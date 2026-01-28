@@ -1,0 +1,373 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+IRFC CLI
+
+Usage:
+  ./bin/irfc setup [--global|--project <path>]
+  ./bin/irfc sync [--global|--project <path>]
+
+Commands:
+  setup   Interactive install + optional dependencies + MCP config
+  sync    Sync agent models from workflow config into agent files
+
+Options:
+  --global                 Install/sync in ~/.pi/agent (default for setup)
+  --project <path>         Install/sync in <path>/.pi
+  --help                   Show this help
+
+Environment (for setup MCP):
+  ZAI_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY
+EOF
+}
+
+if [ "$#" -lt 1 ]; then
+  usage
+  exit 1
+fi
+
+COMMAND="$1"
+shift
+
+TARGET_BASE=""
+SCOPE_FLAG=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --global)
+      TARGET_BASE="$HOME/.pi/agent"
+      SCOPE_FLAG=""
+      shift
+      ;;
+    --project)
+      if [ -z "${2:-}" ]; then
+        echo "Missing path after --project" >&2
+        exit 1
+      fi
+      TARGET_BASE="$2/.pi"
+      SCOPE_FLAG="-l"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+ done
+
+if [ -z "$TARGET_BASE" ]; then
+  if [ "$COMMAND" = "setup" ]; then
+    TARGET_BASE="$HOME/.pi/agent"
+  else
+    # sync default: prefer project if .pi exists in cwd
+    if [ -d ".pi" ]; then
+      TARGET_BASE="$(pwd)/.pi"
+      SCOPE_FLAG="-l"
+    else
+      TARGET_BASE="$HOME/.pi/agent"
+    fi
+  fi
+fi
+
+install_files() {
+  mkdir -p "$TARGET_BASE/agents" "$TARGET_BASE/prompts" "$TARGET_BASE/workflows/implement-review-fix-close"
+  cp "$ROOT_DIR/agents/implementer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-general.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-spec-audit.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-second-opinion.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/review-merge.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/fixer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/closer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher-fetch.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/simplifier.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/simplify-ticket.md" "$TARGET_BASE/agents/"
+
+  cp "$ROOT_DIR/prompts/implement-review-fix-close.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irfc-sync.md" "$TARGET_BASE/prompts/"
+
+  cp "$ROOT_DIR/workflows/implement-review-fix-close/config.json" \
+     "$TARGET_BASE/workflows/implement-review-fix-close/"
+  cp "$ROOT_DIR/workflows/implement-review-fix-close/README.md" \
+     "$TARGET_BASE/workflows/implement-review-fix-close/"
+
+  echo "Installed IRFC workflow to: $TARGET_BASE"
+}
+
+install_extensions() {
+  local install_deps="$1"
+  local install_optional="$2"
+  if ! command -v pi >/dev/null 2>&1; then
+    echo "pi not found in PATH; skipping extension installs." >&2
+    return 0
+  fi
+  if [ "$install_deps" = "true" ]; then
+    pi install $SCOPE_FLAG npm:pi-subagents
+    pi install $SCOPE_FLAG npm:pi-interactive-shell
+  fi
+  if [ "$install_optional" = "true" ]; then
+    pi install $SCOPE_FLAG npm:pi-review-loop
+    pi install $SCOPE_FLAG npm:pi-mcp-adapter
+  fi
+}
+
+configure_mcp() {
+  local mcp_file="$TARGET_BASE/mcp.json"
+  local zai_key="$1"
+  local ctx7_key="$2"
+  local exa_key="$3"
+
+  local python_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    python_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    python_bin="python"
+  else
+    echo "Python not found; skipping MCP config." >&2
+    return 0
+  fi
+
+  MCP_FILE="$mcp_file" ZAI_API_KEY="$zai_key" CONTEXT7_API_KEY="$ctx7_key" EXA_API_KEY="$exa_key" \
+    "$python_bin" - <<'PY'
+import json
+import os
+import sys
+
+path = os.environ["MCP_FILE"]
+
+
+def load_json(p):
+    if not os.path.exists(p):
+        return {}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+config = load_json(path)
+if not isinstance(config, dict):
+    config = {}
+
+config.setdefault("settings", {})
+config["settings"].setdefault("toolPrefix", "short")
+config.setdefault("mcpServers", {})
+
+servers = config["mcpServers"]
+
+
+def set_server(name, url, headers=None, auth=None):
+    srv = {"url": url}
+    if auth:
+        srv["auth"] = auth
+    if headers:
+        srv["headers"] = headers
+    servers[name] = srv
+
+
+context7_key = os.environ.get("CONTEXT7_API_KEY", "").strip()
+exa_key = os.environ.get("EXA_API_KEY", "").strip()
+zai_key = os.environ.get("ZAI_API_KEY", "").strip()
+
+set_server(
+    "context7",
+    "https://mcp.context7.com/mcp",
+    headers={"CONTEXT7_API_KEY": context7_key} if context7_key else None,
+)
+set_server(
+    "exa",
+    "https://mcp.exa.ai/mcp",
+    headers={"EXA_API_KEY": exa_key} if exa_key else None,
+)
+set_server("grep_app", "https://mcp.grep.app")
+
+if zai_key:
+    headers = {"Authorization": f"Bearer {zai_key}"}
+    set_server(
+        "zai-web-search",
+        "https://api.z.ai/api/mcp/web_search_prime/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+    set_server(
+        "zai-web-reader",
+        "https://api.z.ai/api/mcp/web_reader/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+    set_server(
+        "zai-vision",
+        "https://api.z.ai/api/mcp/vision/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+else:
+    print("ZAI_API_KEY not provided; skipping ZAI MCP servers.", file=sys.stderr)
+
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(config, f, indent=2)
+    f.write("\n")
+
+print(f"Configured MCP servers in {path}")
+PY
+}
+
+sync_models() {
+  local python_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    python_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    python_bin="python"
+  else
+    echo "Python not found; cannot sync models." >&2
+    exit 1
+  fi
+
+  TARGET_BASE="$TARGET_BASE" \
+    "$python_bin" - <<'PY'
+import json
+import os
+import re
+from pathlib import Path
+
+base = Path(os.environ["TARGET_BASE"]).expanduser()
+
+project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
+if str(base).endswith("/.pi"):
+    project_config = base / "workflows/implement-review-fix-close/config.json"
+
+global_config = Path.home() / ".pi/agent/workflows/implement-review-fix-close/config.json"
+
+
+def load_config(path: Path):
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def merge(a, b):
+    out = dict(a)
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+config = merge(load_config(global_config), load_config(project_config))
+models = config.get("models", {})
+if not models:
+    print("No models found in config; nothing to sync.")
+    raise SystemExit(0)
+
+agents_dir = base / "agents"
+if not agents_dir.exists():
+    print(f"Agents directory not found: {agents_dir}")
+    raise SystemExit(1)
+
+updated = []
+unchanged = []
+missing = []
+
+for name, model in models.items():
+    path = agents_dir / f"{name}.md"
+    if not path.exists():
+        missing.append(name)
+        continue
+
+    text = path.read_text(encoding="utf-8")
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        unchanged.append(name)
+        continue
+
+    front = parts[1]
+    m = re.search(r"^model:\s*(.+)$", front, flags=re.MULTILINE)
+    if not m:
+        new_front = front.rstrip() + f"\nmodel: {model}\n"
+    else:
+        old = m.group(1).strip()
+        if old == model:
+            unchanged.append(name)
+            continue
+        new_front = re.sub(r"^model:\s*.+$", f"model: {model}", front, flags=re.MULTILINE)
+    new_text = "---" + new_front + "---" + parts[2]
+    path.write_text(new_text, encoding="utf-8")
+    updated.append(name)
+
+print("Synced models.")
+if updated:
+    print("Updated:", ", ".join(updated))
+if unchanged:
+    print("Unchanged:", ", ".join(unchanged))
+if missing:
+    print("Missing agent files:", ", ".join(missing))
+PY
+}
+
+case "$COMMAND" in
+  setup)
+    echo "IRFC setup"
+    if [ -z "$TARGET_BASE" ]; then
+      read -r -p "Install globally? (Y/n) " yn
+      case "$yn" in
+        [Nn]*)
+          read -r -p "Project path (default: current dir): " project_path
+          project_path="${project_path:-$(pwd)}"
+          TARGET_BASE="$project_path/.pi"
+          SCOPE_FLAG="-l"
+          ;;
+        *)
+          TARGET_BASE="$HOME/.pi/agent"
+          SCOPE_FLAG=""
+          ;;
+      esac
+    fi
+
+    read -r -p "Install required Pi extensions (subagents, interactive shell)? (Y/n) " yn
+    install_deps=true
+    case "$yn" in [Nn]*) install_deps=false ;; esac
+
+    read -r -p "Install optional Pi extensions (review-loop, mcp-adapter)? (y/N) " yn
+    install_optional=false
+    case "$yn" in [Yy]*) install_optional=true ;; esac
+
+    read -r -p "Configure MCP servers? (y/N) " yn
+    configure_mcp=false
+    case "$yn" in [Yy]*) configure_mcp=true ;; esac
+
+    install_files
+    install_extensions "$install_deps" "$install_optional"
+
+    if [ "$configure_mcp" = true ]; then
+      read -r -p "ZAI API key (required for ZAI servers, blank to skip): " zai_key
+      read -r -p "Context7 API key (optional): " ctx7_key
+      read -r -p "Exa API key (optional): " exa_key
+      zai_key="${zai_key:-${ZAI_API_KEY:-}}"
+      ctx7_key="${ctx7_key:-${CONTEXT7_API_KEY:-}}"
+      exa_key="${exa_key:-${EXA_API_KEY:-}}"
+      configure_mcp "$zai_key" "$ctx7_key" "$exa_key"
+    fi
+    ;;
+  sync)
+    sync_models
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
