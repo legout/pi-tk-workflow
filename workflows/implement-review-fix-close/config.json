@@ -1,0 +1,84 @@
+{
+  "models": {
+    "implementer": "chutes/moonshotai/Kimi-K2.5-TEE:high",
+    "reviewer-general": "openai-codex/gpt-5.1-codex-mini:high",
+    "reviewer-spec-audit": "openai-codex/gpt-5.1-codex-mini:high",
+    "reviewer-second-opinion": "openai-codex/gpt-5.1-codex-mini:high",
+    "review-merge": "openai-codex/gpt-5.1-codex-mini:medium",
+    "fixer": "zai/glm-4.7:high",
+    "closer": "zai/glm-4.7:medium",
+    "researcher": "openai-codex/gpt-5.1-codex-mini:medium",
+    "researcher-fetch": "openai-codex/gpt-5.1-codex-mini:medium"
+  },
+  "checkers": {
+    "python": {
+      "files": "\\.(py|pyi)$",
+      "lint": "ruff check {files} --fix",
+      "format": "ruff format {files}",
+      "typecheck": "mypy ."
+    },
+    "typescript": {
+      "files": "\\.(js|jsx|ts|tsx)$",
+      "lint": "eslint {files} --fix",
+      "format": "prettier --write {files}",
+      "typecheck": "tsc --noEmit"
+    },
+    "rust": {
+      "files": "\\.rs$",
+      "lint": "cargo clippy --fix -- -W clippy::all",
+      "format": "cargo fmt",
+      "typecheck": "cargo check"
+    },
+    "go": {
+      "files": "\\.go$",
+      "format": "gofmt -w {files}",
+      "typecheck": "go test ./..."
+    },
+    "markdown": {
+      "files": "\\.(md|mdx)$",
+      "format": "prettier --write {files}",
+      "lint": "markdownlint {files}"
+    },
+    "json": {
+      "files": "\\.json$",
+      "format": "prettier --write {files}"
+    },
+    "yaml": {
+      "files": "\\.(yml|yaml)$",
+      "format": "prettier --write {files}"
+    },
+    "html": {
+      "files": "\\.html?$",
+      "format": "prettier --write {files}"
+    },
+    "css": {
+      "files": "\\.(css|scss|sass|less)$",
+      "format": "prettier --write {files}"
+    },
+    "shell": {
+      "files": "\\.(sh|bash|zsh)$",
+      "format": "shfmt -w -s {files}"
+    }
+  },
+  "workflow": {
+    "clarifyDefault": true,
+    "enableResearcher": true,
+    "knowledgeDir": ".pi/knowledge",
+    "researchParallelAgents": 3,
+    "enableReviewers": [
+      "reviewer-general",
+      "reviewer-spec-audit",
+      "reviewer-second-opinion"
+    ],
+    "enableFixer": true,
+    "enableCloser": true,
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".venv/**",
+      "vendor/**"
+    ]
+  }
+}
