@@ -64,6 +64,14 @@
     "clarifyDefault": true,
     "enableResearcher": true,
     "knowledgeDir": ".pi/knowledge",
+    "mcpServers": [
+      "context7",
+      "exa",
+      "grep_app",
+      "zai-web-search",
+      "zai-web-reader",
+      "zai-vision"
+    ],
     "researchParallelAgents": 3,
     "enableReviewers": [
       "reviewer-general",
@@ -72,6 +80,8 @@
     ],
     "enableFixer": true,
     "enableCloser": true,
+    "enableQualityGate": false,
+    "failOn": [],
     "exclude": [
       "node_modules/**",
       "dist/**",

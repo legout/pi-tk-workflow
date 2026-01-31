@@ -20,7 +20,9 @@ Implement the ticket described in the Task input (ticket ID).
 1. **Get ticket details**: Run `tk show <ticket-id>` (ticket ID provided in the Task input)
 2. **Check knowledge base**: Read relevant docs from `.pi/knowledge/` (ticket-specific or topic summaries) and `docs/dev/knowledge/` if they exist
 3. **Explore codebase**: Use find/grep to locate relevant files
-4. **Track file changes**: Create `files_changed.txt` next to `implementation.md` in the chain working directory. Every time you use `edit` or `write`, append the file path to this file (one per line).
+4. **Track file changes**: After every `edit` or `write`, run `./bin/irf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
+   - If the task provides a chain dir, use `./bin/irf track <path> --file {chain_dir}/files_changed.txt`
+   - Otherwise, place `files_changed.txt` next to `implementation.md`
 5. **Implement**: Make changes following existing project patterns
 6. **Code Quality Checks** (run BEFORE tests):
    - **A. Load workflow config (preferred)**:

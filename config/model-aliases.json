@@ -1,0 +1,7 @@
+{
+  "implementer": ["chutes/moonshotai/Kimi-K2.5-TEE", "anthropic/claude-sonnet-4", "openai/gpt-5.2-codex"],
+  "reviewer": ["openai-codex/gpt-5.1-codex-mini", "anthropic/claude-sonnet-4"],
+  "cheap": ["zai/glm-4.7", "google/gemini-2.5-flash", "openai/gpt-5-mini"],
+  "merge": ["zai/glm-4.7", "openai-codex/gpt-5.1-codex-mini"],
+  "fixer": ["zai/glm-4.7", "anthropic/claude-sonnet-4"]
+}

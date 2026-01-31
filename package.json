@@ -5,11 +5,11 @@
   "private": true,
   "keywords": ["pi-package", "pi-workflow"],
   "bin": {
-    "irfc": "bin/irfc"
+    "irf": "bin/irf"
   },
   "scripts": {
-    "setup": "./bin/irfc setup",
-    "sync": "./bin/irfc sync"
+    "setup": "./bin/irf setup",
+    "sync": "./bin/irf sync"
   },
   "pi": {
     "prompts": ["prompts"]

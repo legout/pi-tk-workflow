@@ -1,0 +1,59 @@
+# Project Agents
+
+This file contains project-specific patterns, conventions, and guidelines for AI agents working on this codebase.
+
+## Project Patterns
+
+<!-- Add your project's recurring patterns here -->
+
+### Code Style
+- Language/Framework: <e.g., TypeScript with strict mode>
+- Linter/Formatter: <e.g., ESLint + Prettier>
+- Test Framework: <e.g., Vitest with MSW for mocking>
+
+### Architecture Patterns
+- <Pattern 1: e.g., All API calls go through `src/lib/api.ts`>
+- <Pattern 2: e.g., Use repository pattern for data access>
+- <Pattern 3: e.g., Components are co-located with their tests>
+
+### Naming Conventions
+- Files: <e.g., kebab-case for utilities, PascalCase for components>
+- Functions: <e.g., camelCase, verb-noun format>
+- Types/Interfaces: <e.g., PascalCase with descriptive names>
+
+## Gotchas
+
+<!-- Known issues, traps, or surprising behaviors -->
+
+- <Gotcha 1: e.g., The `legacy-db` module has connection leaks - always wrap in `withConnection()`>
+- <Gotcha 2: e.g., Date parsing is timezone-sensitive - always use ISO format>
+- <Gotcha 3: e.g., The auth middleware must be applied AFTER body parsing>
+
+## Technical Debt
+
+<!-- Known issues that need addressing -->
+
+- <Debt 1: e.g., `src/old-auth/` should be migrated to new auth system>
+- <Debt 2: e.g., Test coverage below 80% in `src/payments/`>
+
+## Ralph Loop Integration
+
+If `.pi/ralph/AGENTS.md` exists, it contains lessons learned from autonomous ticket processing.
+Read it for accumulated wisdom from previous implementations.
+
+To initialize Ralph tracking:
+```bash
+./bin/irf ralph init
+```
+
+## External References
+
+<!-- Links to important docs -->
+
+- Architecture Decision Records: <./docs/adr/>
+- API Documentation: <./docs/api.md>
+- Deployment Guide: <./docs/deployment.md>
+
+---
+
+<!-- Update this file as patterns evolve -->

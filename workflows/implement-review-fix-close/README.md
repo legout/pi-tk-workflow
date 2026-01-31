@@ -1,4 +1,4 @@
-# Implement → Review → Fix → Close (IRFC) Workflow
+# Implement → Review → Fix → Close (IRF) Workflow
 
 This workflow runs a full ticket implementation chain:
 
@@ -12,7 +12,7 @@ This workflow runs a full ticket implementation chain:
 
 The chain is triggered by:
 ```
-/implement-review-fix-close <ticket-id> [flags]
+/irf <ticket-id> [flags]
 ```
 
 ---
@@ -26,7 +26,7 @@ The chain is triggered by:
 - `<project>/.pi/workflows/implement-review-fix-close/config.json`
 
 **Prompt template:**
-- `~/.pi/agent/prompts/implement-review-fix-close.md`
+- `~/.pi/agent/prompts/irf.md`
 
 **Agent files:**
 - `~/.pi/agent/agents/implementer.md`
@@ -40,7 +40,7 @@ The chain is triggered by:
 - `~/.pi/agent/agents/closer.md`
 
 **Sync command:**
-- `~/.pi/agent/prompts/irfc-sync.md` (run `/irfc-sync`)
+- `~/.pi/agent/prompts/irf-sync.md` (run `/irf-sync`)
 
 ---
 
@@ -82,10 +82,21 @@ The chain is triggered by:
 ## Flags
 
 - `--auto` / `--no-clarify` → run headless
+- `--plan` / `--dry-run` → show resolved chain, do not run agents
+- `--create-followups` → run `/irf-followups` on merged review
 - `--simplify-tickets` → run `/simplify --create-tickets --last-implementation` after chain
 - `--final-review-loop` → run `/review-start` after chain
 - `--with-research` → force enable research step
 - `--no-research` → force disable research step
+
+## Related planning commands
+
+- `/irf-seed <idea>`
+- `/irf-spike <topic>`
+- `/irf-backlog <optional seed path or topic-id>`
+- `/irf-from-openspec <change-id or path>`
+- `/irf-baseline <optional focus>`
+- `/irf-followups <review path or ticket-id>`
 
 ---
 
@@ -108,8 +119,10 @@ Edit the config file to customize:
 
 - **Models** per agent
 - **Checkers** per language (lint/format/typecheck)
-- **Workflow toggles** (enable/disable research, reviewers, fixer, closer)
+- **Workflow toggles** (enable/disable research, reviewers, fixer, closer, quality gate)
+- **Fail-on severities** (`workflow.failOn`, list of severities that block closing)
 - **Knowledge directory** (`workflow.knowledgeDir`, default `.pi/knowledge`)
+- **MCP servers** (`workflow.mcpServers`, list of server ids to configure)
 - **Exclude globs** for generated files
 
 Example (partial):
@@ -126,6 +139,10 @@ Example (partial):
       "format": "ruff format {files}",
       "typecheck": "mypy ."
     }
+  },
+  "workflow": {
+    "enableQualityGate": false,
+    "failOn": ["Critical"]
   }
 }
 ```
@@ -150,7 +167,7 @@ Per-ticket briefs reference shared topics to avoid duplication.
 
 Model changes are applied via:
 ```
-/irfc-sync
+/irf-sync
 ```
 
 This updates the `model:` frontmatter in all workflow agent files.

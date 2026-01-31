@@ -1,0 +1,14 @@
+{
+  "maxIterations": 50,
+  "maxIterationsPerTicket": 5,
+  "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
+  "completionCheck": "tk ready | grep -q .",
+  "sleepBetweenTickets": 5000,
+  "sleepBetweenRetries": 10000,
+  "workflow": "/irf-lite",
+  "workflowFlags": "--auto",
+  "includeKnowledgeBase": true,
+  "includePlanningDocs": true,
+  "promiseOnComplete": true,
+  "lessonsMaxCount": 50
+}

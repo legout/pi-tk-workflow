@@ -14,7 +14,7 @@ Options:
 
 Notes:
   This script only copies agents, prompts, and workflow config.
-  Use ./bin/irfc setup for interactive setup (extensions + MCP).
+  Use ./bin/irf setup for interactive setup (extensions + MCP).
 EOF
 }
 
@@ -72,13 +72,43 @@ cp "$SCRIPT_DIR/agents/researcher.md" "$TARGET_BASE/agents/"
 cp "$SCRIPT_DIR/agents/researcher-fetch.md" "$TARGET_BASE/agents/"
 cp "$SCRIPT_DIR/agents/simplifier.md" "$TARGET_BASE/agents/"
 cp "$SCRIPT_DIR/agents/simplify-ticket.md" "$TARGET_BASE/agents/"
+cp "$SCRIPT_DIR/agents/irf-planner.md" "$TARGET_BASE/agents/"
 
-cp "$SCRIPT_DIR/prompts/implement-review-fix-close.md" "$TARGET_BASE/prompts/"
-cp "$SCRIPT_DIR/prompts/irfc-sync.md" "$TARGET_BASE/prompts/"
+# Original prompts
+cp "$SCRIPT_DIR/prompts/irf.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-sync.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-seed.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-backlog.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-spike.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-from-openspec.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-baseline.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-followups.md" "$TARGET_BASE/prompts/"
+
+# Lite prompts (recommended - fewer subagents)
+cp "$SCRIPT_DIR/prompts/irf-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-seed-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-backlog-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-spike-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-from-openspec-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-baseline-lite.md" "$TARGET_BASE/prompts/"
+cp "$SCRIPT_DIR/prompts/irf-followups-lite.md" "$TARGET_BASE/prompts/"
 
 cp "$SCRIPT_DIR/workflows/implement-review-fix-close/config.json" \
    "$TARGET_BASE/workflows/implement-review-fix-close/"
 cp "$SCRIPT_DIR/workflows/implement-review-fix-close/README.md" \
    "$TARGET_BASE/workflows/implement-review-fix-close/"
 
-echo "Installed IRFC workflow files to: $TARGET_BASE"
+# Create root AGENTS.md if it doesn't exist (for --project installs)
+if [ -f "$SCRIPT_DIR/docs/AGENTS.md.template" ] && [ ! -f "AGENTS.md" ]; then
+  if [[ "$TARGET_BASE" != "$HOME/.pi/agent" ]]; then
+    cp "$SCRIPT_DIR/docs/AGENTS.md.template" "AGENTS.md"
+    echo "Created AGENTS.md in project root"
+  fi
+fi
+
+echo "Installed IRF workflow files to: $TARGET_BASE"
+echo ""
+echo "Next steps:"
+echo "  1. Review AGENTS.md (project patterns)"
+echo "  2. Initialize Ralph: ./bin/irf ralph init"
+echo "  3. Start working: /irf-lite <ticket>"

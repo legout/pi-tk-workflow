@@ -1,0 +1,1028 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+IRF CLI
+
+Usage:
+  ./bin/irf setup [--global|--project <path>]
+  ./bin/irf sync [--global|--project <path>]
+  ./bin/irf doctor [--global|--project <path>]
+  ./bin/irf track <path> [--file <files_changed_path>]
+  ./bin/irf ralph <subcommand> [options]
+
+Commands:
+  setup   Interactive install + optional dependencies + MCP config
+  sync    Sync agent models from workflow config into agent files
+  doctor  Preflight checks for tk/pi/extensions/checkers
+  track   Append file paths to files_changed.txt (deduped)
+  ralph   Ralph loop management (see below)
+
+Ralph Subcommands:
+  ralph init     Create .pi/ralph/ directory structure
+  ralph status   Show current loop state and statistics
+  ralph reset    Clear progress (optionally keep lessons)
+  ralph lessons  Show or prune lessons learned
+
+Options:
+  --global                 Install/sync in ~/.pi/agent (default for setup)
+  --project <path>         Install/sync in <path>/.pi
+  --file <path>            Output files_changed.txt path (track only)
+  --keep-lessons           Keep lessons when resetting (ralph reset only)
+  --help                   Show this help
+
+Environment (for setup MCP):
+  ZAI_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY
+
+Environment (for track):
+  IRF_FILES_CHANGED, IRF_CHAIN_DIR
+EOF
+}
+
+if [ "$#" -lt 1 ]; then
+  usage
+  exit 1
+fi
+
+COMMAND="$1"
+shift
+
+TARGET_BASE=""
+SCOPE_FLAG=""
+TRACK_FILE=""
+ARGS=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --global)
+      TARGET_BASE="$HOME/.pi/agent"
+      SCOPE_FLAG=""
+      shift
+      ;;
+    --project)
+      if [ -z "${2:-}" ]; then
+        echo "Missing path after --project" >&2
+        exit 1
+      fi
+      TARGET_BASE="$2/.pi"
+      SCOPE_FLAG="-l"
+      shift 2
+      ;;
+    --file)
+      if [ "$COMMAND" != "track" ]; then
+        echo "--file is only valid with 'track'" >&2
+        usage
+        exit 1
+      fi
+      if [ -z "${2:-}" ]; then
+        echo "Missing path after --file" >&2
+        exit 1
+      fi
+      TRACK_FILE="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [ "$#" -gt 0 ]; do
+        ARGS+=("$1")
+        shift
+      done
+      ;;
+    -* )
+      # For ralph command, pass options through to subcommand
+      if [ "$COMMAND" = "ralph" ]; then
+        ARGS+=("$1")
+        shift
+      else
+        echo "Unknown option: $1" >&2
+        usage
+        exit 1
+      fi
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+ done
+
+if [ -z "$TARGET_BASE" ] && [ "$COMMAND" != "track" ]; then
+  if [ "$COMMAND" = "setup" ]; then
+    TARGET_BASE="$HOME/.pi/agent"
+  else
+    # sync/doctor default: prefer project if .pi exists in cwd
+    if [ -d ".pi" ]; then
+      TARGET_BASE="$(pwd)/.pi"
+      SCOPE_FLAG="-l"
+    else
+      TARGET_BASE="$HOME/.pi/agent"
+    fi
+  fi
+fi
+
+install_files() {
+  mkdir -p "$TARGET_BASE/agents" "$TARGET_BASE/prompts" "$TARGET_BASE/workflows/implement-review-fix-close"
+  cp "$ROOT_DIR/agents/implementer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-general.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-spec-audit.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/reviewer-second-opinion.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/review-merge.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/fixer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/closer.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher-fetch.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/simplifier.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/simplify-ticket.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/irf-planner.md" "$TARGET_BASE/agents/"
+
+  # Original prompts
+  cp "$ROOT_DIR/prompts/irf.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-sync.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-seed.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-backlog.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-spike.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-from-openspec.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-baseline.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-followups.md" "$TARGET_BASE/prompts/"
+
+  # Lite prompts (recommended - fewer subagents)
+  cp "$ROOT_DIR/prompts/irf-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-seed-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-backlog-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-spike-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-from-openspec-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-baseline-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-followups-lite.md" "$TARGET_BASE/prompts/"
+
+  cp "$ROOT_DIR/workflows/implement-review-fix-close/config.json" \
+     "$TARGET_BASE/workflows/implement-review-fix-close/"
+  cp "$ROOT_DIR/workflows/implement-review-fix-close/README.md" \
+     "$TARGET_BASE/workflows/implement-review-fix-close/"
+
+  echo "Installed IRF workflow to: $TARGET_BASE"
+}
+
+install_extensions() {
+  local install_deps="$1"
+  local install_optional="$2"
+  if ! command -v pi >/dev/null 2>&1; then
+    echo "pi not found in PATH; skipping extension installs." >&2
+    return 0
+  fi
+  if [ "$install_deps" = "true" ]; then
+    pi install $SCOPE_FLAG npm:pi-subagents
+    pi install $SCOPE_FLAG npm:pi-model-switch
+  fi
+  if [ "$install_optional" = "true" ]; then
+    pi install $SCOPE_FLAG npm:pi-review-loop
+    pi install $SCOPE_FLAG npm:pi-mcp-adapter
+  fi
+}
+
+configure_mcp() {
+  local mcp_file="$TARGET_BASE/mcp.json"
+  local zai_key="$1"
+  local ctx7_key="$2"
+  local exa_key="$3"
+
+  local python_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    python_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    python_bin="python"
+  else
+    echo "Python not found; skipping MCP config." >&2
+    return 0
+  fi
+
+  MCP_FILE="$mcp_file" TARGET_BASE="$TARGET_BASE" ZAI_API_KEY="$zai_key" CONTEXT7_API_KEY="$ctx7_key" EXA_API_KEY="$exa_key" \
+    "$python_bin" - <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = os.environ["MCP_FILE"]
+base = Path(os.environ.get("TARGET_BASE", "")).expanduser()
+
+
+def load_json(p):
+    if not os.path.exists(p):
+        return {}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def load_config(path: Path):
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def merge(a, b):
+    out = dict(a)
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
+if str(base).endswith("/.pi"):
+    project_config = base / "workflows/implement-review-fix-close/config.json"
+
+global_config = Path.home() / ".pi/agent/workflows/implement-review-fix-close/config.json"
+workflow_config = merge(load_config(global_config), load_config(project_config))
+
+mcp_servers = workflow_config.get("workflow", {}).get("mcpServers")
+if mcp_servers is None:
+    mcp_servers = [
+        "context7",
+        "exa",
+        "grep_app",
+        "zai-web-search",
+        "zai-web-reader",
+        "zai-vision",
+    ]
+elif not isinstance(mcp_servers, list):
+    mcp_servers = [str(mcp_servers)]
+
+allowed = set(mcp_servers)
+
+mcp_config = load_json(path)
+if not isinstance(mcp_config, dict):
+    mcp_config = {}
+
+mcp_config.setdefault("settings", {})
+mcp_config["settings"].setdefault("toolPrefix", "short")
+mcp_config["mcpServers"] = {}
+
+servers = mcp_config["mcpServers"]
+
+
+def set_server(name, url, headers=None, auth=None):
+    if name not in allowed:
+        return
+    srv = {"url": url}
+    if auth:
+        srv["auth"] = auth
+    if headers:
+        srv["headers"] = headers
+    servers[name] = srv
+
+
+context7_key = os.environ.get("CONTEXT7_API_KEY", "").strip()
+exa_key = os.environ.get("EXA_API_KEY", "").strip()
+zai_key = os.environ.get("ZAI_API_KEY", "").strip()
+
+set_server(
+    "context7",
+    "https://mcp.context7.com/mcp",
+    headers={"CONTEXT7_API_KEY": context7_key} if context7_key else None,
+)
+set_server(
+    "exa",
+    "https://mcp.exa.ai/mcp",
+    headers={"EXA_API_KEY": exa_key} if exa_key else None,
+)
+set_server("grep_app", "https://mcp.grep.app")
+
+if zai_key:
+    headers = {"Authorization": f"Bearer {zai_key}"}
+    set_server(
+        "zai-web-search",
+        "https://api.z.ai/api/mcp/web_search_prime/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+    set_server(
+        "zai-web-reader",
+        "https://api.z.ai/api/mcp/web_reader/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+    set_server(
+        "zai-vision",
+        "https://api.z.ai/api/mcp/vision/mcp",
+        headers=headers,
+        auth="bearer",
+    )
+else:
+    if "zai-web-search" in allowed or "zai-web-reader" in allowed or "zai-vision" in allowed:
+        print("ZAI_API_KEY not provided; skipping ZAI MCP servers.", file=sys.stderr)
+
+if not allowed:
+    print("workflow.mcpServers is empty; no MCP servers configured.", file=sys.stderr)
+
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(mcp_config, f, indent=2)
+    f.write("\n")
+
+print(f"Configured MCP servers in {path}")
+PY
+}
+
+track_file() {
+  local tracked_path="${1:-}"
+  if [ -z "$tracked_path" ]; then
+    echo "Usage: ./bin/irf track <path> [--file <files_changed_path>]" >&2
+    exit 1
+  fi
+
+  local files_changed="$TRACK_FILE"
+  if [ -z "$files_changed" ]; then
+    if [ -n "${IRF_FILES_CHANGED:-}" ]; then
+      files_changed="$IRF_FILES_CHANGED"
+    elif [ -n "${IRF_CHAIN_DIR:-}" ]; then
+      files_changed="$IRF_CHAIN_DIR/files_changed.txt"
+    else
+      files_changed="$(pwd)/files_changed.txt"
+    fi
+  fi
+
+  if [[ "$files_changed" != /* ]]; then
+    files_changed="$(pwd)/$files_changed"
+  fi
+
+  if [[ "$tracked_path" != /* ]]; then
+    tracked_path="$(pwd)/$tracked_path"
+  fi
+
+  mkdir -p "$(dirname "$files_changed")"
+  touch "$files_changed"
+
+  if ! grep -Fxq "$tracked_path" "$files_changed"; then
+    echo "$tracked_path" >> "$files_changed"
+  fi
+
+  echo "Tracked: $tracked_path"
+}
+
+doctor() {
+  local failed=0
+
+  echo "IRF doctor"
+
+  check_cmd() {
+    local name="$1"
+    if command -v "$name" >/dev/null 2>&1; then
+      echo "[ok] $name"
+    else
+      echo "[missing] $name"
+      failed=1
+    fi
+  }
+
+  check_extension() {
+    local name="$1"
+    local global_path="$HOME/.pi/agent/extensions/$name"
+    local project_path=""
+    if [[ "$TARGET_BASE" == */.pi ]]; then
+      project_path="$TARGET_BASE/extensions/$name"
+    fi
+
+    if [ -d "$global_path" ] || { [ -n "$project_path" ] && [ -d "$project_path" ]; }; then
+      if [ -n "$project_path" ] && [ -d "$project_path" ]; then
+        echo "[ok] extension $name (project)"
+      else
+        echo "[ok] extension $name (global)"
+      fi
+    else
+      echo "[missing] extension $name"
+      failed=1
+    fi
+  }
+
+  check_cmd "tk"
+  check_cmd "pi"
+
+  check_extension "pi-subagents"
+  check_extension "pi-model-switch"
+
+  if command -v python3 >/dev/null 2>&1; then
+    local cmds
+    cmds=$(TARGET_BASE="$TARGET_BASE" python3 - <<'PY'
+import json
+import os
+import shlex
+from pathlib import Path
+
+base = Path(os.environ.get("TARGET_BASE", "")).expanduser()
+
+project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
+if str(base).endswith("/.pi"):
+    project_config = base / "workflows/implement-review-fix-close/config.json"
+
+global_config = Path.home() / ".pi/agent/workflows/implement-review-fix-close/config.json"
+
+def load_config(path: Path):
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def merge(a, b):
+    out = dict(a)
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+config = merge(load_config(global_config), load_config(project_config))
+checkers = config.get("checkers", {}) or {}
+cmds = set()
+
+for spec in checkers.values():
+    for key in ("lint", "format", "typecheck"):
+        cmd = spec.get(key)
+        if not cmd:
+            continue
+        try:
+            parts = shlex.split(cmd)
+        except ValueError:
+            parts = cmd.split()
+        if parts:
+            cmds.add(parts[0])
+
+print("\n".join(sorted(cmds)))
+PY
+)
+
+    if [ -n "$cmds" ]; then
+      echo "Checker tools:"
+      while IFS= read -r cmd; do
+        [ -z "$cmd" ] && continue
+        check_cmd "$cmd"
+      done <<< "$cmds"
+    else
+      echo "[info] No checkers configured"
+    fi
+  else
+    echo "[missing] python3 (required to read checkers config)"
+    failed=1
+  fi
+
+  if [ "$failed" -ne 0 ]; then
+    echo "IRF doctor: failed"
+    exit 1
+  fi
+
+  echo "IRF doctor: OK"
+}
+
+# =============================================================================
+# Ralph Loop Management
+# =============================================================================
+
+RALPH_DIR=".pi/ralph"
+
+ralph_usage() {
+  cat <<'EOF'
+Ralph Loop Management
+
+Usage:
+  ./bin/irf ralph init         Create .pi/ralph/ directory structure
+  ./bin/irf ralph status       Show current loop state and statistics
+  ./bin/irf ralph reset        Clear progress (use --keep-lessons to preserve lessons)
+  ./bin/irf ralph lessons      Show lessons learned
+  ./bin/irf ralph lessons prune [N]  Keep only last N lessons (default: 20)
+
+The Ralph loop itself is started via Pi prompt:
+  /ralph-start [--max-iterations N]
+
+Files:
+  .pi/ralph/AGENTS.md    Lessons learned (read by implementer)
+  .pi/ralph/progress.md  Loop state and ticket history
+  .pi/ralph/config.json  Loop configuration
+EOF
+}
+
+ralph_init() {
+  echo "Initializing Ralph loop directory..."
+  
+  mkdir -p "$RALPH_DIR"
+  
+  # Create AGENTS.md if not exists
+  if [ ! -f "$RALPH_DIR/AGENTS.md" ]; then
+    cat > "$RALPH_DIR/AGENTS.md" <<'AGENTS_EOF'
+# Ralph Loop: Lessons Learned
+
+This file contains lessons learned during autonomous ticket processing.
+It is read by the implementer at the start of each iteration for re-anchoring.
+
+## How This Works
+
+When running in a Ralph loop, the agent reads this file to:
+- Apply discovered patterns and conventions
+- Avoid known gotchas and pitfalls
+- Reuse successful strategies
+
+## Project Patterns
+
+<!-- Discovered patterns and conventions go here -->
+
+## Gotchas
+
+<!-- Things that caused issues and how to avoid them -->
+
+## Successful Strategies
+
+<!-- Approaches that worked well -->
+
+## Technical Debt Notes
+
+<!-- Known issues to address later -->
+
+---
+
+<!-- Lessons are auto-appended below by the closer agent -->
+AGENTS_EOF
+    echo "Created $RALPH_DIR/AGENTS.md"
+  else
+    echo "Exists: $RALPH_DIR/AGENTS.md"
+  fi
+  
+  # Create progress.md if not exists
+  if [ ! -f "$RALPH_DIR/progress.md" ]; then
+    cat > "$RALPH_DIR/progress.md" <<'PROGRESS_EOF'
+# Ralph Loop Progress
+
+## Current State
+
+- Status: IDLE
+- Current ticket: (none)
+- Started: (not started)
+- Last updated: (never)
+
+## Statistics
+
+- Tickets completed: 0
+- Tickets failed: 0
+- Total iterations: 0
+
+## History
+
+<!-- Auto-appended entries below -->
+PROGRESS_EOF
+    echo "Created $RALPH_DIR/progress.md"
+  else
+    echo "Exists: $RALPH_DIR/progress.md"
+  fi
+  
+  # Create config.json if not exists
+  if [ ! -f "$RALPH_DIR/config.json" ]; then
+    cat > "$RALPH_DIR/config.json" <<'CONFIG_EOF'
+{
+  "maxIterations": 50,
+  "maxIterationsPerTicket": 5,
+  "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
+  "completionCheck": "tk ready | grep -q .",
+  "sleepBetweenTickets": 5000,
+  "sleepBetweenRetries": 10000,
+  "workflow": "/irf-lite",
+  "workflowFlags": "--auto",
+  "includeKnowledgeBase": true,
+  "includePlanningDocs": true,
+  "promiseOnComplete": true,
+  "lessonsMaxCount": 50
+}
+CONFIG_EOF
+    echo "Created $RALPH_DIR/config.json"
+  else
+    echo "Exists: $RALPH_DIR/config.json"
+  fi
+  
+  echo ""
+  echo "Ralph loop initialized in $RALPH_DIR/"
+  echo ""
+  echo "Next steps:"
+  echo "  1. Review $RALPH_DIR/config.json"
+  echo "  2. Add initial patterns to $RALPH_DIR/AGENTS.md"
+  echo "  3. Start the loop with: /ralph-start"
+}
+
+ralph_status() {
+  if [ ! -d "$RALPH_DIR" ]; then
+    echo "Ralph not initialized. Run: ./bin/irf ralph init"
+    exit 1
+  fi
+  
+  echo "=== Ralph Loop Status ==="
+  echo ""
+  
+  # Read progress.md for status
+  if [ -f "$RALPH_DIR/progress.md" ]; then
+    # Extract current state section
+    sed -n '/^## Current State/,/^## /p' "$RALPH_DIR/progress.md" | sed '$d'
+    echo ""
+    
+    # Extract statistics section
+    sed -n '/^## Statistics/,/^## /p' "$RALPH_DIR/progress.md" | sed '$d'
+  else
+    echo "Status: NOT INITIALIZED"
+  fi
+  
+  echo ""
+  echo "=== Ticket Queue ==="
+  if command -v tk >/dev/null 2>&1; then
+    local ready_count
+    ready_count=$(tk ready 2>/dev/null | wc -l | tr -d ' ')
+    echo "Ready tickets: $ready_count"
+    if [ "$ready_count" -gt 0 ]; then
+      echo ""
+      tk ready 2>/dev/null | head -5 || echo "(unable to list tickets)"
+    fi
+  else
+    echo "(tk not available)"
+  fi
+  
+  echo ""
+  echo "=== Lessons Learned ==="
+  if [ -f "$RALPH_DIR/AGENTS.md" ]; then
+    local lesson_count
+    lesson_count=$(grep -c "^## Lesson from" "$RALPH_DIR/AGENTS.md" 2>/dev/null) || lesson_count=0
+    echo "Total lessons: $lesson_count"
+  else
+    echo "No lessons file"
+  fi
+}
+
+ralph_reset() {
+  if [ ! -d "$RALPH_DIR" ]; then
+    echo "Ralph not initialized. Run: ./bin/irf ralph init"
+    exit 1
+  fi
+  
+  local keep_lessons=false
+  for arg in "$@"; do
+    case "$arg" in
+      --keep-lessons) keep_lessons=true ;;
+    esac
+  done
+  
+  echo "Resetting Ralph loop progress..."
+  
+  # Reset progress.md
+  cat > "$RALPH_DIR/progress.md" <<'PROGRESS_EOF'
+# Ralph Loop Progress
+
+## Current State
+
+- Status: IDLE
+- Current ticket: (none)
+- Started: (not started)
+- Last updated: (never)
+
+## Statistics
+
+- Tickets completed: 0
+- Tickets failed: 0
+- Total iterations: 0
+
+## History
+
+<!-- Auto-appended entries below -->
+PROGRESS_EOF
+  echo "Reset: $RALPH_DIR/progress.md"
+  
+  if [ "$keep_lessons" = false ]; then
+    # Reset AGENTS.md but keep structure
+    cat > "$RALPH_DIR/AGENTS.md" <<'AGENTS_EOF'
+# Ralph Loop: Lessons Learned
+
+This file contains lessons learned during autonomous ticket processing.
+It is read by the implementer at the start of each iteration for re-anchoring.
+
+## How This Works
+
+When running in a Ralph loop, the agent reads this file to:
+- Apply discovered patterns and conventions
+- Avoid known gotchas and pitfalls
+- Reuse successful strategies
+
+## Project Patterns
+
+<!-- Discovered patterns and conventions go here -->
+
+## Gotchas
+
+<!-- Things that caused issues and how to avoid them -->
+
+## Successful Strategies
+
+<!-- Approaches that worked well -->
+
+## Technical Debt Notes
+
+<!-- Known issues to address later -->
+
+---
+
+<!-- Lessons are auto-appended below by the closer agent -->
+AGENTS_EOF
+    echo "Reset: $RALPH_DIR/AGENTS.md"
+  else
+    echo "Kept: $RALPH_DIR/AGENTS.md (--keep-lessons)"
+  fi
+  
+  echo ""
+  echo "Ralph loop reset complete."
+}
+
+ralph_lessons() {
+  if [ ! -d "$RALPH_DIR" ]; then
+    echo "Ralph not initialized. Run: ./bin/irf ralph init"
+    exit 1
+  fi
+  
+  local subcmd="${1:-show}"
+  shift || true
+  
+  case "$subcmd" in
+    show)
+      if [ -f "$RALPH_DIR/AGENTS.md" ]; then
+        cat "$RALPH_DIR/AGENTS.md"
+      else
+        echo "No lessons file found."
+      fi
+      ;;
+    prune)
+      local keep_count="${1:-20}"
+      if [ ! -f "$RALPH_DIR/AGENTS.md" ]; then
+        echo "No lessons file found."
+        exit 1
+      fi
+      
+      echo "Pruning lessons to keep last $keep_count..."
+      
+      # Use Python for reliable parsing
+      local python_bin=""
+      if command -v python3 >/dev/null 2>&1; then
+        python_bin="python3"
+      elif command -v python >/dev/null 2>&1; then
+        python_bin="python"
+      else
+        echo "Python required for pruning." >&2
+        exit 1
+      fi
+      
+      RALPH_DIR="$RALPH_DIR" KEEP_COUNT="$keep_count" "$python_bin" - <<'PY'
+import os
+import re
+from pathlib import Path
+
+ralph_dir = Path(os.environ["RALPH_DIR"])
+keep_count = int(os.environ.get("KEEP_COUNT", "20"))
+agents_file = ralph_dir / "AGENTS.md"
+
+content = agents_file.read_text(encoding="utf-8")
+
+# Split at the separator line
+parts = content.split("\n---\n", 1)
+if len(parts) < 2:
+    print("No lessons section found (no --- separator)")
+    raise SystemExit(0)
+
+header = parts[0]
+lessons_section = parts[1]
+
+# Find all lessons (start with "## Lesson from")
+lesson_pattern = r"(## Lesson from .+?)(?=## Lesson from |\Z)"
+lessons = re.findall(lesson_pattern, lessons_section, re.DOTALL)
+
+total = len(lessons)
+if total <= keep_count:
+    print(f"Only {total} lessons found, keeping all.")
+    raise SystemExit(0)
+
+# Keep last N lessons
+kept_lessons = lessons[-keep_count:]
+removed = total - keep_count
+
+new_content = header + "\n---\n\n" + "\n".join(kept_lessons)
+agents_file.write_text(new_content, encoding="utf-8")
+
+print(f"Pruned {removed} lessons, kept {keep_count}.")
+PY
+      ;;
+    *)
+      echo "Unknown lessons subcommand: $subcmd"
+      echo "Usage: ./bin/irf ralph lessons [show|prune [N]]"
+      exit 1
+      ;;
+  esac
+}
+
+ralph_cmd() {
+  local subcmd="${1:-}"
+  shift || true
+  
+  case "$subcmd" in
+    init)
+      ralph_init
+      ;;
+    status)
+      ralph_status
+      ;;
+    reset)
+      ralph_reset "$@"
+      ;;
+    lessons)
+      ralph_lessons "$@"
+      ;;
+    ""|help|--help|-h)
+      ralph_usage
+      ;;
+    *)
+      echo "Unknown ralph subcommand: $subcmd" >&2
+      ralph_usage
+      exit 1
+      ;;
+  esac
+}
+
+sync_models() {
+  local python_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    python_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    python_bin="python"
+  else
+    echo "Python not found; cannot sync models." >&2
+    exit 1
+  fi
+
+  TARGET_BASE="$TARGET_BASE" \
+    "$python_bin" - <<'PY'
+import json
+import os
+import re
+from pathlib import Path
+
+base = Path(os.environ["TARGET_BASE"]).expanduser()
+
+project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
+if str(base).endswith("/.pi"):
+    project_config = base / "workflows/implement-review-fix-close/config.json"
+
+global_config = Path.home() / ".pi/agent/workflows/implement-review-fix-close/config.json"
+
+
+def load_config(path: Path):
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def merge(a, b):
+    out = dict(a)
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+config = merge(load_config(global_config), load_config(project_config))
+models = config.get("models", {})
+if not models:
+    print("No models found in config; nothing to sync.")
+    raise SystemExit(0)
+
+agents_dir = base / "agents"
+if not agents_dir.exists():
+    print(f"Agents directory not found: {agents_dir}")
+    raise SystemExit(1)
+
+updated = []
+unchanged = []
+missing = []
+
+for name, model in models.items():
+    path = agents_dir / f"{name}.md"
+    if not path.exists():
+        missing.append(name)
+        continue
+
+    text = path.read_text(encoding="utf-8")
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        unchanged.append(name)
+        continue
+
+    front = parts[1]
+    m = re.search(r"^model:\s*(.+)$", front, flags=re.MULTILINE)
+    if not m:
+        new_front = front.rstrip() + f"\nmodel: {model}\n"
+    else:
+        old = m.group(1).strip()
+        if old == model:
+            unchanged.append(name)
+            continue
+        new_front = re.sub(r"^model:\s*.+$", f"model: {model}", front, flags=re.MULTILINE)
+    new_text = "---" + new_front + "---" + parts[2]
+    path.write_text(new_text, encoding="utf-8")
+    updated.append(name)
+
+print("Synced models.")
+if updated:
+    print("Updated:", ", ".join(updated))
+if unchanged:
+    print("Unchanged:", ", ".join(unchanged))
+if missing:
+    print("Missing agent files:", ", ".join(missing))
+PY
+}
+
+case "$COMMAND" in
+  setup)
+    echo "IRF setup"
+    if [ -z "$TARGET_BASE" ]; then
+      read -r -p "Install globally? (Y/n) " yn
+      case "$yn" in
+        [Nn]*)
+          read -r -p "Project path (default: current dir): " project_path
+          project_path="${project_path:-$(pwd)}"
+          TARGET_BASE="$project_path/.pi"
+          SCOPE_FLAG="-l"
+          ;;
+        *)
+          TARGET_BASE="$HOME/.pi/agent"
+          SCOPE_FLAG=""
+          ;;
+      esac
+    fi
+
+    read -r -p "Install required Pi extensions (subagents, model-switch)? (Y/n) " yn
+    install_deps=true
+    case "$yn" in [Nn]*) install_deps=false ;; esac
+
+    read -r -p "Install optional Pi extensions (review-loop, mcp-adapter)? (y/N) " yn
+    install_optional=false
+    case "$yn" in [Yy]*) install_optional=true ;; esac
+
+    read -r -p "Configure MCP servers? (y/N) " yn
+    configure_mcp=false
+    case "$yn" in [Yy]*) configure_mcp=true ;; esac
+
+    install_files
+    install_extensions "$install_deps" "$install_optional"
+
+    if [ "$configure_mcp" = true ]; then
+      read -r -p "ZAI API key (required for ZAI servers, blank to skip): " zai_key
+      read -r -p "Context7 API key (optional): " ctx7_key
+      read -r -p "Exa API key (optional): " exa_key
+      zai_key="${zai_key:-${ZAI_API_KEY:-}}"
+      ctx7_key="${ctx7_key:-${CONTEXT7_API_KEY:-}}"
+      exa_key="${exa_key:-${EXA_API_KEY:-}}"
+      configure_mcp "$zai_key" "$ctx7_key" "$exa_key"
+    fi
+    ;;
+  sync)
+    sync_models
+    ;;
+  doctor)
+    doctor
+    ;;
+  track)
+    if [ "${#ARGS[@]}" -eq 0 ]; then
+      track_file ""
+    elif [ "${#ARGS[@]}" -eq 1 ]; then
+      track_file "${ARGS[0]}"
+    else
+      echo "Too many arguments for track" >&2
+      exit 1
+    fi
+    ;;
+  ralph)
+    ralph_cmd "${ARGS[@]}"
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
