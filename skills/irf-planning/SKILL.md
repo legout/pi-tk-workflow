@@ -364,7 +364,8 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
      --description "<description>" \
      --tags irf,backlog \
      --type task \
-     --priority 2
+     --priority 2 \
+     --external-ref "seed-{topic-id}"
    ```
 
    **Baseline:**
@@ -373,7 +374,8 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
      --description "<description>" \
      --tags irf,backlog,baseline \
      --type task \
-     --priority 2
+     --priority 2 \
+     --external-ref "baseline-{topic-id}"
    ```
 
    **Plan:**
@@ -382,7 +384,8 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
      --description "<description>" \
      --tags irf,backlog,plan \
      --type task \
-     --priority 2
+     --priority 2 \
+     --external-ref "plan-{topic-id}"
    ```
 
 8. **Write backlog.md**:
@@ -581,7 +584,17 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
    - OpenSpec Change: {change_id}
    ```
 
-5. **Write backlog.md** in change directory
+5. **Create via `tk`**:
+   ```bash
+   tk create "<title>" \
+     --description "<description>" \
+     --tags irf,openspec \
+     --type task \
+     --priority 2 \
+     --external-ref "openspec-{change_id}"
+   ```
+
+6. **Write backlog.md** in change directory
 
 ---
 
@@ -634,8 +647,8 @@ tk create "<title>" \
 | Plan Revision | `plan.md` | status = revised |
 | Plan Review | `plan.md` | status = approved/blocked |
 | Seed Capture | `topics/{id}/` directory | index.json updated |
-| Backlog | `backlog.md` | Tickets in `tk` |
+| Backlog | `backlog.md` | Tickets in `tk` (with external-ref) |
 | Spike | `topics/{id}/` directory | index.json updated |
 | Baseline | `topics/{id}/` directory | index.json updated |
 | Follow-ups | `followups.md` | Tickets in `tk` |
-| OpenSpec | `backlog.md` | Tickets in `tk` |
+| OpenSpec | `backlog.md` | Tickets in `tk` (with external-ref) |

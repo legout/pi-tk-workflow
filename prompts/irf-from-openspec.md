@@ -60,7 +60,14 @@ Follow the **IRF Planning Skill** "OpenSpec Bridge" procedure:
    ## References
    - OpenSpec Change: {change_id}
    ```
-5. Write `backlog.md` in change directory
+5. Create via `tk`:
+   ```bash
+   tk create "<title>" \
+     --description "<description>" \
+     --tags irf,openspec \
+     --external-ref "openspec-{change_id}"
+   ```
+6. Write `backlog.md` in change directory
 
 ## Ticket Guidelines
 
@@ -71,7 +78,7 @@ Follow the **IRF Planning Skill** "OpenSpec Bridge" procedure:
 
 ## Output
 
-- Tickets created in `tk` (tagged: irf, openspec)
+- Tickets created in `tk` (tagged: irf, openspec, external-ref: openspec-{change_id})
 - `backlog.md` in change directory
 
 ## Next Steps

@@ -37,9 +37,30 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
 3. Read relevant artifacts and plan status (warn if plan not approved)
 4. Create 5-15 small tickets (1-2 hours each, 30 lines max)
 5. Create via `tk create`:
-   - Seed → tags: `irf,backlog`
-   - Baseline → tags: `irf,backlog,baseline`
-   - Plan → tags: `irf,backlog,plan`
+
+   **Seed:**
+   ```bash
+   tk create "<title>" \
+     --description "<description>" \
+     --tags irf,backlog \
+     --external-ref "seed-{topic-id}"
+   ```
+
+   **Baseline:**
+   ```bash
+   tk create "<title>" \
+     --description "<description>" \
+     --tags irf,backlog,baseline \
+     --external-ref "baseline-{topic-id}"
+   ```
+
+   **Plan:**
+   ```bash
+   tk create "<title>" \
+     --description "<description>" \
+     --tags irf,backlog,plan \
+     --external-ref "plan-{topic-id}"
+   ```
 6. Write `backlog.md` with ticket summary
 
 ## Ticket Templates
@@ -107,7 +128,7 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
 
 ## Output
 
-- Tickets created in `tk`
+- Tickets created in `tk` (with external-ref linking to source)
 - `backlog.md` written to topic directory
 
 ## Next Steps
