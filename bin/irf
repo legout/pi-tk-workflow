@@ -23,12 +23,19 @@ Commands:
   backlog-ls  List backlog status and tickets for seed/baseline topics
   track       Append file paths to files_changed.txt (deduped)
   ralph       Ralph loop management (see below)
+  agentsmd    AGENTS.md management (init, validate, fix, status)
 
 Ralph Subcommands:
   ralph init     Create .pi/ralph/ directory structure
   ralph status   Show current loop state and statistics
   ralph reset    Clear progress (optionally keep lessons)
   ralph lessons  Show or prune lessons learned
+
+Agentsmd Subcommands:
+  agentsmd init [path]     Create minimal AGENTS.md (defaults: uv, current dir)
+  agentsmd status [path]   Show AGENTS.md overview and recommendations
+  agentsmd validate [path] Check for bloat, stale paths, contradictions
+  agentsmd fix [path]      Auto-fix common issues (backup created)
 
 Options:
   --global                 Install/sync in ~/.pi/agent (default for setup)
@@ -57,12 +64,14 @@ TARGET_BASE=""
 SCOPE_FLAG=""
 TRACK_FILE=""
 ARGS=()
+IS_GLOBAL=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --global)
       TARGET_BASE="$HOME/.pi/agent"
       SCOPE_FLAG=""
+      IS_GLOBAL=true
       shift
       ;;
     --project)
@@ -72,6 +81,7 @@ while [ "$#" -gt 0 ]; do
       fi
       TARGET_BASE="$2/.pi"
       SCOPE_FLAG="-l"
+      IS_GLOBAL=false
       shift 2
       ;;
     --file)
@@ -119,13 +129,16 @@ while [ "$#" -gt 0 ]; do
 if [ -z "$TARGET_BASE" ] && [ "$COMMAND" != "track" ]; then
   if [ "$COMMAND" = "setup" ]; then
     TARGET_BASE="$HOME/.pi/agent"
+    IS_GLOBAL=true
   else
     # sync/doctor default: prefer project if .pi exists in cwd
     if [ -d ".pi" ]; then
       TARGET_BASE="$(pwd)/.pi"
       SCOPE_FLAG="-l"
+      IS_GLOBAL=false
     else
       TARGET_BASE="$HOME/.pi/agent"
+      IS_GLOBAL=true
     fi
   fi
 fi
@@ -144,6 +157,9 @@ install_files() {
   cp "$ROOT_DIR/agents/reviewer-general.md" "$TARGET_BASE/agents/"
   cp "$ROOT_DIR/agents/reviewer-spec-audit.md" "$TARGET_BASE/agents/"
   cp "$ROOT_DIR/agents/reviewer-second-opinion.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/review-merge.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher.md" "$TARGET_BASE/agents/"
+  cp "$ROOT_DIR/agents/researcher-fetch.md" "$TARGET_BASE/agents/"
   cp "$ROOT_DIR/agents/fixer.md" "$TARGET_BASE/agents/"
   cp "$ROOT_DIR/agents/closer.md" "$TARGET_BASE/agents/"
 
@@ -156,6 +172,10 @@ install_files() {
   # Prompts (command entry points)
   cp "$ROOT_DIR/prompts/irf.md" "$TARGET_BASE/prompts/"
   cp "$ROOT_DIR/prompts/irf-lite.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-plan.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-plan-consult.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-plan-revise.md" "$TARGET_BASE/prompts/"
+  cp "$ROOT_DIR/prompts/irf-plan-review.md" "$TARGET_BASE/prompts/"
   cp "$ROOT_DIR/prompts/irf-seed.md" "$TARGET_BASE/prompts/"
   cp "$ROOT_DIR/prompts/irf-backlog.md" "$TARGET_BASE/prompts/"
   cp "$ROOT_DIR/prompts/irf-backlog-ls.md" "$TARGET_BASE/prompts/"
@@ -192,24 +212,54 @@ install_extensions() {
   fi
 }
 
+is_uv_project() {
+  if [ -f "uv.lock" ]; then
+    return 0
+  fi
+  if [ -f "pyproject.toml" ] && grep -q "^\[tool\.uv\]" pyproject.toml; then
+    return 0
+  fi
+  return 1
+}
+
+resolve_python_cmd() {
+  PYTHON_CMD=()
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD=(python3)
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_CMD=(python)
+    return 0
+  fi
+  if command -v uv >/dev/null 2>&1 && is_uv_project; then
+    PYTHON_CMD=(uv run python)
+    return 0
+  fi
+  return 1
+}
+
 configure_mcp() {
   local mcp_file="$TARGET_BASE/mcp.json"
   local zai_key="$1"
   local ctx7_key="$2"
   local exa_key="$3"
 
-  local python_bin=""
-  if command -v python3 >/dev/null 2>&1; then
-    python_bin="python3"
-  elif command -v python >/dev/null 2>&1; then
-    python_bin="python"
+  local python_cmd=()
+  if resolve_python_cmd; then
+    python_cmd=("${PYTHON_CMD[@]}")
   else
     echo "Python not found; skipping MCP config." >&2
     return 0
   fi
 
-  MCP_FILE="$mcp_file" TARGET_BASE="$TARGET_BASE" ZAI_API_KEY="$zai_key" CONTEXT7_API_KEY="$ctx7_key" EXA_API_KEY="$exa_key" \
-    "$python_bin" - <<'PY'
+  local ignore_project="false"
+  if [ "$IS_GLOBAL" = true ]; then
+    ignore_project="true"
+  fi
+
+  MCP_FILE="$mcp_file" TARGET_BASE="$TARGET_BASE" IGNORE_PROJECT_CONFIG="$ignore_project" ZAI_API_KEY="$zai_key" CONTEXT7_API_KEY="$ctx7_key" EXA_API_KEY="$exa_key" \
+    "${python_cmd[@]}" - <<'PY'
 import json
 import os
 import sys
@@ -248,12 +298,17 @@ def merge(a, b):
     return out
 
 
+ignore_project = os.environ.get("IGNORE_PROJECT_CONFIG", "").lower() == "true"
+
 project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
 if str(base).endswith("/.pi"):
     project_config = base / "workflows/implement-review-fix-close/config.json"
 
 global_config = Path.home() / ".pi/agent/workflows/implement-review-fix-close/config.json"
-workflow_config = merge(load_config(global_config), load_config(project_config))
+if ignore_project:
+    workflow_config = load_config(global_config)
+else:
+    workflow_config = merge(load_config(global_config), load_config(project_config))
 
 mcp_servers = workflow_config.get("workflow", {}).get("mcpServers")
 if mcp_servers is None:
@@ -421,15 +476,23 @@ doctor() {
   check_extension "pi-model-switch"
   check_extension "pi-prompt-template-model"
 
-  if command -v python3 >/dev/null 2>&1; then
+  local python_cmd=()
+  if resolve_python_cmd; then
+    python_cmd=("${PYTHON_CMD[@]}")
+    local ignore_project="false"
+    if [ "$IS_GLOBAL" = true ]; then
+      ignore_project="true"
+    fi
+
     local cmds
-    cmds=$(TARGET_BASE="$TARGET_BASE" python3 - <<'PY'
+    cmds=$(TARGET_BASE="$TARGET_BASE" IGNORE_PROJECT_CONFIG="$ignore_project" "${python_cmd[@]}" - <<'PY'
 import json
 import os
 import shlex
 from pathlib import Path
 
 base = Path(os.environ.get("TARGET_BASE", "")).expanduser()
+ignore_project = os.environ.get("IGNORE_PROJECT_CONFIG", "").lower() == "true"
 
 project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
 if str(base).endswith("/.pi"):
@@ -455,7 +518,11 @@ def merge(a, b):
             out[k] = v
     return out
 
-config = merge(load_config(global_config), load_config(project_config))
+if ignore_project:
+    config = load_config(global_config)
+else:
+    config = merge(load_config(global_config), load_config(project_config))
+
 checkers = config.get("checkers", {}) or {}
 cmds = set()
 
@@ -485,7 +552,7 @@ PY
       echo "[info] No checkers configured"
     fi
   else
-    echo "[missing] python3 (required to read checkers config)"
+    echo "[missing] python (required to read checkers config)"
     failed=1
   fi
 
@@ -606,7 +673,7 @@ PROGRESS_EOF
   "completionCheck": "tk ready | grep -q .",
   "sleepBetweenTickets": 5000,
   "sleepBetweenRetries": 10000,
-  "workflow": "/irf-lite",
+  "workflow": "/irf",
   "workflowFlags": "--auto",
   "includeKnowledgeBase": true,
   "includePlanningDocs": true,
@@ -868,6 +935,561 @@ ralph_cmd() {
   esac
 }
 
+# =============================================================================
+# AGENTS.md Management
+# =============================================================================
+
+agentsmd_usage() {
+  cat <<'EOF'
+AGENTS.md Management
+
+Usage:
+  ./bin/irf agentsmd init [path]          Create minimal AGENTS.md
+  ./bin/irf agentsmd status [path]        Show AGENTS.md overview
+  ./bin/irf agentsmd validate [path]      Check for bloat, stale paths
+  ./bin/irf agentsmd fix [path]           Auto-fix common issues
+
+Options:
+  [path]      Target directory (default: current directory)
+              Creates AGENTS.md at [path]/AGENTS.md
+
+Examples:
+  ./bin/irf agentsmd init                 # Create AGENTS.md in current dir
+  ./bin/irf agentsmd init ~/my-project    # Create in specific directory
+  ./bin/irf agentsmd status               # Check current AGENTS.md
+  ./bin/irf agentsmd validate             # Validate for issues
+  ./bin/irf agentsmd fix                  # Auto-fix with backup
+EOF
+}
+
+agentsmd_detect_package_manager() {
+  local target_dir="$1"
+  
+  # Check for uv (preferred)
+  if [ -f "$target_dir/uv.lock" ] || [ -f "$target_dir/pyproject.toml" ] && grep -q "\[tool.uv\]" "$target_dir/pyproject.toml" 2>/dev/null; then
+    echo "uv"
+    return 0
+  fi
+  
+  # Check for other Python package managers
+  if [ -f "$target_dir/poetry.lock" ]; then
+    echo "poetry"
+    return 0
+  fi
+  if [ -f "$target_dir/Pipfile" ]; then
+    echo "pipenv"
+    return 0
+  fi
+  if [ -f "$target_dir/requirements.txt" ]; then
+    echo "pip"
+    return 0
+  fi
+  if [ -f "$target_dir/setup.py" ] || [ -f "$target_dir/setup.cfg" ]; then
+    echo "pip"
+    return 0
+  fi
+  
+  # Check for Node package managers
+  if [ -f "$target_dir/pnpm-lock.yaml" ]; then
+    echo "pnpm"
+    return 0
+  fi
+  if [ -f "$target_dir/yarn.lock" ]; then
+    echo "yarn"
+    return 0
+  fi
+  if [ -f "$target_dir/package-lock.json" ]; then
+    echo "npm"
+    return 0
+  fi
+  if [ -f "$target_dir/bun.lockb" ]; then
+    echo "bun"
+    return 0
+  fi
+  
+  # Check for other languages
+  if [ -f "$target_dir/Cargo.toml" ]; then
+    echo "cargo"
+    return 0
+  fi
+  if [ -f "$target_dir/go.mod" ]; then
+    echo "go"
+    return 0
+  fi
+  if [ -f "$target_dir/Gemfile" ]; then
+    echo "bundle"
+    return 0
+  fi
+  
+  # Default to uv for Python projects (check pyproject.toml without uv marker)
+  if [ -f "$target_dir/pyproject.toml" ]; then
+    echo "uv"
+    return 0
+  fi
+  
+  echo "unknown"
+}
+
+agentsmd_get_default_commands() {
+  local pm="$1"
+  case "$pm" in
+    uv)
+      echo "run: uv run python"
+      echo "test: uv run pytest"
+      echo "lint: uv run ruff check ."
+      echo "format: uv run ruff format ."
+      echo "typecheck: uv run mypy ."
+      ;;
+    poetry)
+      echo "run: poetry run python"
+      echo "test: poetry run pytest"
+      echo "lint: poetry run ruff check ."
+      ;;
+    pipenv)
+      echo "run: pipenv run python"
+      echo "test: pipenv run pytest"
+      ;;
+    pip)
+      echo "run: python"
+      echo "test: pytest"
+      ;;
+    pnpm)
+      echo "run: pnpm dev"
+      echo "build: pnpm build"
+      echo "test: pnpm test"
+      echo "lint: pnpm lint"
+      ;;
+    npm)
+      echo "run: npm run dev"
+      echo "build: npm run build"
+      echo "test: npm test"
+      echo "lint: npm run lint"
+      ;;
+    yarn)
+      echo "run: yarn dev"
+      echo "build: yarn build"
+      echo "test: yarn test"
+      ;;
+    bun)
+      echo "run: bun run dev"
+      echo "build: bun run build"
+      echo "test: bun test"
+      ;;
+    cargo)
+      echo "build: cargo build"
+      echo "test: cargo test"
+      echo "run: cargo run"
+      ;;
+    go)
+      echo "build: go build"
+      echo "test: go test"
+      echo "run: go run ."
+      ;;
+    bundle)
+      echo "run: bundle exec ruby"
+      echo "test: bundle exec rspec"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+agentsmd_init() {
+  local target_dir="${1:-$(pwd)}"
+  target_dir="$(cd "$target_dir" && pwd)"
+  local agents_file="$target_dir/AGENTS.md"
+  
+  echo "Initializing AGENTS.md..."
+  echo "Target directory: $target_dir"
+  
+  # Check if file already exists
+  if [ -f "$agents_file" ]; then
+    echo ""
+    echo "⚠️  AGENTS.md already exists at:"
+    echo "   $agents_file"
+    echo ""
+    read -r -p "Overwrite? (y/N) " yn
+    case "$yn" in
+      [Yy]*)
+        mv "$agents_file" "$agents_file.backup.$(date +%Y%m%d%H%M%S)"
+        echo "Backed up existing file."
+        ;;
+      *)
+        echo "Cancelled."
+        exit 0
+        ;;
+    esac
+  fi
+  
+  # Detect package manager
+  local pm
+  pm=$(agentsmd_detect_package_manager "$target_dir")
+  echo "Detected package manager: $pm"
+  
+  # Get project name from directory
+  local project_name
+  project_name=$(basename "$target_dir")
+  
+  # Interactive prompts
+  echo ""
+  read -r -p "Project name [$project_name]: " input_name
+  project_name="${input_name:-$project_name}"
+  
+  echo ""
+  read -r -p "One-sentence description: " description
+  
+  if [ -z "$description" ]; then
+    description="A $project_name project."
+  fi
+  
+  # Generate AGENTS.md content
+  cat > "$agents_file" <<EOF
+# $project_name
+
+$description
+
+## Quick Commands
+EOF
+
+  # Add commands based on package manager
+  local cmds
+  cmds=$(agentsmd_get_default_commands "$pm")
+  if [ -n "$cmds" ]; then
+    while IFS= read -r line; do
+      if [ -n "$line" ]; then
+        echo "- $line" >> "$agents_file"
+      fi
+    done <<< "$cmds"
+  fi
+  
+  # Add package manager note
+  case "$pm" in
+    uv)
+      echo "" >> "$agents_file"
+      echo "This project uses \`uv\` for Python package management." >> "$agents_file"
+      echo "See: https://docs.astral.sh/uv/" >> "$agents_file"
+      ;;
+    poetry)
+      echo "" >> "$agents_file"
+      echo "This project uses \`poetry\` for Python package management." >> "$agents_file"
+      ;;
+    pnpm)
+      echo "" >> "$agents_file"
+      echo "This project uses \`pnpm\` for Node.js package management." >> "$agents_file"
+      ;;
+  esac
+  
+  # Add conventions section
+  cat >> "$agents_file" <<'EOF'
+
+## Conventions
+
+<!-- Add links to convention docs as needed: -->
+<!-- - TypeScript: See [docs/TYPESCRIPT.md](./docs/TYPESCRIPT.md) -->
+<!-- - Testing: See [docs/TESTING.md](./docs/TESTING.md) -->
+
+## Notes
+
+<!-- Project-specific notes for AI agents -->
+EOF
+
+  echo ""
+  echo "✓ Created AGENTS.md at:"
+  echo "  $agents_file"
+  echo ""
+  echo "File size: $(wc -c < "$agents_file") bytes"
+  echo ""
+  echo "Next steps:"
+  echo "  1. Review and customize the description"
+  echo "  2. Add convention docs to docs/ folder if needed"
+  echo "  3. Run './bin/irf agentsmd validate' to check"
+  
+  # Offer to symlink CLAUDE.md for Claude Code users
+  if [ ! -f "$target_dir/CLAUDE.md" ]; then
+    echo ""
+    read -r -p "Create CLAUDE.md symlink for Claude Code? (y/N) " yn
+    case "$yn" in
+      [Yy]*)
+        ln -s AGENTS.md "$target_dir/CLAUDE.md"
+        echo "Created CLAUDE.md → AGENTS.md symlink"
+        ;;
+    esac
+  fi
+}
+
+agentsmd_status() {
+  local target_dir="${1:-$(pwd)}"
+  local agents_file="$target_dir/AGENTS.md"
+  
+  echo "=== AGENTS.md Status ==="
+  echo ""
+  
+  if [ ! -f "$agents_file" ]; then
+    echo "❌ No AGENTS.md found at: $agents_file"
+    echo ""
+    echo "Create one with:"
+    echo "  ./bin/irf agentsmd init"
+    exit 1
+  fi
+  
+  local size
+  size=$(wc -c < "$agents_file")
+  local lines
+  lines=$(wc -l < "$agents_file")
+  
+  echo "File: $agents_file"
+  echo "Size: $size bytes"
+  echo "Lines: $lines"
+  echo ""
+  
+  # Size assessment
+  if [ "$size" -lt 2048 ]; then
+    echo "✓ Size: Good (under 2KB)"
+  elif [ "$size" -lt 5120 ]; then
+    echo "⚠️  Size: Moderate ($size bytes) - consider using progressive disclosure"
+  else
+    echo "❌ Size: Large ($size bytes) - recommend refactoring"
+  fi
+  
+  # Check for CLAUDE.md symlink
+  echo ""
+  if [ -L "$target_dir/CLAUDE.md" ]; then
+    echo "✓ CLAUDE.md symlink exists"
+  elif [ -f "$target_dir/CLAUDE.md" ]; then
+    echo "⚠️  CLAUDE.md exists (separate file, not symlinked)"
+  else
+    echo "○ CLAUDE.md not found (optional, for Claude Code users)"
+  fi
+  
+  # Check for nested AGENTS.md files
+  echo ""
+  echo "Nested AGENTS.md files:"
+  local found_nested=false
+  while IFS= read -r -d '' file; do
+    if [ "$file" != "$agents_file" ]; then
+      echo "  - ${file#$target_dir/} ($(wc -c < "$file") bytes)"
+      found_nested=true
+    fi
+  done < <(find "$target_dir" -name "AGENTS.md" -type f -print0 2>/dev/null)
+  
+  if [ "$found_nested" = false ]; then
+    echo "  (none found)"
+  fi
+  
+  # Quick content preview
+  echo ""
+  echo "=== Content Preview ==="
+  head -20 "$agents_file"
+  if [ "$lines" -gt 20 ]; then
+    echo "... ($((lines - 20)) more lines)"
+  fi
+}
+
+agentsmd_validate() {
+  local target_dir="${1:-$(pwd)}"
+  local agents_file="$target_dir/AGENTS.md"
+  
+  echo "=== AGENTS.md Validation ==="
+  echo ""
+  
+  if [ ! -f "$agents_file" ]; then
+    echo "❌ AGENTS.md not found at: $agents_file"
+    exit 1
+  fi
+  
+  local issues=0
+  local warnings=0
+  
+  # Check file size
+  local size
+  size=$(wc -c < "$agents_file")
+  echo "File size: $size bytes"
+  
+  if [ "$size" -gt 5120 ]; then
+    echo "❌ File is large ($size bytes > 5KB). Consider progressive disclosure."
+    ((issues++))
+  elif [ "$size" -gt 2048 ]; then
+    echo "⚠️  File is moderate size ($size bytes). Monitor for growth."
+    ((warnings++))
+  else
+    echo "✓ File size is good"
+  fi
+  
+  # Extract and check file paths (skip comments)
+  echo ""
+  echo "Checking referenced paths..."
+  local paths
+  paths=$(grep -v '^\s*<' "$agents_file" 2>/dev/null | grep -oE '\b(src|lib|docs|test|tests|app|bin|scripts)/[a-zA-Z0-9_./-]+\.[a-z]+' 2>/dev/null || true)
+  
+  local stale_paths=()
+  if [ -n "$paths" ]; then
+    while IFS= read -r path; do
+      if [ ! -e "$target_dir/$path" ] && [ ! -e "$path" ]; then
+        stale_paths+=("$path")
+      fi
+    done <<< "$paths"
+  fi
+  
+  if [ ${#stale_paths[@]} -gt 0 ]; then
+    echo "⚠️  Potentially stale paths found:"
+    for path in "${stale_paths[@]}"; do
+      echo "   - $path (not found)"
+    done
+    ((warnings++))
+  else
+    echo "✓ No obviously stale paths detected"
+  fi
+  
+  # Check for common anti-patterns
+  echo ""
+  echo "Checking for anti-patterns..."
+  
+  # Check for vague platitudes
+  local platitudes=("write clean code" "follow best practices" "keep it simple" "don't repeat yourself" "write good code")
+  local found_platitudes=()
+  for phrase in "${platitudes[@]}"; do
+    if grep -qi "$phrase" "$agents_file" 2>/dev/null; then
+      found_platitudes+=("$phrase")
+    fi
+  done
+  
+  if [ ${#found_platitudes[@]} -gt 0 ]; then
+    echo "⚠️  Vague platitudes found (not actionable):"
+    for phrase in "${found_platitudes[@]}"; do
+      echo "   - \"$phrase\""
+    done
+    ((warnings++))
+  else
+    echo "✓ No vague platitudes found"
+  fi
+  
+  # Check for "always" / "never" (potential contradictions)
+  local absolutes
+  absolutes=$(grep -iE "^\s*[-*]?\s*(always|never)\s+" "$agents_file" 2>/dev/null | head -5 || true)
+  if [ -n "$absolutes" ]; then
+    echo "⚠️  Absolute statements found (may cause contradictions):"
+    echo "$absolutes" | head -3 | sed 's/^/   /'
+    if [ "$(echo "$absolutes" | wc -l)" -gt 3 ]; then
+      echo "   ... ($(echo "$absolutes" | wc -l) more)"
+    fi
+    ((warnings++))
+  fi
+  
+  # Check for file structure documentation
+  if grep -qiE "(directory structure|folder structure|file structure|project structure)" "$agents_file" 2>/dev/null; then
+    echo "⚠️  File structure documentation found - this goes stale quickly"
+    ((warnings++))
+  fi
+  
+  # Summary
+  echo ""
+  echo "=== Summary ==="
+  if [ $issues -eq 0 ] && [ $warnings -eq 0 ]; then
+    echo "✓ All checks passed!"
+  else
+    echo "Issues: $issues, Warnings: $warnings"
+    if [ $issues -gt 0 ]; then
+      echo "Run './bin/irf agentsmd fix' to attempt auto-fixes"
+    fi
+  fi
+}
+
+agentsmd_fix() {
+  local target_dir="${1:-$(pwd)}"
+  local agents_file="$target_dir/AGENTS.md"
+  
+  echo "=== AGENTS.md Auto-Fix ==="
+  echo ""
+  
+  if [ ! -f "$agents_file" ]; then
+    echo "❌ AGENTS.md not found at: $agents_file"
+    exit 1
+  fi
+  
+  # Create backup
+  local backup="$agents_file.backup.$(date +%Y%m%d%H%M%S)"
+  cp "$agents_file" "$backup"
+  echo "✓ Backup created: $backup"
+  echo ""
+  
+  local fixes=0
+  
+  # Fix 1: Add package manager if missing
+  if ! grep -qiE "(package manager|uv|poetry|pip|npm|pnpm|yarn)" "$agents_file"; then
+    local pm
+    pm=$(agentsmd_detect_package_manager "$target_dir")
+    if [ "$pm" != "unknown" ]; then
+      echo "Adding package manager ($pm)..."
+      # Insert after the first heading
+      sed -i.bak "1,/^# /{ /^# /a\\
+\\
+## Package Manager\\
+\\
+This project uses \`$pm\`.\\
+
+}" "$agents_file" 2>/dev/null || true
+      rm -f "$agents_file.bak"
+      ((fixes++))
+    fi
+  fi
+  
+  # Fix 2: Remove trailing whitespace
+  if sed -i.bak 's/[[:space:]]*$//' "$agents_file" 2>/dev/null; then
+    if ! diff -q "$agents_file" "$agents_file.bak" >/dev/null 2>&1; then
+      echo "✓ Removed trailing whitespace"
+      ((fixes++))
+    fi
+    rm -f "$agents_file.bak"
+  fi
+  
+  # Fix 3: Ensure single newline at end of file
+  if [ -s "$agents_file" ]; then
+    if [ "$(tail -c 1 "$agents_file" | wc -l)" -eq 0 ]; then
+      echo "" >> "$agents_file"
+      echo "✓ Added trailing newline"
+      ((fixes++))
+    fi
+  fi
+  
+  echo ""
+  if [ $fixes -eq 0 ]; then
+    echo "No auto-fixes applied."
+  else
+    echo "Applied $fixes fix(es)."
+  fi
+  echo ""
+  echo "Review changes with: git diff $agents_file"
+}
+
+agentsmd_cmd() {
+  local subcmd="${1:-}"
+  shift || true
+  
+  case "$subcmd" in
+    init)
+      agentsmd_init "$@"
+      ;;
+    status)
+      agentsmd_status "$@"
+      ;;
+    validate)
+      agentsmd_validate "$@"
+      ;;
+    fix)
+      agentsmd_fix "$@"
+      ;;
+    ""|help|--help|-h)
+      agentsmd_usage
+      ;;
+    *)
+      echo "Unknown agentsmd subcommand: $subcmd" >&2
+      agentsmd_usage
+      exit 1
+      ;;
+  esac
+}
+
 backlog_ls() {
   local topic="${1:-}"
   local python_bin=""
@@ -1043,24 +1665,28 @@ PY
 }
 
 sync_models() {
-  local python_bin=""
-  if command -v python3 >/dev/null 2>&1; then
-    python_bin="python3"
-  elif command -v python >/dev/null 2>&1; then
-    python_bin="python"
+  local python_cmd=()
+  if resolve_python_cmd; then
+    python_cmd=("${PYTHON_CMD[@]}")
   else
     echo "Python not found; cannot sync models." >&2
     exit 1
   fi
 
-  TARGET_BASE="$TARGET_BASE" \
-    "$python_bin" - <<'PY'
+  local ignore_project="false"
+  if [ "$IS_GLOBAL" = true ]; then
+    ignore_project="true"
+  fi
+
+  TARGET_BASE="$TARGET_BASE" IGNORE_PROJECT_CONFIG="$ignore_project" \
+    "${python_cmd[@]}" - <<'PY'
 import json
 import os
 import re
 from pathlib import Path
 
 base = Path(os.environ["TARGET_BASE"]).expanduser()
+ignore_project = os.environ.get("IGNORE_PROJECT_CONFIG", "").lower() == "true"
 
 project_config = Path(".pi/workflows/implement-review-fix-close/config.json")
 if str(base).endswith("/.pi"):
@@ -1087,7 +1713,11 @@ def merge(a, b):
             out[k] = v
     return out
 
-config = merge(load_config(global_config), load_config(project_config))
+if ignore_project:
+    config = load_config(global_config)
+else:
+    config = merge(load_config(global_config), load_config(project_config))
+
 models = config.get("models", {})
 if not models:
     print("No models found in config; nothing to sync.")
@@ -1149,10 +1779,12 @@ case "$COMMAND" in
           project_path="${project_path:-$(pwd)}"
           TARGET_BASE="$project_path/.pi"
           SCOPE_FLAG="-l"
+          IS_GLOBAL=false
           ;;
         *)
           TARGET_BASE="$HOME/.pi/agent"
           SCOPE_FLAG=""
+          IS_GLOBAL=true
           ;;
       esac
     fi
@@ -1207,6 +1839,9 @@ case "$COMMAND" in
     ;;
   ralph)
     ralph_cmd "${ARGS[@]}"
+    ;;
+  agentsmd)
+    agentsmd_cmd "${ARGS[@]}"
     ;;
   *)
     usage
