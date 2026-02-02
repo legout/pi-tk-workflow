@@ -4,9 +4,24 @@ Step-by-step guides for common development scenarios.
 
 ---
 
-## Greenfield Development
+## Choosing Between Seed and Plan
 
-Starting a new project or feature from scratch.
+| | Seed (`/irf-seed`) | Plan (`/irf-plan`) |
+|---|---|---|
+| **Purpose** | Explore and capture ideas | Specify implementation details |
+| **When to use** | New ideas, fuzzy requirements | Complex features, need rigor |
+| **Process** | One-shot capture | Multi-phase (consult → revise → review) |
+| **Artifacts** | `seed.md`, `mvp-scope.md`, `constraints.md` | `plan.md` with requirements, work plan |
+| **Approval** | None | Formal review (PASS/FAIL) |
+| **Speed** | Fast | Slower but thorough |
+
+**Can I use both?** Yes! For complex new features, use seed first to explore, then plan to specify rigorously. See [Seed + Plan Combo](#seed--plan-combo) below.
+
+---
+
+## Greenfield Development (Seed Only)
+
+Starting a new project or feature from scratch when you want to move fast.
 
 ### 1. Capture Your Idea
 
@@ -63,6 +78,90 @@ Processes remaining tickets automatically.
 
 ---
 
+## Seed + Plan Combo
+
+For complex new features where you want to explore first, then specify rigorously.
+
+**When to use:**
+- Major new features with lots of unknowns
+- Architectural changes that need both exploration AND rigor
+- When stakeholders need approval gates but you need to explore first
+
+**The flow:**
+
+```
+/irf-seed "Big idea" → /irf-plan "Refined from seed" → review → /irf-backlog → /irf
+   explore              specify rigorously              tickets        implement
+```
+
+### Step 1: Explore with Seed
+
+```
+/irf-seed "Build a distributed task queue system"
+```
+
+This captures:
+- **Vision** - What problem we're solving
+- **Core concept** - High-level approach
+- **MVP scope** - What's in/out for first version
+- **Constraints** - Performance, scalability, tech limits
+- **Assumptions** - What we're assuming about users/tech
+
+**Review the artifacts:**
+```bash
+cat .pi/knowledge/topics/seed-distributed-task-queue/seed.md
+cat .pi/knowledge/topics/seed-distributed-task-queue/mvp-scope.md
+cat .pi/knowledge/topics/seed-distributed-task-queue/constraints.md
+```
+
+### Step 2: Specify with Plan
+
+Now create a rigorous plan using the seed content as input:
+
+```
+/irf-plan "Distributed task queue: implement core message broker with Redis streams, 
+           supporting at-least-once delivery, 10K msgs/sec throughput, 
+           based on seed-distributed-task-queue"
+```
+
+The plan will include:
+- **Requirements** - Specific, testable requirements
+- **Work plan** - Phased implementation with sequencing
+- **Acceptance criteria** - How we know it's done
+- **Risks** - What could go wrong
+
+### Step 3: Iterate the Plan (Optional)
+
+For complex features, run the plan through review:
+
+```
+/irf-plan-consult plan-distributed-task-queue   # Detect gaps
+/irf-plan-revise plan-distributed-task-queue    # Apply feedback
+/irf-plan-review plan-distributed-task-queue    # Get approval
+```
+
+### Step 4: Create Tickets and Implement
+
+```
+/irf-backlog plan-distributed-task-queue
+/irf TICKET-123
+```
+
+### Why Combine Them?
+
+| Phase | Seed Provides | Plan Provides |
+|-------|---------------|---------------|
+| **Explore** | Vision, scope, constraints | — |
+| **Specify** | Context for decisions | Detailed requirements, work plan |
+| **Review** | — | Formal approval gate |
+| **Implement** | Background context | Specific acceptance criteria |
+
+**Seed alone** = Fast but might miss edge cases  
+**Plan alone** = Rigid, might over-specify  
+**Seed + Plan** = Exploratory then rigorous
+
+---
+
 ## Brownfield Development
 
 Working with an existing codebase.
@@ -109,9 +208,20 @@ Each ticket includes baseline context so you understand the existing code.
 
 ---
 
-## Structured Planning
+## Structured Planning (Plan Only)
 
-For complex features requiring careful design.
+For complex features requiring careful design. Use this when you already understand the problem well and want to go straight to rigorous specification.
+
+**When to use plan directly (without seed first):**
+- You have clear requirements already
+- Refactoring existing features
+- Adding capabilities to established systems
+- Team already aligned on approach
+
+**When to use seed + plan combo instead:**
+- New territory, lots of unknowns
+- Need to explore options before specifying
+- Stakeholders need to see vision before details
 
 ### 1. Create Initial Plan
 

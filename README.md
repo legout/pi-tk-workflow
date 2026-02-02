@@ -119,7 +119,7 @@ Processes tickets in a loop until backlog is empty.
 
 Choose the workflow that matches your situation:
 
-### 🌱 Greenfield Development
+### 🌱 Greenfield Development (Seed → Backlog)
 **When to use:** Starting a new project or feature from scratch
 
 ```
@@ -130,10 +130,62 @@ Choose the workflow that matches your situation:
                                                           └──────────┘
 ```
 
+**Best for:** Exploring new ideas, prototyping, when requirements are fuzzy
+
 1. Capture your idea with `/irf-seed`
 2. Generate tickets with `/irf-backlog`
 3. Implement with `/irf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
+
+---
+
+### 📋 Structured Planning (Plan → Consult → Revise → Review → Backlog)
+**When to use:** Complex features requiring careful design, multiple stakeholders, or high-risk changes
+
+```
+┌────────────┐   ┌──────────────┐   ┌─────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────┐
+│ /irf-plan  │ → │/irf-plan-    │ → │/irf-plan-   │ → │/irf-plan-   │ → │ /irf-backlog │ → │  /irf    │
+│  "Feature" │   │   consult    │   │   revise    │   │   review    │   │    plan-*    │   │ <ticket> │
+└────────────┘   └──────────────┘   └─────────────┘   └─────────────┘   └──────────────┘   └──────────┘
+      ↓                                                                                           ↓
+   draft                                                                                      approved
+```
+
+**Best for:** Production features, architecture changes, when you need rigor
+
+1. Create plan with `/irf-plan`
+2. Detect gaps with `/irf-plan-consult`
+3. Apply feedback with `/irf-plan-revise`
+4. Validate with `/irf-plan-review` (must be approved)
+5. Create tickets with `/irf-backlog`
+6. Implement with `/irf <ticket>`
+
+---
+
+### 🌱📋 Seed + Plan Combo (Exploration → Specification)
+**When to use:** Complex new features where you want to explore first, then specify rigorously
+
+```
+┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
+│  /irf-seed  │ →  │  /irf-plan  │ →  │   /irf-plan- │ →  │  /irf-backlog│ →  │   /irf   │
+│  "Big idea" │    │ "Refined    │    │   review     │    │   plan-*     │    │ <ticket> │
+│             │    │  from seed" │    │              │    │              │    │          │
+└─────────────┘    └─────────────┘    └──────────────┘    └─────────────┘    └──────────┘
+   explore            specify              validate            tickets         implement
+```
+
+**Best for:** Major features, architectural changes, when you need both exploration AND rigor
+
+1. **Explore** with `/irf-seed` - capture the vision, constraints, MVP scope
+2. **Read** the seed artifacts (especially `seed.md`, `mvp-scope.md`, `constraints.md`)
+3. **Specify** with `/irf-plan` - use the seed content as input for a rigorous plan
+4. **Iterate** the plan through consult/revise/review if needed
+5. Create tickets and implement
+
+**Why combine them?**
+- Seed captures the "why" and "what" (vision, scope, constraints)
+- Plan captures the "how" (detailed work plan, acceptance criteria)
+- Seed is quick and exploratory; Plan is rigorous and approval-gated
 
 ---
 
@@ -148,31 +200,12 @@ Choose the workflow that matches your situation:
                                                            └──────────┘
 ```
 
+**Best for:** Refactoring, adding features to existing code, modernizing
+
 1. Capture current state with `/irf-baseline` (analyzes risks, tests, dependencies)
 2. Create improvement tickets with `/irf-backlog`
 3. Implement with `/irf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
-
----
-
-### 📋 Structured Planning
-**When to use:** Complex features requiring careful design, multiple stakeholders, or high-risk changes
-
-```
-┌────────────┐   ┌──────────────┐   ┌─────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────┐
-│ /irf-plan  │ → │/irf-plan-    │ → │/irf-plan-   │ → │/irf-plan-   │ → │ /irf-backlog │ → │  /irf    │
-│  "Feature" │   │   consult    │   │   revise    │   │   review    │   │    plan-*    │   │ <ticket> │
-└────────────┘   └──────────────┘   └─────────────┘   └─────────────┘   └──────────────┘   └──────────┘
-      ↓                                                                                           ↓
-   draft                                                                                      approved
-```
-
-1. Create plan with `/irf-plan`
-2. Detect gaps with `/irf-plan-consult`
-3. Apply feedback with `/irf-plan-revise`
-4. Validate with `/irf-plan-review` (must be approved)
-5. Create tickets with `/irf-backlog`
-6. Implement with `/irf <ticket>`
 
 ---
 
@@ -240,9 +273,10 @@ Suggestions)
 
 | Workflow | Use When | Key Commands |
 |----------|----------|--------------|
-| **Greenfield** | New projects/features | `/irf-seed` → `/irf-backlog` |
+| **Greenfield** | New projects/features (exploratory) | `/irf-seed` → `/irf-backlog` |
+| **Seed + Plan** | Complex new features (explore → specify) | `/irf-seed` → `/irf-plan` → review → `/irf-backlog` |
+| **Structured Planning** | Complex features, high-risk (rigorous) | `/irf-plan` → consult → revise → review |
 | **Brownfield** | Existing code, refactoring | `/irf-baseline` → `/irf-backlog` |
-| **Structured Planning** | Complex features, high-risk | `/irf-plan` → consult → revise → review |
 | **Research First** | Unknown tech, architectural decisions | `/irf-spike` → `/irf-seed` |
 | **OpenSpec** | External specifications | `/irf-from-openspec` |
 | **Review-Driven** | Technical debt from reviews | `/irf-followups` |
