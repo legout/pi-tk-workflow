@@ -1,6 +1,7 @@
 ---
 description: Deprecated alias for /irf [irf-workflow +Kimi-K2.5]
-model: chutes/moonshotai/Kimi-K2.5-TEE:high
+model: chutes/moonshotai/Kimi-K2.5-TEE
+thinking: high
 skill: irf-workflow
 ---
 

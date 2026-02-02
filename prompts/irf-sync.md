@@ -1,6 +1,7 @@
 ---
 description: Sync IRF configuration [irf-config +GLM-4.7]
-model: zai/glm-4.7:medium
+model: zai/glm-4.7
+thinking: medium
 skill: irf-config
 ---
 

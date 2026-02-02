@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -167,6 +168,157 @@ def configure_mcp(config: dict, mcp_file: Path, zai_key: str, ctx7_key: str, exa
     print(f"Configured MCP servers in {mcp_file}")
 
 
+def resolve_meta_model(config: dict, name: str) -> dict:
+    """Resolve a meta-model reference to actual model + thinking."""
+    meta_models = config.get("metaModels", {})
+    
+    # If name is already a meta-model key, resolve it
+    if name in meta_models:
+        return meta_models[name]
+    
+    # Check if it's an agent reference
+    agents = config.get("agents", {})
+    if name in agents:
+        meta_key = agents[name]
+        return meta_models.get(meta_key, {"model": name, "thinking": "medium"})
+    
+    # Check if it's a prompt reference
+    prompts = config.get("prompts", {})
+    if name in prompts:
+        meta_key = prompts[name]
+        return meta_models.get(meta_key, {"model": name, "thinking": "medium"})
+    
+    # Fallback: treat as direct model reference
+    return {"model": name, "thinking": "medium"}
+
+
+def update_agent_frontmatter(agent_path: Path, config: dict, agent_name: str) -> bool:
+    """Update agent file with resolved meta-model."""
+    content = agent_path.read_text(encoding="utf-8")
+    
+    # Resolve the meta-model for this agent
+    resolved = resolve_meta_model(config, agent_name)
+    model = resolved.get("model", "openai-codex/gpt-5.1-codex-mini")
+    thinking = resolved.get("thinking", "medium")
+    
+    # Pattern to match frontmatter
+    frontmatter_pattern = r'^(---\s*\n)(.*?)(\n---\s*\n)'
+    
+    def replace_frontmatter(match):
+        prefix = match.group(1)
+        frontmatter = match.group(2)
+        suffix = match.group(3)
+        
+        # Update or add model
+        if re.search(r'^model:\s*', frontmatter, re.MULTILINE):
+            frontmatter = re.sub(
+                r'^model:\s*.*$', 
+                f'model: {model}', 
+                frontmatter, 
+                flags=re.MULTILINE
+            )
+        else:
+            frontmatter += f'\nmodel: {model}'
+        
+        # Update or add thinking
+        if re.search(r'^thinking:\s*', frontmatter, re.MULTILINE):
+            frontmatter = re.sub(
+                r'^thinking:\s*.*$', 
+                f'thinking: {thinking}', 
+                frontmatter, 
+                flags=re.MULTILINE
+            )
+        else:
+            frontmatter += f'\nthinking: {thinking}'
+        
+        return prefix + frontmatter + suffix
+    
+    new_content = re.sub(frontmatter_pattern, replace_frontmatter, content, flags=re.DOTALL)
+    
+    if new_content != content:
+        agent_path.write_text(new_content, encoding="utf-8")
+        return True
+    return False
+
+
+def update_prompt_frontmatter(prompt_path: Path, config: dict, prompt_name: str) -> bool:
+    """Update prompt file with resolved meta-model."""
+    content = prompt_path.read_text(encoding="utf-8")
+    
+    # Resolve the meta-model for this prompt
+    resolved = resolve_meta_model(config, prompt_name)
+    model = resolved.get("model", "openai-codex/gpt-5.1-codex-mini")
+    thinking = resolved.get("thinking", "medium")
+    
+    # Pattern to match frontmatter
+    frontmatter_pattern = r'^(---\s*\n)(.*?)(\n---\s*\n)'
+    
+    def replace_frontmatter(match):
+        prefix = match.group(1)
+        frontmatter = match.group(2)
+        suffix = match.group(3)
+        
+        # Update or add model
+        if re.search(r'^model:\s*', frontmatter, re.MULTILINE):
+            frontmatter = re.sub(
+                r'^model:\s*.*$', 
+                f'model: {model}', 
+                frontmatter, 
+                flags=re.MULTILINE
+            )
+        else:
+            frontmatter += f'\nmodel: {model}'
+        
+        # Update or add thinking
+        if re.search(r'^thinking:\s*', frontmatter, re.MULTILINE):
+            frontmatter = re.sub(
+                r'^thinking:\s*.*$', 
+                f'thinking: {thinking}', 
+                frontmatter, 
+                flags=re.MULTILINE
+            )
+        else:
+            frontmatter += f'\nthinking: {thinking}'
+        
+        return prefix + frontmatter + suffix
+    
+    new_content = re.sub(frontmatter_pattern, replace_frontmatter, content, flags=re.DOTALL)
+    
+    if new_content != content:
+        prompt_path.write_text(new_content, encoding="utf-8")
+        return True
+    return False
+
+
+def sync_models(config: dict, base: Path) -> dict:
+    """Sync models from config to all agents and prompts."""
+    results = {"agents": [], "prompts": [], "errors": []}
+    
+    # Sync agents
+    agents_dir = base / "agents"
+    if agents_dir.exists():
+        for agent_file in agents_dir.glob("*.md"):
+            agent_name = agent_file.stem
+            try:
+                if update_agent_frontmatter(agent_file, config, agent_name):
+                    results["agents"].append(agent_name)
+            except Exception as e:
+                results["errors"].append(f"agents/{agent_file.name}: {e}")
+    
+    # Sync prompts
+    prompts_dir = base / "prompts"
+    if prompts_dir.exists():
+        for prompt_file in prompts_dir.glob("*.md"):
+            prompt_name = prompt_file.stem
+            try:
+                if update_prompt_frontmatter(prompt_file, config, prompt_name):
+                    results["prompts"].append(prompt_name)
+            except Exception as e:
+                results["errors"].append(f"prompts/{prompt_file.name}: {e}")
+    
+    return results
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="IRF config helper")
     parser.add_argument("--base", default=os.environ.get("TARGET_BASE", ""))
@@ -182,6 +334,7 @@ def parse_args():
     subparsers.add_parser("checker-tools")
     subparsers.add_parser("knowledge-dir")
     subparsers.add_parser("mcp-servers")
+    subparsers.add_parser("sync-models", help="Sync meta-models to agents and prompts")
 
     mcp_parser = subparsers.add_parser("configure-mcp")
     mcp_parser.add_argument("--mcp-file", required=True)
@@ -209,6 +362,17 @@ def main():
         return
     if args.command == "mcp-servers":
         print("\n".join(get_mcp_servers(config)))
+        return
+    if args.command == "sync-models":
+        results = sync_models(config, base)
+        if results["agents"]:
+            print(f"Updated agents: {', '.join(results['agents'])}")
+        if results["prompts"]:
+            print(f"Updated prompts: {', '.join(results['prompts'])}")
+        if results["errors"]:
+            print("Errors:", file=sys.stderr)
+            for err in results["errors"]:
+                print(f"  {err}", file=sys.stderr)
         return
     if args.command == "configure-mcp":
         configure_mcp(

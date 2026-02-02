@@ -1,16 +1,58 @@
 {
-  "models": {
-    "implementer": "chutes/moonshotai/Kimi-K2.5-TEE:high",
-    "reviewer-general": "openai-codex/gpt-5.1-codex-mini:high",
-    "reviewer-spec-audit": "openai-codex/gpt-5.1-codex-mini:high",
-    "reviewer-second-opinion": "openai-codex/gpt-5.1-codex-mini:high",
-    "review-merge": "openai-codex/gpt-5.1-codex-mini:medium",
-    "fixer": "zai/glm-4.7:high",
-    "closer": "zai/glm-4.7:medium",
-    "researcher": "openai-codex/gpt-5.1-codex-mini:medium",
-    "researcher-fetch": "openai-codex/gpt-5.1-codex-mini:medium",
-    "planning": "openai-codex/gpt-5.1-codex-mini:medium",
-    "config": "zai/glm-4.7:medium"
+  "metaModels": {
+    "planning": {
+      "model": "openai-codex/gpt-5.1-codex-mini",
+      "thinking": "medium",
+      "description": "Fast, cheap model for planning tasks"
+    },
+    "worker": {
+      "model": "chutes/moonshotai/Kimi-K2.5-TEE",
+      "thinking": "high",
+      "description": "Strong model for implementation and complex reasoning"
+    },
+    "research": {
+      "model": "openai-codex/gpt-5.1-codex-mini",
+      "thinking": "medium",
+      "description": "Fast model for research and information gathering"
+    },
+    "fast": {
+      "model": "zai/glm-4.7",
+      "thinking": "medium",
+      "description": "Cheapest model for quick tasks, fixes, and summaries"
+    },
+    "review": {
+      "model": "openai-codex/gpt-5.1-codex-mini",
+      "thinking": "high",
+      "description": "Capable model for code review"
+    }
+  },
+  "agents": {
+    "implementer": "worker",
+    "reviewer-general": "review",
+    "reviewer-spec-audit": "review",
+    "reviewer-second-opinion": "review",
+    "review-merge": "fast",
+    "fixer": "fast",
+    "closer": "fast",
+    "researcher": "research",
+    "researcher-fetch": "research"
+  },
+  "prompts": {
+    "irf": "worker",
+    "irf-lite": "worker",
+    "irf-plan": "planning",
+    "irf-plan-consult": "planning",
+    "irf-plan-revise": "planning",
+    "irf-plan-review": "planning",
+    "irf-seed": "planning",
+    "irf-backlog": "planning",
+    "irf-backlog-ls": "planning",
+    "irf-spike": "planning",
+    "irf-baseline": "planning",
+    "irf-followups": "planning",
+    "irf-from-openspec": "planning",
+    "irf-sync": "fast",
+    "ralph-start": "worker"
   },
   "checkers": {
     "python": {

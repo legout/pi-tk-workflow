@@ -1,6 +1,7 @@
 ---
 description: Create tickets from seed, baseline, or plan artifacts [irf-planning +codex-mini]
-model: openai-codex/gpt-5.1-codex-mini:medium
+model: openai-codex/gpt-5.1-codex-mini
+thinking: medium
 skill: irf-planning
 ---
 
