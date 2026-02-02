@@ -6,7 +6,7 @@ Step-by-step guides for common development scenarios.
 
 ## Choosing Between Seed and Plan
 
-| | Seed (`/irf-seed`) | Plan (`/irf-plan`) |
+| | Seed (`/tf-seed`) | Plan (`/tf-plan`) |
 |---|---|---|
 | **Purpose** | Explore and capture ideas | Specify implementation details |
 | **When to use** | New ideas, fuzzy requirements | Complex features, need rigor |
@@ -26,7 +26,7 @@ Starting a new project or feature from scratch when you want to move fast.
 ### 1. Capture Your Idea
 
 ```
-/irf-seed "Build a CLI tool for managing database migrations"
+/tf-seed "Build a CLI tool for managing database migrations"
 ```
 
 This creates structured artifacts in `.pi/knowledge/topics/seed-build-a-cli/`:
@@ -41,7 +41,7 @@ This creates structured artifacts in `.pi/knowledge/topics/seed-build-a-cli/`:
 If you need to research technical approaches:
 
 ```
-/irf-spike "Database migration tools in Python"
+/tf-spike "Database migration tools in Python"
 ```
 
 Creates `.pi/knowledge/topics/spike-database-migration-tools/` with:
@@ -51,7 +51,7 @@ Creates `.pi/knowledge/topics/spike-database-migration-tools/` with:
 ### 3. Create Tickets
 
 ```
-/irf-backlog seed-build-a-cli
+/tf-backlog seed-build-a-cli
 ```
 
 Generates 5-15 small tickets in `tk`, each:
@@ -63,7 +63,7 @@ Generates 5-15 small tickets in `tk`, each:
 ### 4. Implement
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 Runs the full IRF cycle on each ticket.
@@ -90,14 +90,14 @@ For complex new features where you want to explore first, then specify rigorousl
 **The flow:**
 
 ```
-/irf-seed "Big idea" → /irf-plan "Refined from seed" → review → /irf-backlog → /irf
+/tf-seed "Big idea" → /tf-plan "Refined from seed" → review → /tf-backlog → /tf
    explore              specify rigorously              tickets        implement
 ```
 
 ### Step 1: Explore with Seed
 
 ```
-/irf-seed "Build a distributed task queue system"
+/tf-seed "Build a distributed task queue system"
 ```
 
 This captures:
@@ -119,7 +119,7 @@ cat .pi/knowledge/topics/seed-distributed-task-queue/constraints.md
 Now create a rigorous plan using the seed content as input:
 
 ```
-/irf-plan "Distributed task queue: implement core message broker with Redis streams, 
+/tf-plan "Distributed task queue: implement core message broker with Redis streams, 
            supporting at-least-once delivery, 10K msgs/sec throughput, 
            based on seed-distributed-task-queue"
 ```
@@ -135,16 +135,16 @@ The plan will include:
 For complex features, run the plan through review:
 
 ```
-/irf-plan-consult plan-distributed-task-queue   # Detect gaps
-/irf-plan-revise plan-distributed-task-queue    # Apply feedback
-/irf-plan-review plan-distributed-task-queue    # Get approval
+/tf-plan-consult plan-distributed-task-queue   # Detect gaps
+/tf-plan-revise plan-distributed-task-queue    # Apply feedback
+/tf-plan-review plan-distributed-task-queue    # Get approval
 ```
 
 ### Step 4: Create Tickets and Implement
 
 ```
-/irf-backlog plan-distributed-task-queue
-/irf TICKET-123
+/tf-backlog plan-distributed-task-queue
+/tf TICKET-123
 ```
 
 ### Why Combine Them?
@@ -171,13 +171,13 @@ Working with an existing codebase.
 Document the current state before making changes:
 
 ```
-/irf-baseline
+/tf-baseline
 ```
 
 Or focus on a specific area:
 
 ```
-/irf-baseline "authentication system"
+/tf-baseline "authentication system"
 ```
 
 Creates `.pi/knowledge/topics/baseline-myapp/` with:
@@ -189,7 +189,7 @@ Creates `.pi/knowledge/topics/baseline-myapp/` with:
 ### 2. Create Improvement Tickets
 
 ```
-/irf-backlog baseline-myapp
+/tf-backlog baseline-myapp
 ```
 
 Generates tickets from:
@@ -201,7 +201,7 @@ Generates tickets from:
 ### 3. Implement
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 Each ticket includes baseline context so you understand the existing code.
@@ -226,7 +226,7 @@ For complex features requiring careful design. Use this when you already underst
 ### 1. Create Initial Plan
 
 ```
-/irf-plan "Refactor auth flow to support OAuth + magic links"
+/tf-plan "Refactor auth flow to support OAuth + magic links"
 ```
 
 Creates `.pi/knowledge/topics/plan-auth-refactor/plan.md` with:
@@ -241,7 +241,7 @@ Status: `draft`
 ### 2. Consult for Gaps
 
 ```
-/irf-plan-consult plan-auth-refactor
+/tf-plan-consult plan-auth-refactor
 ```
 
 Identifies:
@@ -255,7 +255,7 @@ Updates plan.md with Consultant Notes. Status: `consulted`
 ### 3. Revise Based on Feedback
 
 ```
-/irf-plan-revise plan-auth-refactor
+/tf-plan-revise plan-auth-refactor
 ```
 
 Applies changes to address consultant findings.
@@ -265,7 +265,7 @@ Status: `revised`
 ### 4. High-Accuracy Review
 
 ```
-/irf-plan-review plan-auth-refactor --high-accuracy
+/tf-plan-review plan-auth-refactor --high-accuracy
 ```
 
 Validates:
@@ -281,7 +281,7 @@ Status: `approved` or `blocked`
 Only proceed if plan is approved:
 
 ```
-/irf-backlog plan-auth-refactor
+/tf-backlog plan-auth-refactor
 ```
 
 Generates tickets from the work plan, each referencing the approved plan.
@@ -289,7 +289,7 @@ Generates tickets from the work plan, each referencing the approved plan.
 ### 6. Implement
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 ---
@@ -301,7 +301,7 @@ When you need to evaluate options before deciding.
 ### 1. Research Spike
 
 ```
-/irf-spike "React Server Components vs Next.js App Router" --parallel
+/tf-spike "React Server Components vs Next.js App Router" --parallel
 ```
 
 Uses parallel subagents for faster research. Creates:
@@ -311,7 +311,7 @@ Uses parallel subagents for faster research. Creates:
 ### 2. Capture Decision as Seed
 
 ```
-/irf-seed "Migrate to Next.js App Router based on spike findings"
+/tf-seed "Migrate to Next.js App Router based on spike findings"
 ```
 
 References the spike in your seed.
@@ -319,8 +319,8 @@ References the spike in your seed.
 ### 3. Create and Implement Tickets
 
 ```
-/irf-backlog seed-migrate-nextjs
-/irf TICKET-123
+/tf-backlog seed-migrate-nextjs
+/tf TICKET-123
 ```
 
 ---
@@ -332,7 +332,7 @@ Addressing issues found during code review.
 ### 1. Normal Implementation
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 Produces `review.md` with findings.
@@ -342,7 +342,7 @@ Produces `review.md` with findings.
 For warnings and suggestions that are out of scope:
 
 ```
-/irf-followups ./review.md
+/tf-followups ./review.md
 ```
 
 Creates tickets tagged with `followup` and priority 3 (lower than implementation).
@@ -350,7 +350,7 @@ Creates tickets tagged with `followup` and priority 3 (lower than implementation
 ### 3. Process Follow-ups
 
 ```
-/irf FOLLOWUP-456
+/tf FOLLOWUP-456
 ```
 
 ---
@@ -362,7 +362,7 @@ Working with external specifications.
 ### 1. Create Tickets from OpenSpec
 
 ```
-/irf-from-openspec auth-pkce-support
+/tf-from-openspec auth-pkce-support
 ```
 
 Reads from `openspec/changes/auth-pkce-support/`:
@@ -374,7 +374,7 @@ Creates tickets tagged with `openspec` and linked to the change.
 ### 2. Implement
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 Each ticket includes relevant technical details from the OpenSpec.
@@ -388,7 +388,7 @@ Running batches of tickets without manual intervention.
 ### 1. Initialize Ralph
 
 ```bash
-./bin/irf ralph init
+./bin/tf ralph init
 ```
 
 Creates `.pi/ralph/` directory with:
@@ -418,7 +418,7 @@ Edit `.pi/ralph/AGENTS.md`:
 Or with CLI:
 
 ```bash
-./bin/irf ralph init
+./bin/tf ralph init
 # Then in pi:
 /ralph-start
 ```
@@ -426,15 +426,15 @@ Or with CLI:
 ### 4. Monitor Progress
 
 ```bash
-./bin/irf ralph status
-./bin/irf ralph lessons
+./bin/tf ralph status
+./bin/tf ralph lessons
 ```
 
 ### 5. Review and Prune
 
 ```bash
 # Remove outdated lessons
-./bin/irf ralph lessons prune 30
+./bin/tf ralph lessons prune 30
 ```
 
 ---

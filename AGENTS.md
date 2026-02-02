@@ -4,7 +4,7 @@ IRF workflow toolkit for Pi - ticket management, agent orchestration, and review
 
 ## Quick Commands
 
-- Run CLI: `./bin/irf <command>`
+- Run CLI: `./bin/tf <command>`
 - Create ticket: `tk create "description"`
 - List ready tickets: `tk ready`
 - Start Ralph loop: `/ralph-start`
@@ -18,7 +18,7 @@ IRF workflow toolkit for Pi - ticket management, agent orchestration, and review
 
 ## Capabilities
 
-- Workflow management via `./bin/irf`
+- Workflow management via `./bin/tf`
 - Ralph loop for autonomous ticket processing
 - Agent definitions for IRF (Implement-Review-Fix) workflow
 - Skills for planning, config, and workflow orchestration

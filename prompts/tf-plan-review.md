@@ -1,18 +1,18 @@
 ---
-description: Review an implementation plan with high-accuracy validation [irf-planning +codex-mini]
+description: Review an implementation plan with high-accuracy validation [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-plan-review
+# /tf-plan-review
 
 Validate a plan with high-precision checks. Updates the same `plan.md`.
 
 ## Usage
 
 ```
-/irf-plan-review <plan-id-or-path> [--high-accuracy]
+/tf-plan-review <plan-id-or-path> [--high-accuracy]
 ```
 
 ## Arguments
@@ -24,7 +24,7 @@ Validate a plan with high-precision checks. Updates the same `plan.md`.
 ## Example
 
 ```
-/irf-plan-review plan-auth-rewrite --high-accuracy
+/tf-plan-review plan-auth-rewrite --high-accuracy
 ```
 
 ## Execution

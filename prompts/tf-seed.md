@@ -1,18 +1,18 @@
 ---
-description: Capture greenfield idea into seed artifacts [irf-planning +codex-mini]
+description: Capture greenfield idea into seed artifacts [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-seed
+# /tf-seed
 
 Capture an initial idea into structured seed artifacts.
 
 ## Usage
 
 ```
-/irf-seed <idea description>
+/tf-seed <idea description>
 ```
 
 ## Arguments
@@ -22,7 +22,7 @@ Capture an initial idea into structured seed artifacts.
 ## Example
 
 ```
-/irf-seed Build a CLI tool for managing database migrations
+/tf-seed Build a CLI tool for managing database migrations
 ```
 
 ## Execution
@@ -57,4 +57,4 @@ Created seed artifacts in `.pi/knowledge/topics/{topic-id}/`:
 
 After creating seed:
 - Review and refine artifacts
-- Run `/irf-backlog {topic-id}` to create tickets
+- Run `/tf-backlog {topic-id}` to create tickets

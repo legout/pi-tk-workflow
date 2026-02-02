@@ -20,14 +20,14 @@ Implement the ticket described in the Task input (ticket ID).
 1. **Get ticket details**: Run `tk show <ticket-id>` (ticket ID provided in the Task input)
 2. **Check knowledge base**: Read relevant docs from `.pi/knowledge/` (ticket-specific or topic summaries) and `docs/dev/knowledge/` if they exist
 3. **Explore codebase**: Use find/grep to locate relevant files
-4. **Track file changes**: After every `edit` or `write`, run `irf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
-   - If the task provides a chain dir, use `irf track <path> --file {chain_dir}/files_changed.txt`
+4. **Track file changes**: After every `edit` or `write`, run `tf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
+   - If the task provides a chain dir, use `tf track <path> --file {chain_dir}/files_changed.txt`
    - Otherwise, place `files_changed.txt` next to `implementation.md`
-   - If `irf` is not in PATH but `./bin/irf` exists, use `./bin/irf track ...` instead
+   - If `tf` is not in PATH but `./bin/tf` exists, use `./bin/tf track ...` instead
 5. **Implement**: Make changes following existing project patterns
 6. **Code Quality Checks** (run BEFORE tests):
    - **A. Load workflow config (preferred)**:
-     - Check for `.pi/workflows/irf/config.json` (project override) and `~/.pi/agent/workflows/irf/config.json` (global).
+     - Check for `.pi/workflows/tf/config.json` (project override) and `~/.pi/agent/workflows/tf/config.json` (global).
      - If both exist, merge with project settings taking precedence.
      - If `workflow.exclude` exists, filter those paths out of `files_changed.txt` before running checkers.
      - If `checkers` exists, use it to drive lint/format/typecheck commands.

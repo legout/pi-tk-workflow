@@ -1,18 +1,18 @@
 ---
-description: List backlog status and tickets [irf-planning +codex-mini]
+description: List backlog status and tickets [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-backlog-ls
+# /tf-backlog-ls
 
 Show backlog status and corresponding tickets for seed/baseline/plan topics.
 
 ## Usage
 
 ```
-/irf-backlog-ls [topic-id-or-path]
+/tf-backlog-ls [topic-id-or-path]
 ```
 
 ## Arguments
@@ -23,11 +23,11 @@ Show backlog status and corresponding tickets for seed/baseline/plan topics.
 ## Examples
 
 ```
-/irf-backlog-ls
-/irf-backlog-ls seed-build-a-cli
-/irf-backlog-ls plan-auth-rewrite
-/irf-backlog-ls baseline-myapp
-/irf-backlog-ls .pi/knowledge/topics/baseline-myapp/
+/tf-backlog-ls
+/tf-backlog-ls seed-build-a-cli
+/tf-backlog-ls plan-auth-rewrite
+/tf-backlog-ls baseline-myapp
+/tf-backlog-ls .pi/knowledge/topics/baseline-myapp/
 ```
 
 ## Execution

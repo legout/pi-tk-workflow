@@ -1,18 +1,18 @@
 ---
-description: Sync IRF configuration [irf-config +GLM-4.7]
+description: Sync IRF configuration [tf-config +GLM-4.7]
 model: zai/glm-4.7
 thinking: medium
-skill: irf-config
+skill: tf-config
 ---
 
-# /irf-sync
+# /tf-sync
 
 Apply the workflow configuration and verify required extensions.
 
 ## Usage
 
 ```
-/irf-sync
+/tf-sync
 ```
 
 ## Execution
@@ -50,15 +50,15 @@ Config key → Agent file mapping:
 ### Prompt Models Updated
 
 Config key → Prompt file mapping:
-- `models.implementer` → `prompts/irf.md`, `prompts/irf-lite.md`
-- `models.planning` → `prompts/irf-plan.md`, `prompts/irf-plan-consult.md`, `prompts/irf-plan-revise.md`, `prompts/irf-plan-review.md`, `prompts/irf-seed.md`, `prompts/irf-backlog.md`, `prompts/irf-backlog-ls.md`, `prompts/irf-spike.md`, `prompts/irf-from-openspec.md`, `prompts/irf-baseline.md`, `prompts/irf-followups.md`
-- `models.config` → `prompts/irf-sync.md`
+- `models.implementer` → `prompts/tf.md`, `prompts/tf-lite.md`
+- `models.planning` → `prompts/tf-plan.md`, `prompts/tf-plan-consult.md`, `prompts/tf-plan-revise.md`, `prompts/tf-plan-review.md`, `prompts/tf-seed.md`, `prompts/tf-backlog.md`, `prompts/tf-backlog-ls.md`, `prompts/tf-spike.md`, `prompts/tf-from-openspec.md`, `prompts/tf-baseline.md`, `prompts/tf-followups.md`
+- `models.config` → `prompts/tf-sync.md`
 
 ## Configuration Sources
 
 Read and merge (project overrides global):
-- `.pi/workflows/irf/config.json` (project)
-- `~/.pi/agent/workflows/irf/config.json` (global)
+- `.pi/workflows/tf/config.json` (project)
+- `~/.pi/agent/workflows/tf/config.json` (global)
 
 ## Output Example
 
@@ -77,7 +77,7 @@ Read and merge (project overrides global):
 - ...
 
 ## Prompt Models Updated
-- irf-plan.md: openai-codex/gpt-5.1-codex-mini → openai-codex/gpt-5.1-codex-mini:medium
+- tf-plan.md: openai-codex/gpt-5.1-codex-mini → openai-codex/gpt-5.1-codex-mini:medium
 
 ## Recommendations
 - Consider installing pi-mcp-adapter for research capabilities

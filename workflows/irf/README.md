@@ -12,7 +12,7 @@ This workflow runs a full ticket implementation chain:
 
 The chain is triggered by:
 ```
-/irf <ticket-id> [flags]
+/tf <ticket-id> [flags]
 ```
 
 ---
@@ -20,13 +20,13 @@ The chain is triggered by:
 ## Files & Locations
 
 **Config (global):**
-- `~/.pi/agent/workflows/irf/config.json`
+- `~/.pi/agent/workflows/tf/config.json`
 
 **Config (project override):**
-- `<project>/.pi/workflows/irf/config.json`
+- `<project>/.pi/workflows/tf/config.json`
 
 **Prompt template:**
-- `~/.pi/agent/prompts/irf.md`
+- `~/.pi/agent/prompts/tf.md`
 
 **Agent files:**
 - `~/.pi/agent/agents/implementer.md`
@@ -40,7 +40,7 @@ The chain is triggered by:
 - `~/.pi/agent/agents/closer.md`
 
 **Sync command:**
-- `~/.pi/agent/prompts/irf-sync.md` (run `/irf-sync`)
+- `~/.pi/agent/prompts/tf-sync.md` (run `/tf-sync`)
 
 ---
 
@@ -83,7 +83,7 @@ The chain is triggered by:
 
 - `--auto` / `--no-clarify` → run headless
 - `--plan` / `--dry-run` → show resolved chain, do not run agents
-- `--create-followups` → run `/irf-followups` on merged review
+- `--create-followups` → run `/tf-followups` on merged review
 - `--simplify-tickets` → run `/simplify --create-tickets --last-implementation` after chain (if available)
 - `--final-review-loop` → run `/review-start` after chain (if available)
 - `--with-research` → force enable research step
@@ -91,12 +91,12 @@ The chain is triggered by:
 
 ## Related planning commands
 
-- `/irf-seed <idea>`
-- `/irf-spike <topic>`
-- `/irf-backlog <optional seed path or topic-id>`
-- `/irf-from-openspec <change-id or path>`
-- `/irf-baseline <optional focus>`
-- `/irf-followups <review path or ticket-id>`
+- `/tf-seed <idea>`
+- `/tf-spike <topic>`
+- `/tf-backlog <optional seed path or topic-id>`
+- `/tf-from-openspec <change-id or path>`
+- `/tf-baseline <optional focus>`
+- `/tf-followups <review path or ticket-id>`
 
 ---
 
@@ -172,7 +172,7 @@ Per-ticket briefs reference shared topics to avoid duplication.
 
 Model changes are applied via:
 ```
-/irf-sync
+/tf-sync
 ```
 
 This updates the `model:` frontmatter in workflow agent **and prompt** files.

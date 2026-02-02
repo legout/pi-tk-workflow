@@ -1,18 +1,18 @@
 ---
-description: Create tickets from review warnings/suggestions [irf-planning +codex-mini]
+description: Create tickets from review warnings/suggestions [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-followups
+# /tf-followups
 
 Create follow-up tickets from Warnings and Suggestions in a review.
 
 ## Usage
 
 ```
-/irf-followups <review-path-or-ticket-id>
+/tf-followups <review-path-or-ticket-id>
 ```
 
 ## Arguments
@@ -23,8 +23,8 @@ Create follow-up tickets from Warnings and Suggestions in a review.
 ## Examples
 
 ```
-/irf-followups ./review.md
-/irf-followups abc-1234
+/tf-followups ./review.md
+/tf-followups abc-1234
 ```
 
 ## Execution
@@ -42,7 +42,7 @@ Follow the **IRF Planning Skill** "Follow-up Creation" procedure:
    ```bash
    tk create "<title>" \
      --description "## Origin\nFrom review of: {ticket}\nFile: {file}\nLine: {line}\n\n## Issue\n{description}" \
-     --tags irf,followup \
+     --tags tf,followup \
      --priority 3
    ```
 4. Write `followups.md` documenting created tickets
@@ -69,7 +69,7 @@ Line: {line_number}
 
 ## Output
 
-- Tickets created in `tk` (tagged: irf, followup)
+- Tickets created in `tk` (tagged: tf, followup)
 - `followups.md` with summary
 
 ## Notes

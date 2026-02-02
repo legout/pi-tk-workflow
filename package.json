@@ -1,15 +1,15 @@
 {
-  "name": "pi-tk-workflow",
+  "name": "pi-ticketflow",
   "version": "0.1.0",
-  "description": "Pi ticket implementation workflow: implement → review → fix → close.",
+  "description": "Pi ticketflow workflow: plan → research → implement → review → fix → close.",
   "private": true,
   "keywords": ["pi-package", "pi-workflow"],
   "bin": {
-    "irf": "bin/irf"
+    "tf": "bin/tf"
   },
   "scripts": {
-    "setup": "./bin/irf setup",
-    "sync": "./bin/irf sync"
+    "setup": "./bin/tf setup",
+    "sync": "./bin/tf sync"
   },
   "pi": {
     "prompts": ["prompts"]

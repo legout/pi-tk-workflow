@@ -18,11 +18,11 @@ The current IRF workflow provides a strong end‑to‑end chain (Research → Im
 
 ## Proposed Improvements
 
-### 1) `irf doctor` (preflight checks)
-**What:** Add `./bin/irf doctor` to validate prerequisites: `tk`, Pi binary, required extensions, MCP availability (if enabled), and language tools configured in `checkers`.
+### 1) `tf doctor` (preflight checks)
+**What:** Add `./bin/tf doctor` to validate prerequisites: `tk`, Pi binary, required extensions, MCP availability (if enabled), and language tools configured in `checkers`.
 
 ### 2) Session‑scoped change tracking (no git diff)
-**What:** Maintain a per‑run change ledger in the subagent **chain artifacts directory** (`{chain_dir}`; fixed by pi‑subagents). Use **absolute paths** when writing (e.g., `${chain_dir}/files_changed.txt`). Provide a helper (`./bin/irf track <path>`) and update agents to call it after each edit/write. This keeps `files_changed.txt` **session‑accurate** and isolated from other tickets.
+**What:** Maintain a per‑run change ledger in the subagent **chain artifacts directory** (`{chain_dir}`; fixed by pi‑subagents). Use **absolute paths** when writing (e.g., `${chain_dir}/files_changed.txt`). Provide a helper (`./bin/tf track <path>`) and update agents to call it after each edit/write. This keeps `files_changed.txt` **session‑accurate** and isolated from other tickets.
 
 ### 3) Follow‑up tickets behind a flag
 **What:** Add `--create-followups` to run a dedicated **`/irf-followups`** command after review merge. The command parses `review.md`, creates follow‑up tickets via `tk create` (tagged, e.g. `followup`), and writes `followups.md` as a run artifact. Default behavior remains unchanged (no follow‑ups).
@@ -40,7 +40,7 @@ The current IRF workflow provides a strong end‑to‑end chain (Research → Im
 **What:** Add `workflow.failOn` in config (e.g., `["Critical", "Major"]`). If triggered, the chain stops before closing and reports a clear block.
 
 ### 8) Config‑driven MCP server selection
-**What:** Add `workflow.mcpServers` list in config to explicitly enable/disable MCP servers. `bin/irf setup` respects this list when writing `mcp.json`.
+**What:** Add `workflow.mcpServers` list in config to explicitly enable/disable MCP servers. `bin/tf setup` respects this list when writing `mcp.json`.
 
 ### 9) `--plan` / `--dry-run` flag
 **What:** Resolve config + flags and print the computed chain (including reviewers and steps) without running any agents.
@@ -52,15 +52,15 @@ The current IRF workflow provides a strong end‑to‑end chain (Research → Im
 
 ## Acceptance Criteria
 
-### 1) `irf doctor`
-- Running `./bin/irf doctor` prints a checklist with pass/fail for `tk`, `pi`, required extensions, and checker tools.
+### 1) `tf doctor`
+- Running `./bin/tf doctor` prints a checklist with pass/fail for `tk`, `pi`, required extensions, and checker tools.
 - Exit code is **non‑zero** when required tools are missing.
 - No files are modified.
 
 ### 2) Session‑scoped change tracking
 - `files_changed.txt` is created per chain run at an **absolute path** (`${chain_dir}/files_changed.txt`) and only includes files edited/written in that run.
 - No git‑diff is used to populate `files_changed.txt`.
-- The helper (`./bin/irf track <path>`) appends paths in a de‑duplicated way.
+- The helper (`./bin/tf track <path>`) appends paths in a de‑duplicated way.
 - Parallel ticket runs do **not** contaminate each other’s `files_changed.txt`.
 
 ### 3) Follow‑up tickets behind a flag
@@ -88,10 +88,10 @@ The current IRF workflow provides a strong end‑to‑end chain (Research → Im
 ### 8) Config‑driven MCP server selection
 - `workflow.mcpServers` controls which MCP servers are written to `mcp.json`.
 - If the list is empty, no MCP servers are configured.
-- `bin/irf setup` respects this list without additional prompts.
+- `bin/tf setup` respects this list without additional prompts.
 
 ### 9) `--plan` / `--dry-run`
-- Running `/irf <ticket> --plan` prints the resolved chain and exits without invoking agents.
+- Running `/tf <ticket> --plan` prints the resolved chain and exits without invoking agents.
 - Output includes resolved reviewers, steps, and config overrides.
 
 ### 10) Dynamic reviewer outputs
@@ -101,10 +101,10 @@ The current IRF workflow provides a strong end‑to‑end chain (Research → Im
 ---
 
 ## Suggested Files to Update
-- `prompts/irf.md`
-- `prompts/irf-followups.md` (new command)
+- `prompts/tf.md`
+- `prompts/tf-followups.md` (new command)
 - `workflows/irf/config.json`
-- `bin/irf`
+- `bin/tf`
 - Agent files (`implementer.md`, `review-merge.md`, `fixer.md`, `closer.md`) where needed for new artifacts
 
 ---

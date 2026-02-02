@@ -1,6 +1,6 @@
 # Ralph Loop
 
-Autonomous ticket processing for pi-tk-workflow.
+Autonomous ticket processing for pi-ticketflow.
 
 ---
 
@@ -21,7 +21,7 @@ Ralph is an orchestration layer that runs the IRF workflow in a loop, processing
 ### 1. Initialize
 
 ```bash
-./bin/irf ralph init
+./bin/tf ralph init
 ```
 
 Creates `.pi/ralph/` directory structure.
@@ -44,7 +44,7 @@ If `.pi/ralph/AGENTS.md` exists, read it for lessons learned.
 ### 3. Run IRF (Ralph-Ready by Default)
 
 ```
-/irf <ticket-id> [--auto]
+/tf <ticket-id> [--auto]
 ```
 
 Automatically:
@@ -64,7 +64,7 @@ Or manually:
 ```bash
 while tk ready | grep -q .; do
   TICKET=$(tk ready | head -1 | awk '{print $1}')
-  pi "/irf $TICKET --auto"
+  pi "/tf $TICKET --auto"
 done
 ```
 
@@ -91,7 +91,7 @@ done
   "maxIterationsPerTicket": 5,
   "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
   "completionCheck": "tk ready | grep -q .",
-  "workflow": "/irf",
+  "workflow": "/tf",
   "workflowFlags": "--auto",
   "sleepBetweenTickets": 5000,
   "sleepBetweenRetries": 10000,
@@ -108,7 +108,7 @@ done
 | `maxIterationsPerTicket` | 5 | Retries per ticket |
 | `ticketQuery` | `tk ready \| head -1` | Command to pick next ticket |
 | `completionCheck` | `tk ready \| grep -q .` | Command to detect empty backlog |
-| `workflow` | `/irf` | Command to run per ticket |
+| `workflow` | `/tf` | Command to run per ticket |
 | `workflowFlags` | `--auto` | Flags for workflow |
 | `sleepBetweenTickets` | 5000 | Ms to wait between tickets |
 | `promiseOnComplete` | true | Emit `<promise>COMPLETE</promise>` on completion |
@@ -174,20 +174,20 @@ State is stored in `.pi/ralph/progress.md`:
 
 ```bash
 # Initialize
-./bin/irf ralph init
+./bin/tf ralph init
 
 # Check status
-./bin/irf ralph status
+./bin/tf ralph status
 
 # View lessons
-./bin/irf ralph lessons
+./bin/tf ralph lessons
 
 # Prune old lessons (keep last N)
-./bin/irf ralph lessons prune 20
+./bin/tf ralph lessons prune 20
 
 # Reset progress
-./bin/irf ralph reset --keep-lessons  # Keep lessons
-./bin/irf ralph reset                 # Clear everything
+./bin/tf ralph reset --keep-lessons  # Keep lessons
+./bin/tf ralph reset                 # Clear everything
 ```
 
 ---
@@ -217,7 +217,7 @@ Before starting, add known patterns to `.pi/ralph/AGENTS.md`:
 Check first few tickets manually:
 
 ```bash
-./bin/irf ralph status
+./bin/tf ralph status
 # Review completed tickets in tk
 ```
 
@@ -226,7 +226,7 @@ Check first few tickets manually:
 Keep lessons file manageable:
 
 ```bash
-./bin/irf ralph lessons prune 30
+./bin/tf ralph lessons prune 30
 ```
 
 Old lessons may become outdated as the codebase evolves.
@@ -237,7 +237,7 @@ Ralph works best with well-defined tickets:
 
 ```bash
 # Create detailed backlog first
-/irf-backlog my-feature
+/tf-backlog my-feature
 
 # Then run Ralph
 /ralph-start
@@ -247,7 +247,7 @@ Ralph works best with well-defined tickets:
 
 ## Comparison: With vs Without Ralph
 
-| Aspect | Standalone `/irf` | With Ralph Loop |
+| Aspect | Standalone `/tf` | With Ralph Loop |
 |--------|-------------------|-----------------|
 | Context | Fresh per invocation | Fresh per ticket + lessons |
 | Learning | None | Accumulates in AGENTS.md |

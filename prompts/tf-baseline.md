@@ -1,18 +1,18 @@
 ---
-description: Capture brownfield project status quo [irf-planning +codex-mini]
+description: Capture brownfield project status quo [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-baseline
+# /tf-baseline
 
 Capture a status-quo baseline for an existing project.
 
 ## Usage
 
 ```
-/irf-baseline [focus-area]
+/tf-baseline [focus-area]
 ```
 
 ## Arguments
@@ -22,8 +22,8 @@ Capture a status-quo baseline for an existing project.
 ## Examples
 
 ```
-/irf-baseline
-/irf-baseline "authentication system"
+/tf-baseline
+/tf-baseline "authentication system"
 ```
 
 ## Execution
@@ -64,5 +64,5 @@ Created artifacts in `.pi/knowledge/topics/{topic-id}/`:
 ## Next Steps
 
 - Review baseline artifacts
-- Use `/irf-seed` for improvement ideas
-- Create tickets via `/irf-backlog`
+- Use `/tf-seed` for improvement ideas
+- Create tickets via `/tf-backlog`

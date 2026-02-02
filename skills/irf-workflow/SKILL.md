@@ -1,5 +1,5 @@
 ---
-name: irf-workflow
+name: tf-workflow
 description: Execute the Implement → Review → Fix → Close workflow for ticket implementation. Use when implementing any ticket, whether standalone or in a Ralph loop.
 ---
 
@@ -41,8 +41,8 @@ pi install npm:pi-subagents
 ## Configuration
 
 Read workflow config (project overrides global):
-- `.pi/workflows/irf/config.json`
-- `~/.pi/agent/workflows/irf/config.json`
+- `.pi/workflows/tf/config.json`
+- `~/.pi/agent/workflows/tf/config.json`
 
 Key config values:
 - `metaModels` - Abstract model definitions (model + thinking)
@@ -69,7 +69,7 @@ Parse flags from the Task input before running any steps:
 - `--plan` / `--dry-run`: Print the resolved chain (enabled/disabled steps, models, reviewers) and exit without running agents.
 - `--no-research`: Skip research even if enabled in config.
 - `--with-research`: Force research even if disabled in config.
-- `--create-followups`: After review merge, run `/irf-followups` (or equivalent procedure) on the merged review.
+- `--create-followups`: After review merge, run `/tf-followups` (or equivalent procedure) on the merged review.
 - `--simplify-tickets`: After the chain completes, run `/simplify --create-tickets --last-implementation` if the command exists. If not available, warn and continue.
 - `--final-review-loop`: After the chain completes, run `/review-start` if the review-loop extension is installed. If not available, warn and continue.
 
@@ -262,7 +262,7 @@ Store returned paths for next step.
 Run only when `--create-followups` is provided.
 
 1. **Use merged review**: Ensure `review.md` exists.
-2. **Create follow-ups**: Run `/irf-followups <review.md>` or follow the IRF Planning "Follow-up Creation" procedure.
+2. **Create follow-ups**: Run `/tf-followups <review.md>` or follow the IRF Planning "Follow-up Creation" procedure.
 3. **Write `followups.md`** documenting created tickets or "No follow-ups needed".
 
 ### Procedure: Close Ticket
@@ -331,7 +331,7 @@ Only if `.pi/ralph/` directory exists:
 
 ## Full Workflow Execution
 
-### For /irf (Standard)
+### For /tf (Standard)
 
 ```
 1. Re-Anchor Context
@@ -347,9 +347,9 @@ Only if `.pi/ralph/` directory exists:
 11. Ralph Integration (if active)
 ```
 
-### /irf-lite (Deprecated Alias)
+### /tf-lite (Deprecated Alias)
 
-`/irf-lite` runs the same workflow as `/irf` and will be removed in a future release.
+`/tf-lite` runs the same workflow as `/tf` and will be removed in a future release.
 
 ## Error Handling
 

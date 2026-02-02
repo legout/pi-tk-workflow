@@ -1,18 +1,18 @@
 ---
-description: Research spike on a topic [irf-planning +codex-mini]
+description: Research spike on a topic [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-spike
+# /tf-spike
 
 Run a focused research spike on a topic and store results.
 
 ## Usage
 
 ```
-/irf-spike <topic> [--parallel]
+/tf-spike <topic> [--parallel]
 ```
 
 ## Arguments
@@ -28,8 +28,8 @@ Run a focused research spike on a topic and store results.
 ## Examples
 
 ```
-/irf-spike "React Server Components vs Next.js App Router"
-/irf-spike "PostgreSQL partitioning strategies" --parallel
+/tf-spike "React Server Components vs Next.js App Router"
+/tf-spike "PostgreSQL partitioning strategies" --parallel
 ```
 
 ## Execution

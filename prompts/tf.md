@@ -1,18 +1,18 @@
 ---
-description: Implement ticket with IRF workflow [irf-workflow +Kimi-K2.5]
+description: Implement ticket with IRF workflow [tf-workflow +Kimi-K2.5]
 model: chutes/moonshotai/Kimi-K2.5-TEE
 thinking: high
-skill: irf-workflow
+skill: tf-workflow
 ---
 
-# /irf
+# /tf
 
 Execute the standard Implement → Review → Fix → Close workflow for a ticket.
 
 ## Usage
 
 ```
-/irf <ticket-id> [--auto] [--no-research] [--with-research] [--plan] [--dry-run]
+/tf <ticket-id> [--auto] [--no-research] [--with-research] [--plan] [--dry-run]
              [--create-followups] [--simplify-tickets] [--final-review-loop]
 ```
 
@@ -29,7 +29,7 @@ Execute the standard Implement → Review → Fix → Close workflow for a ticke
 | `--no-research` | Skip research step |
 | `--with-research` | Force enable research step |
 | `--plan` / `--dry-run` | Print resolved chain and exit without running agents |
-| `--create-followups` | Run `/irf-followups` on merged review output |
+| `--create-followups` | Run `/tf-followups` on merged review output |
 | `--simplify-tickets` | Run `/simplify --create-tickets --last-implementation` if available |
 | `--final-review-loop` | Run `/review-start` after the chain if available |
 
@@ -64,4 +64,4 @@ Ralph files (if `.pi/ralph/` exists):
 
 - This is the standard workflow (model-switch for sequential phases)
 - Only the parallel review step spawns subagents
-- `/irf-lite` is a deprecated alias that runs the same workflow
+- `/tf-lite` is a deprecated alias that runs the same workflow

@@ -1,17 +1,17 @@
 # Command Reference
 
-Complete reference for all pi-tk-workflow commands.
+Complete reference for all pi-ticketflow commands.
 
 ---
 
 ## Implementation Commands
 
-### `/irf`
+### `/tf`
 
 Execute the Implement → Review → Fix → Close workflow on a ticket.
 
 ```
-/irf <ticket-id> [--auto] [--no-research] [--with-research] [--plan]
+/tf <ticket-id> [--auto] [--no-research] [--with-research] [--plan]
                  [--create-followups] [--simplify-tickets] [--final-review-loop]
 ```
 
@@ -67,12 +67,12 @@ Processes tickets until backlog is empty, max iterations reached, or error occur
 
 ## Planning Commands
 
-### `/irf-plan`
+### `/tf-plan`
 
 Create a plan document from a request.
 
 ```
-/irf-plan <request description>
+/tf-plan <request description>
 ```
 
 Creates a structured plan in `.pi/knowledge/topics/plan-*/`:
@@ -81,48 +81,48 @@ Creates a structured plan in `.pi/knowledge/topics/plan-*/`:
 
 **Example:**
 ```
-/irf-plan Refactor auth flow to support OAuth + magic links
+/tf-plan Refactor auth flow to support OAuth + magic links
 ```
 
 **Next Steps:**
 ```
-/irf-plan-consult plan-auth-refactor
-/irf-plan-revise plan-auth-refactor
-/irf-plan-review plan-auth-refactor --high-accuracy
+/tf-plan-consult plan-auth-refactor
+/tf-plan-revise plan-auth-refactor
+/tf-plan-review plan-auth-refactor --high-accuracy
 ```
 
 ---
 
-### `/irf-plan-consult`
+### `/tf-plan-consult`
 
 Review a plan for gaps, ambiguities, and over-engineering.
 
 ```
-/irf-plan-consult <plan-id-or-path>
+/tf-plan-consult <plan-id-or-path>
 ```
 
 Updates the same `plan.md` with Consultant Notes and sets status to `consulted`.
 
 ---
 
-### `/irf-plan-revise`
+### `/tf-plan-revise`
 
 Revise a plan based on consultant/reviewer feedback.
 
 ```
-/irf-plan-revise <plan-id-or-path>
+/tf-plan-revise <plan-id-or-path>
 ```
 
 Updates the same `plan.md` with revisions and sets status to `revised`.
 
 ---
 
-### `/irf-plan-review`
+### `/tf-plan-review`
 
 Validate a plan with high-accuracy checks.
 
 ```
-/irf-plan-review <plan-id-or-path> [--high-accuracy]
+/tf-plan-review <plan-id-or-path> [--high-accuracy]
 ```
 
 Updates `plan.md` with PASS/FAIL status:
@@ -133,12 +133,12 @@ Updates `plan.md` with PASS/FAIL status:
 
 ## Research Commands
 
-### `/irf-seed`
+### `/tf-seed`
 
 Capture an idea into structured seed artifacts.
 
 ```
-/irf-seed <idea description>
+/tf-seed <idea description>
 ```
 
 **Creates artifacts in `.pi/knowledge/topics/seed-*/`:**
@@ -152,22 +152,22 @@ Capture an idea into structured seed artifacts.
 
 **Example:**
 ```
-/irf-seed Build a CLI tool for managing database migrations
+/tf-seed Build a CLI tool for managing database migrations
 ```
 
 **Next Steps:**
 ```
-/irf-backlog seed-build-a-cli
+/tf-backlog seed-build-a-cli
 ```
 
 ---
 
-### `/irf-spike`
+### `/tf-spike`
 
 Research spike on a topic.
 
 ```
-/irf-spike <topic> [--parallel]
+/tf-spike <topic> [--parallel]
 ```
 
 **Modes:**
@@ -183,18 +183,18 @@ Research spike on a topic.
 
 **Example:**
 ```
-/irf-spike "React Server Components vs Next.js App Router"
-/irf-spike "PostgreSQL partitioning strategies" --parallel
+/tf-spike "React Server Components vs Next.js App Router"
+/tf-spike "PostgreSQL partitioning strategies" --parallel
 ```
 
 ---
 
-### `/irf-baseline`
+### `/tf-baseline`
 
 Capture status-quo of an existing project.
 
 ```
-/irf-baseline [focus-area]
+/tf-baseline [focus-area]
 ```
 
 **Creates artifacts in `.pi/knowledge/topics/baseline-*/`:**
@@ -207,25 +207,25 @@ Capture status-quo of an existing project.
 
 **Examples:**
 ```
-/irf-baseline
-/irf-baseline "authentication system"
+/tf-baseline
+/tf-baseline "authentication system"
 ```
 
 **Next Steps:**
 ```
-/irf-backlog baseline-myapp
+/tf-backlog baseline-myapp
 ```
 
 ---
 
 ## Ticket Creation Commands
 
-### `/irf-backlog`
+### `/tf-backlog`
 
 Create tickets from seeds, baselines, or plans.
 
 ```
-/irf-backlog <seed|baseline|plan>
+/tf-backlog <seed|baseline|plan>
 ```
 
 Generates 5-15 small tickets:
@@ -241,9 +241,9 @@ Generates 5-15 small tickets:
 
 **Examples:**
 ```
-/irf-backlog seed-build-a-cli
-/irf-backlog baseline-myapp
-/irf-backlog plan-auth-rewrite
+/tf-backlog seed-build-a-cli
+/tf-backlog baseline-myapp
+/tf-backlog plan-auth-rewrite
 ```
 
 **Output:**
@@ -252,12 +252,12 @@ Generates 5-15 small tickets:
 
 ---
 
-### `/irf-backlog-ls`
+### `/tf-backlog-ls`
 
 List backlog status and tickets.
 
 ```
-/irf-backlog-ls [topic-id-or-path]
+/tf-backlog-ls [topic-id-or-path]
 ```
 
 **Without topic:** Lists all seed/baseline/plan topics with backlog status
@@ -265,18 +265,18 @@ List backlog status and tickets.
 
 **Example:**
 ```
-/irf-backlog-ls
-/irf-backlog-ls seed-build-a-cli
+/tf-backlog-ls
+/tf-backlog-ls seed-build-a-cli
 ```
 
 ---
 
-### `/irf-followups`
+### `/tf-followups`
 
 Create follow-up tickets from review warnings/suggestions.
 
 ```
-/irf-followups <review-path-or-ticket-id>
+/tf-followups <review-path-or-ticket-id>
 ```
 
 Creates tickets from:
@@ -287,18 +287,18 @@ Both are out of scope for the original ticket.
 
 **Example:**
 ```
-/irf-followups ./review.md
-/irf-followups abc-1234
+/tf-followups ./review.md
+/tf-followups abc-1234
 ```
 
 ---
 
-### `/irf-from-openspec`
+### `/tf-from-openspec`
 
 Create tickets from an OpenSpec change.
 
 ```
-/irf-from-openspec <change-id-or-path>
+/tf-from-openspec <change-id-or-path>
 ```
 
 Reads OpenSpec artifacts:
@@ -309,69 +309,69 @@ Creates tickets tagged with `openspec` and linked via `external-ref`.
 
 **Example:**
 ```
-/irf-from-openspec auth-pkce-support
-/irf-from-openspec openspec/changes/auth-pkce-support/
+/tf-from-openspec auth-pkce-support
+/tf-from-openspec openspec/changes/auth-pkce-support/
 ```
 
 ---
 
 ## Configuration Commands
 
-### `/irf-sync`
+### `/tf-sync`
 
 Sync configuration from `config.json` to agent and prompt files.
 
 ```
-/irf-sync
+/tf-sync
 ```
 
-Updates `model:` frontmatter in all agent and prompt files based on `workflows/irf/config.json`.
+Updates `model:` frontmatter in all agent and prompt files based on `workflows/tf/config.json`.
 
 ---
 
 ## CLI Reference
 
-The `irf` CLI is installed during setup and provides utilities for workflow management.
+The `tf` CLI is installed during setup and provides utilities for workflow management.
 
-### Global Install (CLI at `~/.local/bin/irf`)
+### Global Install (CLI at `~/.local/bin/tf`)
 
 ```bash
 # Setup
-irf setup                          # Interactive install + extensions + MCP
+tf setup                          # Interactive install + extensions + MCP
 
 # Sync
-irf sync                           # Sync models from config
+tf sync                           # Sync models from config
 
 # Diagnostics
-irf doctor                         # Preflight checks
+tf doctor                         # Preflight checks
 
 # Backlog
 irf backlog-ls [topic]             # List backlog status
 
 # Track changes
-irf track <path>                   # Append to files_changed.txt
+tf track <path>                   # Append to files_changed.txt
 
 # Ralph Loop
-irf ralph init                     # Create .pi/ralph/ directory
-irf ralph status                   # Show current loop state
-irf ralph reset                    # Clear progress
-irf ralph reset --keep-lessons     # Clear progress, keep lessons
-irf ralph lessons                  # Show lessons learned
-irf ralph lessons prune 20         # Keep only last 20 lessons
+tf ralph init                     # Create .pi/ralph/ directory
+tf ralph status                   # Show current loop state
+tf ralph reset                    # Clear progress
+tf ralph reset --keep-lessons     # Clear progress, keep lessons
+tf ralph lessons                  # Show lessons learned
+tf ralph lessons prune 20         # Keep only last 20 lessons
 
 # AGENTS.md Management
-irf agentsmd init                  # Create minimal AGENTS.md
-irf agentsmd status                # Show AGENTS.md overview
-irf agentsmd validate              # Check for bloat, stale paths
-irf agentsmd fix                   # Auto-fix common issues
+tf agentsmd init                  # Create minimal AGENTS.md
+tf agentsmd status                # Show AGENTS.md overview
+tf agentsmd validate              # Check for bloat, stale paths
+tf agentsmd fix                   # Auto-fix common issues
 ```
 
-### Project Install (CLI at `.pi/bin/irf`)
+### Project Install (CLI at `.pi/bin/tf`)
 
-Use `./.pi/bin/irf` instead of `irf` for project installs.
+Use `./.pi/bin/tf` instead of `irf` for project installs.
 
 ```bash
-./.pi/bin/irf setup
-./.pi/bin/irf sync
-./.pi/bin/irf ralph init
+./.pi/bin/tf setup
+./.pi/bin/tf sync
+./.pi/bin/tf ralph init
 ```

@@ -3,11 +3,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_HELPER="$ROOT_DIR/scripts/irf_config.py"
+CONFIG_HELPER="$ROOT_DIR/scripts/tf_config.py"
 
 usage() {
   cat <<'EOF'
-IRF CLI
+Ticketflow CLI
 
 Usage:
   ./bin/irf setup [--global|--project <path>]
@@ -49,7 +49,7 @@ Environment (for setup MCP):
   ZAI_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY
 
 Environment (for track):
-  IRF_FILES_CHANGED, IRF_CHAIN_DIR
+  TF_FILES_CHANGED, TF_CHAIN_DIR
 EOF
 }
 
@@ -167,7 +167,7 @@ install_files() {
     count=$((count + 1))
   done < "$manifest"
 
-  echo "Installed IRF workflow to: $TARGET_BASE"
+  echo "Installed Ticketflow workflow to: $TARGET_BASE"
   echo "Installed files: $count"
 }
 
@@ -261,10 +261,10 @@ track_file() {
 
   local files_changed="$TRACK_FILE"
   if [ -z "$files_changed" ]; then
-    if [ -n "${IRF_FILES_CHANGED:-}" ]; then
-      files_changed="$IRF_FILES_CHANGED"
-    elif [ -n "${IRF_CHAIN_DIR:-}" ]; then
-      files_changed="$IRF_CHAIN_DIR/files_changed.txt"
+    if [ -n "${TF_FILES_CHANGED:-}" ]; then
+      files_changed="$TF_FILES_CHANGED"
+    elif [ -n "${TF_CHAIN_DIR:-}" ]; then
+      files_changed="$TF_CHAIN_DIR/files_changed.txt"
     else
       files_changed="$(pwd)/files_changed.txt"
     fi
@@ -291,7 +291,7 @@ track_file() {
 doctor() {
   local failed=0
 
-  echo "IRF doctor"
+  echo "Ticketflow doctor"
 
   check_cmd() {
     local name="$1"
@@ -360,11 +360,11 @@ doctor() {
   fi
 
   if [ "$failed" -ne 0 ]; then
-    echo "IRF doctor: failed"
+    echo "Ticketflow doctor: failed"
     exit 1
   fi
 
-  echo "IRF doctor: OK"
+  echo "Ticketflow doctor: OK"
 }
 
 # =============================================================================
@@ -1468,7 +1468,7 @@ sync_models() {
 
 case "$COMMAND" in
   setup)
-    echo "IRF setup"
+    echo "Ticketflow setup"
     if [ -z "$TARGET_BASE" ]; then
       read -r -p "Install globally? (Y/n) " yn
       case "$yn" in

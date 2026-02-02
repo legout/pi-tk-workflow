@@ -1,18 +1,18 @@
 ---
-description: Revise an implementation plan based on feedback [irf-planning +codex-mini]
+description: Revise an implementation plan based on feedback [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-plan-revise
+# /tf-plan-revise
 
 Revise a plan based on consultant/reviewer feedback. Updates the same `plan.md`.
 
 ## Usage
 
 ```
-/irf-plan-revise <plan-id-or-path>
+/tf-plan-revise <plan-id-or-path>
 ```
 
 ## Arguments
@@ -23,7 +23,7 @@ Revise a plan based on consultant/reviewer feedback. Updates the same `plan.md`.
 ## Example
 
 ```
-/irf-plan-revise plan-auth-rewrite
+/tf-plan-revise plan-auth-rewrite
 ```
 
 ## Execution

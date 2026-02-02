@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Repository location for remote installs
-REPO_URL="https://raw.githubusercontent.com/legout/pi-tk-workflow/main"
+REPO_URL="https://raw.githubusercontent.com/legout/pi-ticketflow/main"
 
 # Detect if script is being piped (not run from a local file)
 is_piped() {
@@ -18,23 +18,23 @@ Usage:
   ./install.sh --project /path/to/project
 
   # Remote install (via curl)
-  curl -fsSL https://raw.githubusercontent.com/legout/pi-tk-workflow/main/install.sh | bash -s -- --global
-  curl -fsSL https://raw.githubusercontent.com/legout/pi-tk-workflow/main/install.sh | bash -s -- --project /path/to/project
+  curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --global
+  curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --project /path/to/project
 
 Options:
-  --global              Install into ~/.pi/agent and ~/.local/bin/irf
+  --global              Install into ~/.pi/agent and ~/.local/bin/tf
   --project <path>      Install into <path>/.pi (defaults to current dir)
   --remote              Force remote mode (download from GitHub)
   --help                Show this help
 
 Notes:
-  This script installs agents, skills, prompts, workflow config, and the irf CLI.
-  After install, use 'irf setup' (global) or './.pi/bin/irf setup' (project) for interactive setup.
+  This script installs agents, skills, prompts, workflow config, and the tf CLI.
+  After install, use 'tf setup' (global) or './.pi/bin/tf setup' (project) for interactive setup.
 EOF
 }
 
 log() {
-  echo "[irf-install] $*" >&2
+  echo "[tf-install] $*" >&2
 }
 
 download_file() {
@@ -68,18 +68,18 @@ install_cli() {
   chmod +x "$source_file"
 
   if [ "$is_global" = true ]; then
-    # Global install: try to install to ~/.local/bin/irf
-    local global_bin="${HOME}/.local/bin/irf"
+    # Global install: try to install to ~/.local/bin/tf
+    local global_bin="${HOME}/.local/bin/tf"
 
     # Create ~/.local/bin if needed
     if ! mkdir -p "${HOME}/.local/bin" 2>/dev/null; then
       log "WARNING: Cannot create ${HOME}/.local/bin"
-      log "          Installing CLI to $target_dir/bin/irf instead"
-      cp "$source_file" "$target_dir/bin/irf"
+      log "          Installing CLI to $target_dir/bin/tf instead"
+      cp "$source_file" "$target_dir/bin/tf"
       return 1
     fi
 
-    # Copy CLI to ~/.local/bin/irf
+    # Copy CLI to ~/.local/bin/tf
     if cp "$source_file" "$global_bin" 2>/dev/null; then
       log "Installed CLI to: $global_bin"
 
@@ -93,16 +93,16 @@ install_cli() {
       return 0
     else
       log "WARNING: Cannot install to $global_bin (permission denied?)"
-      log "          Installing CLI to $target_dir/bin/irf instead"
+      log "          Installing CLI to $target_dir/bin/tf instead"
       mkdir -p "$target_dir/bin"
-      cp "$source_file" "$target_dir/bin/irf"
+      cp "$source_file" "$target_dir/bin/tf"
       return 1
     fi
   else
-    # Project install: install to .pi/bin/irf
+    # Project install: install to .pi/bin/tf
     mkdir -p "$target_dir/bin"
-    cp "$source_file" "$target_dir/bin/irf"
-    log "Installed CLI to: $target_dir/bin/irf"
+    cp "$source_file" "$target_dir/bin/tf"
+    log "Installed CLI to: $target_dir/bin/tf"
     return 0
   fi
 }
@@ -127,8 +127,8 @@ install_remote() {
   fi
 
   # Download CLI first
-  local cli_url="$REPO_URL/bin/irf"
-  local cli_temp="$temp_dir/irf-cli"
+  local cli_url="$REPO_URL/bin/tf"
+  local cli_temp="$temp_dir/tf-cli"
 
   if download_file "$cli_url" "$cli_temp"; then
     install_cli "$cli_temp" "$target_base" "$is_global"
@@ -146,7 +146,7 @@ install_remote() {
     fi
 
     # Skip CLI (already handled)
-    if [[ "$line" == "bin/irf" ]]; then
+    if [[ "$line" == "bin/tf" ]]; then
       count=$((count + 1))
       continue
     fi
@@ -191,8 +191,8 @@ install_local() {
   fi
 
   # Install CLI first
-  if [ -f "$script_dir/bin/irf" ]; then
-    install_cli "$script_dir/bin/irf" "$target_base" "$is_global"
+  if [ -f "$script_dir/bin/tf" ]; then
+    install_cli "$script_dir/bin/tf" "$target_base" "$is_global"
   fi
 
   local agents_count=0
@@ -207,7 +207,7 @@ install_local() {
     fi
 
     # Skip CLI (already handled)
-    if [[ "$line" == "bin/irf" ]]; then
+    if [[ "$line" == "bin/tf" ]]; then
       continue
     fi
 
@@ -237,7 +237,7 @@ install_local() {
   echo "Installed IRF workflow files to: $target_base"
   echo ""
   echo "Installed components:"
-  echo "  - irf CLI (command-line tool)"
+  echo "  - tf CLI (command-line tool)"
   echo "  - $agents_count agents (execution units)"
   echo "  - $skills_count skills (domain expertise)"
   echo "  - $prompts_count prompts (command entry points)"
@@ -315,13 +315,13 @@ main() {
       echo "     pi install npm:pi-model-switch"
       echo "     pi install npm:pi-subagents"
       echo "  3. Run interactive setup:"
-      echo "     irf setup"
+      echo "     tf setup"
       echo "  4. Sync configuration:"
-      echo "     irf sync"
+      echo "     tf sync"
       echo "  5. Initialize Ralph:"
-      echo "     irf ralph init"
+      echo "     tf ralph init"
       echo "  6. Start working:"
-      echo "     /irf <ticket>"
+      echo "     /tf <ticket>"
     else
       echo "Next steps:"
       echo "  1. Install required Pi extensions:"
@@ -329,13 +329,13 @@ main() {
       echo "     pi install npm:pi-model-switch"
       echo "     pi install npm:pi-subagents"
       echo "  2. Run interactive setup:"
-      echo "     ./.pi/bin/irf setup"
+      echo "     ./.pi/bin/tf setup"
       echo "  3. Sync configuration:"
-      echo "     ./.pi/bin/irf sync"
+      echo "     ./.pi/bin/tf sync"
       echo "  4. Initialize Ralph:"
-      echo "     ./.pi/bin/irf ralph init"
+      echo "     ./.pi/bin/tf ralph init"
       echo "  5. Start working:"
-      echo "     /irf <ticket>"
+      echo "     /tf <ticket>"
     fi
   else
     install_local "$target_base" "$is_global"
@@ -345,24 +345,24 @@ main() {
       echo "  1. Ensure ~/.local/bin is in your PATH:"
       echo "     export PATH=\"\$HOME/.local/bin:\$PATH\""
       echo "  2. Run interactive setup:"
-      echo "     irf setup"
+      echo "     tf setup"
       echo "  3. Sync configuration:"
-      echo "     irf sync"
+      echo "     tf sync"
       echo "  4. Initialize Ralph:"
-      echo "     irf ralph init"
+      echo "     tf ralph init"
       echo "  5. Start working:"
-      echo "     /irf <ticket>"
+      echo "     /tf <ticket>"
     else
       echo "Next steps:"
       echo "  1. Run interactive setup:"
-      echo "     ./.pi/bin/irf setup"
+      echo "     ./.pi/bin/tf setup"
       echo "  2. Sync configuration:"
-      echo "     ./.pi/bin/irf sync"
+      echo "     ./.pi/bin/tf sync"
       echo "  3. Review AGENTS.md (project patterns)"
       echo "  4. Initialize Ralph:"
-      echo "     ./.pi/bin/irf ralph init"
+      echo "     ./.pi/bin/tf ralph init"
       echo "  5. Start working:"
-      echo "     /irf <ticket>"
+      echo "     /tf <ticket>"
     fi
   fi
 }

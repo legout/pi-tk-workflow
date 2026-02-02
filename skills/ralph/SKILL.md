@@ -74,7 +74,7 @@ Controlled by `promiseOnComplete` (default: true).
   "maxIterationsPerTicket": 5,
   "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
   "completionCheck": "tk ready | grep -q .",
-  "workflow": "/irf",
+  "workflow": "/tf",
   "workflowFlags": "--auto",
   "sleepBetweenTickets": 5000,
   "sleepBetweenRetries": 10000,
@@ -248,7 +248,7 @@ Read and summarize:
 
 ## Integration with IRF Workflow
 
-Ralph is **additive** - the core `/irf` workflow works identically:
+Ralph is **additive** - the core `/tf` workflow works identically:
 
 | Aspect | Standalone | With Ralph |
 |--------|-----------|------------|

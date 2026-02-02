@@ -21,10 +21,10 @@ Fix issues from the review described in the Task input.
 1. **Read review.md**: Parse Critical, Major, and Minor issues
 2. **No-op if empty**: If there are no Critical/Major/Minor issues, write `fixes.md` with "No fixes needed" and stop.
 3. **Read affected files**: Use `read` to see current state
-4. **Track file changes**: After every `edit` or `write`, run `irf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
-   - If the task provides a chain dir, use `irf track <path> --file {chain_dir}/files_changed.txt`
+4. **Track file changes**: After every `edit` or `write`, run `tf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
+   - If the task provides a chain dir, use `tf track <path> --file {chain_dir}/files_changed.txt`
    - Otherwise, place `files_changed.txt` next to `fixes.md`
-   - If `irf` is not in PATH but `./bin/irf` exists, use `./bin/irf track ...` instead
+   - If `tf` is not in PATH but `./bin/tf` exists, use `./bin/tf track ...` instead
 5. **Fix Critical issues**: Address ALL critical issues
 6. **Fix Major issues**: Address all major issues if feasible
 7. **Fix Minor issues**: Address minor issues if low effort

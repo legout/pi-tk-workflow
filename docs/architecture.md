@@ -1,12 +1,12 @@
 # Architecture
 
-How pi-tk-workflow is structured and how it works.
+How pi-ticketflow is structured and how it works.
 
 ---
 
 ## Overview
 
-pi-tk-workflow uses a **skill-centric** architecture where:
+pi-ticketflow uses a **skill-centric** architecture where:
 
 - **Skills** contain domain expertise and procedures
 - **Commands** are thin wrappers with `model:` and `skill:` frontmatter
@@ -18,13 +18,13 @@ pi-tk-workflow uses a **skill-centric** architecture where:
 ## Component Hierarchy
 
 ```
-User types: /irf ABC-123
+User types: /tf ABC-123
          │
          ▼
 ┌─────────────────┐
 │  Extension      │  Reads frontmatter:
 │  (pi-prompt-    │    model: chutes/moonshotai/Kimi-K2.5-TEE:high
-│   template-     │    skill: irf-workflow
+│   template-     │    skill: tf-workflow
 │   model)        │
 └────────┬────────┘
          │
@@ -35,7 +35,7 @@ User types: /irf ABC-123
          │
          ▼
 ┌─────────────────┐
-│  Skill Injection│  Injects skills/irf-workflow/SKILL.md
+│  Skill Injection│  Injects skills/tf-workflow/SKILL.md
 │                 │  into system prompt
 └────────┬────────┘
          │
@@ -66,16 +66,16 @@ Skills are the core expertise containers. They live in `skills/*/SKILL.md`.
 
 | Skill | Purpose | Key Procedures |
 |-------|---------|----------------|
-| `irf-workflow` | Core implementation | Re-anchor, Research, Implement, Review, Fix, Close |
-| `irf-planning` | Research & planning | Seed capture, Backlog generation, Plan lifecycle, Research spike, Baseline, Follow-ups, OpenSpec bridge |
-| `irf-config` | Setup & maintenance | Verify setup, Sync models, Check MCP |
+| `tf-workflow` | Core implementation | Re-anchor, Research, Implement, Review, Fix, Close |
+| `tf-planning` | Research & planning | Seed capture, Backlog generation, Plan lifecycle, Research spike, Baseline, Follow-ups, OpenSpec bridge |
+| `tf-config` | Setup & maintenance | Verify setup, Sync models, Check MCP |
 | `ralph` | Autonomous loop | Initialize, Start loop, Extract lessons, Progress tracking |
 
 ### Skill Structure
 
 ```markdown
 ---
-name: irf-workflow
+name: tf-workflow
 description: Core IRF implementation workflow
 ---
 
@@ -114,12 +114,12 @@ Commands are thin wrappers in `prompts/*.md`. They specify:
 
 ```markdown
 ---
-description: Implement ticket [irf-workflow +Kimi-K2.5]
+description: Implement ticket [tf-workflow +Kimi-K2.5]
 model: chutes/moonshotai/Kimi-K2.5-TEE:high
-skill: irf-workflow
+skill: tf-workflow
 ---
 
-# /irf
+# /tf
 
 Execute the IRF workflow for ticket: $@
 
@@ -130,11 +130,11 @@ Follow the **IRF Workflow Skill** procedures.
 
 | Category | Commands | Skill |
 |----------|----------|-------|
-| Implementation | `/irf`, `/ralph-start` | irf-workflow, ralph |
-| Planning | `/irf-plan`, `/irf-plan-consult`, `/irf-plan-revise`, `/irf-plan-review` | irf-planning |
-| Research | `/irf-seed`, `/irf-spike`, `/irf-baseline` | irf-planning |
-| Ticket Creation | `/irf-backlog`, `/irf-backlog-ls`, `/irf-followups`, `/irf-from-openspec` | irf-planning |
-| Config | `/irf-sync` | irf-config |
+| Implementation | `/tf`, `/ralph-start` | tf-workflow, ralph |
+| Planning | `/tf-plan`, `/tf-plan-consult`, `/tf-plan-revise`, `/tf-plan-review` | tf-planning |
+| Research | `/tf-seed`, `/tf-spike`, `/tf-baseline` | tf-planning |
+| Ticket Creation | `/tf-backlog`, `/tf-backlog-ls`, `/tf-followups`, `/tf-from-openspec` | tf-planning |
+| Config | `/tf-sync` | tf-config |
 
 ---
 
@@ -190,10 +190,10 @@ All planning and research artifacts are stored in `.pi/knowledge/`:
 
 | Prefix | Type | Created By | Purpose |
 |--------|------|------------|---------|
-| `seed-*` | Greenfield | `/irf-seed` | New ideas and features |
-| `baseline-*` | Brownfield | `/irf-baseline` | Existing project analysis |
-| `plan-*` | Plan | `/irf-plan` | Structured implementation plans |
-| `spike-*` | Research | `/irf-spike` | Technology research |
+| `seed-*` | Greenfield | `/tf-seed` | New ideas and features |
+| `baseline-*` | Brownfield | `/tf-baseline` | Existing project analysis |
+| `plan-*` | Plan | `/tf-plan` | Structured implementation plans |
+| `spike-*` | Research | `/tf-spike` | Technology research |
 
 ### Linking Tickets to Topics
 
@@ -234,7 +234,7 @@ Used by skills to switch between phases:
 
 ## Workflow Flows
 
-### `/irf` Flow (Implementation)
+### `/tf` Flow (Implementation)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -287,58 +287,58 @@ Used by skills to switch between phases:
 #### Seed → Tickets
 
 ```
-/irf-seed "Idea"
+/tf-seed "Idea"
   ↓
 Create .pi/knowledge/topics/seed-*/
   - seed.md, mvp-scope.md, success-metrics.md, etc.
   ↓
-/irf-backlog seed-*
+/tf-backlog seed-*
   ↓
 Create tickets in tk (with external-ref: seed-*)
   ↓
-/irf <ticket>
+/tf <ticket>
 ```
 
 #### Baseline → Tickets
 
 ```
-/irf-baseline [focus]
+/tf-baseline [focus]
   ↓
 Create .pi/knowledge/topics/baseline-*/
   - baseline.md, risk-map.md, test-inventory.md, etc.
   ↓
-/irf-backlog baseline-*
+/tf-backlog baseline-*
   ↓
 Create tickets from risks, test gaps, dependencies
   ↓
-/irf <ticket>
+/tf <ticket>
 ```
 
 #### Plan Lifecycle
 
 ```
-/irf-plan "Feature"
+/tf-plan "Feature"
   ↓
 plan.md (status: draft)
   ↓
-/irf-plan-consult → plan.md (status: consulted)
+/tf-plan-consult → plan.md (status: consulted)
   ↓
-/irf-plan-revise → plan.md (status: revised)
+/tf-plan-revise → plan.md (status: revised)
   ↓
-/irf-plan-review → plan.md (status: approved/blocked)
+/tf-plan-review → plan.md (status: approved/blocked)
   ↓
 (if approved)
   ↓
-/irf-backlog plan-*
+/tf-backlog plan-*
   ↓
-/irf <ticket>
+/tf <ticket>
 ```
 
 ---
 
 ## Model Strategy
 
-Models are configured in `workflows/irf/config.json`:
+Models are configured in `workflows/tf/config.json`:
 
 | Role | Default Model | Purpose |
 |------|---------------|---------|
@@ -350,7 +350,7 @@ Models are configured in `workflows/irf/config.json`:
 | planning | GPT-5.1-mini | Planning workflows |
 | config | GLM-4.7 | Setup and sync |
 
-Run `/irf-sync` after editing config to apply changes.
+Run `/tf-sync` after editing config to apply changes.
 
 ---
 

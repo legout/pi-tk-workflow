@@ -1,5 +1,5 @@
 ---
-name: irf-config
+name: tf-config
 description: Setup, configuration, and maintenance for IRF workflow. Use for installing extensions, syncing models, verifying setup, and managing workflow configuration.
 ---
 
@@ -34,8 +34,8 @@ pi list | grep -q "pi-review-loop" && echo "✓ pi-review-loop" || echo "○ pi-
 ### Workflow Config
 
 Location (project overrides global):
-- `.pi/workflows/irf/config.json` (project)
-- `~/.pi/agent/workflows/irf/config.json` (global)
+- `.pi/workflows/tf/config.json` (project)
+- `~/.pi/agent/workflows/tf/config.json` (global)
 
 Structure:
 ```json
@@ -99,7 +99,7 @@ Check complete installation status:
    - `agents/closer.md`
 
 3. **Check workflow config exists**:
-   - Look for `workflows/irf/config.json`
+   - Look for `workflows/tf/config.json`
 
 4. **Check `tk` CLI**:
    ```bash
@@ -130,9 +130,9 @@ Update agent **and prompt** files from config:
 **Prompt mapping (config key → prompt file)**:
 | Config Key | Prompt File |
 |------------|-------------|
-| `models.implementer` | `prompts/irf.md`, `prompts/irf-lite.md` |
-| `models.planning` | `prompts/irf-plan.md`, `prompts/irf-plan-consult.md`, `prompts/irf-plan-revise.md`, `prompts/irf-plan-review.md`, `prompts/irf-seed.md`, `prompts/irf-backlog.md`, `prompts/irf-backlog-ls.md`, `prompts/irf-spike.md`, `prompts/irf-from-openspec.md`, `prompts/irf-baseline.md`, `prompts/irf-followups.md` |
-| `models.config` | `prompts/irf-sync.md` |
+| `models.implementer` | `prompts/tf.md`, `prompts/tf-lite.md` |
+| `models.planning` | `prompts/tf-plan.md`, `prompts/tf-plan-consult.md`, `prompts/tf-plan-revise.md`, `prompts/tf-plan-review.md`, `prompts/tf-seed.md`, `prompts/tf-backlog.md`, `prompts/tf-backlog-ls.md`, `prompts/tf-spike.md`, `prompts/tf-from-openspec.md`, `prompts/tf-baseline.md`, `prompts/tf-followups.md` |
+| `models.config` | `prompts/tf-sync.md` |
 
 **Steps**:
 
@@ -164,25 +164,25 @@ If `pi-model-switch` is installed, suggest useful aliases:
 **Suggested content**:
 ```json
 {
-  "irf-implementer": [
+  "tf-implementer": [
     "chutes/moonshotai/Kimi-K2.5-TEE",
     "anthropic/claude-sonnet-4",
     "openai-codex/gpt-5.2"
   ],
-  "irf-reviewer": [
+  "tf-reviewer": [
     "openai-codex/gpt-5.1-codex-mini",
     "anthropic/claude-sonnet-4",
     "zai/glm-4.7"
   ],
-  "irf-cheap": [
+  "tf-cheap": [
     "zai/glm-4.7",
     "google/gemini-2.5-flash"
   ],
-  "irf-planning": [
+  "tf-planning": [
     "openai-codex/gpt-5.1-codex-mini",
     "zai/glm-4.7"
   ],
-  "irf-config": [
+  "tf-config": [
     "zai/glm-4.7",
     "openai-codex/gpt-5.1-codex-mini"
   ]
@@ -247,7 +247,7 @@ Always provide clear status report:
 - ...
 
 ## Prompt Models Updated
-- irf-plan.md: openai-codex/gpt-5.1-codex-mini → openai-codex/gpt-5.1-codex-mini:medium
+- tf-plan.md: openai-codex/gpt-5.1-codex-mini → openai-codex/gpt-5.1-codex-mini:medium
 
 ## Prompt Models Unchanged
 - irf.md: chutes/moonshotai/Kimi-K2.5-TEE:high

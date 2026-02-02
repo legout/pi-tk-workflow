@@ -22,9 +22,9 @@ Start the Ralph autonomous loop for continuous ticket processing.
 
 ## Prerequisites
 
-- Ralph initialized: `./bin/irf ralph init`
+- Ralph initialized: `./bin/tf ralph init`
 - Tickets ready in backlog: `tk ready`
-- `/irf` working standalone
+- `/tf` working standalone
 
 ## Execution
 
@@ -35,7 +35,7 @@ FOR iteration = 1 TO maxIterations:
   1. READ STATE - Load config, progress, lessons
   2. GET TICKET - `tk ready | head -1`
   3. RE-ANCHOR - Load lessons, ticket, knowledge
-  4. EXECUTE - Run `/irf {ticket} --auto`
+  4. EXECUTE - Run `/tf {ticket} --auto`
   5. PARSE RESULT - Check promise sigil
   6. UPDATE STATE - Progress, statistics, lessons
   7. SLEEP - Wait between tickets
@@ -59,7 +59,7 @@ Output: <promise>COMPLETE</promise> (if promiseOnComplete)
   "maxIterations": 50,
   "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
   "completionCheck": "tk ready | grep -q .",
-  "workflow": "/irf",
+  "workflow": "/tf",
   "workflowFlags": "--auto",
   "sleepBetweenTickets": 5000,
   "sleepBetweenRetries": 10000,
@@ -72,8 +72,8 @@ Output: <promise>COMPLETE</promise> (if promiseOnComplete)
 
 In another terminal:
 ```bash
-./bin/irf ralph status     # Current state
-./bin/irf ralph lessons    # View lessons learned
+./bin/tf ralph status     # Current state
+./bin/tf ralph lessons    # View lessons learned
 ```
 
 ## Stopping
@@ -86,6 +86,6 @@ The loop stops when:
 ## Notes
 
 - Uses `restore: false` - stays on loop model after completion
-- Works best with well-defined tickets (use `/irf-backlog` first)
+- Works best with well-defined tickets (use `/tf-backlog` first)
 - First run: start with `--max-iterations 3` to verify
 - Check first few tickets manually before long runs

@@ -1,18 +1,18 @@
 ---
-description: Consult an implementation plan for gaps and ambiguities [irf-planning +codex-mini]
+description: Consult an implementation plan for gaps and ambiguities [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-plan-consult
+# /tf-plan-consult
 
 Review a plan for gaps, ambiguities, and over-engineering. Updates the same `plan.md`.
 
 ## Usage
 
 ```
-/irf-plan-consult <plan-id-or-path>
+/tf-plan-consult <plan-id-or-path>
 ```
 
 ## Arguments
@@ -23,7 +23,7 @@ Review a plan for gaps, ambiguities, and over-engineering. Updates the same `pla
 ## Example
 
 ```
-/irf-plan-consult plan-auth-rewrite
+/tf-plan-consult plan-auth-rewrite
 ```
 
 ## Execution

@@ -1,18 +1,18 @@
 ---
-description: Create tickets from seed, baseline, or plan artifacts [irf-planning +codex-mini]
+description: Create tickets from seed, baseline, or plan artifacts [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-backlog
+# /tf-backlog
 
 Generate small, actionable implementation tickets from seed (greenfield), baseline (brownfield), or plan artifacts.
 
 ## Usage
 
 ```
-/irf-backlog <seed-baseline-or-plan-path-or-topic-id>
+/tf-backlog <seed-baseline-or-plan-path-or-topic-id>
 ```
 
 ## Arguments
@@ -23,10 +23,10 @@ Generate small, actionable implementation tickets from seed (greenfield), baseli
 ## Examples
 
 ```
-/irf-backlog seed-build-a-cli
-/irf-backlog baseline-myapp
-/irf-backlog plan-auth-rewrite
-/irf-backlog .pi/knowledge/topics/baseline-myapp/
+/tf-backlog seed-build-a-cli
+/tf-backlog baseline-myapp
+/tf-backlog plan-auth-rewrite
+/tf-backlog .pi/knowledge/topics/baseline-myapp/
 ```
 
 ## Execution
@@ -43,7 +43,7 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
    ```bash
    tk create "<title>" \
      --description "<description>" \
-     --tags irf,backlog \
+     --tags tf,backlog \
      --type task \
      --priority 2 \
      --external-ref "{topic-id}"
@@ -53,7 +53,7 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
    ```bash
    tk create "<title>" \
      --description "<description>" \
-     --tags irf,backlog,baseline \
+     --tags tf,backlog,baseline \
      --type task \
      --priority 2 \
      --external-ref "{topic-id}"
@@ -63,7 +63,7 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
    ```bash
    tk create "<title>" \
      --description "<description>" \
-     --tags irf,backlog,plan \
+     --tags tf,backlog,plan \
      --type task \
      --priority 2 \
      --external-ref "{topic-id}"
@@ -142,5 +142,5 @@ Follow the **IRF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)"
 
 Start implementation:
 ```
-/irf <ticket-id>
+/tf <ticket-id>
 ```

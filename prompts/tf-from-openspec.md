@@ -1,18 +1,18 @@
 ---
-description: Create tickets from OpenSpec change [irf-planning +codex-mini]
+description: Create tickets from OpenSpec change [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-from-openspec
+# /tf-from-openspec
 
 Create small, self-contained IRF tickets from an OpenSpec change.
 
 ## Usage
 
 ```
-/irf-from-openspec <change-id-or-path>
+/tf-from-openspec <change-id-or-path>
 ```
 
 ## Arguments
@@ -22,8 +22,8 @@ Create small, self-contained IRF tickets from an OpenSpec change.
 ## Examples
 
 ```
-/irf-from-openspec auth-pkce-support
-/irf-from-openspec openspec/changes/auth-pkce-support/
+/tf-from-openspec auth-pkce-support
+/tf-from-openspec openspec/changes/auth-pkce-support/
 ```
 
 ## Execution
@@ -65,7 +65,7 @@ Follow the **IRF Planning Skill** "OpenSpec Bridge" procedure:
    ```bash
    tk create "<title>" \
      --description "<description>" \
-     --tags irf,openspec \
+     --tags tf,openspec \
      --type task \
      --priority 2 \
      --external-ref "openspec-{change_id}"
@@ -81,12 +81,12 @@ Follow the **IRF Planning Skill** "OpenSpec Bridge" procedure:
 
 ## Output
 
-- Tickets created in `tk` (tagged: irf, openspec, external-ref: openspec-{change_id})
+- Tickets created in `tk` (tagged: tf, openspec, external-ref: openspec-{change_id})
 - `backlog.md` in change directory
 
 ## Next Steps
 
 Start implementation:
 ```
-/irf <ticket-id>
+/tf <ticket-id>
 ```

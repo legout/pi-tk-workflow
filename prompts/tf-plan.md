@@ -1,18 +1,18 @@
 ---
-description: Create an implementation plan document [irf-planning +codex-mini]
+description: Create an implementation plan document [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
-skill: irf-planning
+skill: tf-planning
 ---
 
-# /irf-plan
+# /tf-plan
 
 Create a single plan document for a project, feature, or refactor.
 
 ## Usage
 
 ```
-/irf-plan <request description>
+/tf-plan <request description>
 ```
 
 ## Arguments
@@ -22,7 +22,7 @@ Create a single plan document for a project, feature, or refactor.
 ## Example
 
 ```
-/irf-plan Refactor auth flow to support OAuth + magic links
+/tf-plan Refactor auth flow to support OAuth + magic links
 ```
 
 ## Execution
@@ -43,7 +43,7 @@ Follow the **IRF Planning Skill** "Plan Interview (Planner)" procedure:
 
 Run consultant and reviewer:
 ```
-/irf-plan-consult {topic-id}
-/irf-plan-revise {topic-id}
-/irf-plan-review {topic-id} --high-accuracy
+/tf-plan-consult {topic-id}
+/tf-plan-revise {topic-id}
+/tf-plan-review {topic-id} --high-accuracy
 ```

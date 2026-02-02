@@ -1,5 +1,5 @@
 ---
-name: irf-planning
+name: tf-planning
 description: Research and planning activities for IRF workflow. Use for capturing ideas, creating tickets, research spikes, and bridging from external specs. Includes seed capture, backlog generation, baseline analysis, and OpenSpec integration.
 ---
 
@@ -27,8 +27,8 @@ All ticket creation in this skill follows these rules:
 ## Configuration
 
 Read workflow config (project overrides global):
-- `.pi/workflows/irf/config.json`
-- `~/.pi/agent/workflows/irf/config.json`
+- `.pi/workflows/tf/config.json`
+- `~/.pi/agent/workflows/tf/config.json`
 
 Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
 
@@ -424,7 +424,7 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
 
 5. **If `backlog.md` missing**:
    - Mark as **unticketed**
-   - Suggest running `/irf-backlog <topic>`
+   - Suggest running `/tf-backlog <topic>`
 
 6. **Output format**:
    - If a single topic is requested: print full backlog table + summary
@@ -609,8 +609,8 @@ All procedures use model-switch pattern with meta-model resolution:
    switch_model action="switch" search="{metaModels.planning.model}"
    ```
 
-For example, for `/irf-plan`:
-- `prompts.irf-plan` → "planning"
+For example, for `/tf-plan`:
+- `prompts.tf-plan` → "planning"
 - `metaModels.planning.model` → "openai-codex/gpt-5.1-codex-mini"
 
 ### Ticket Creation Pattern

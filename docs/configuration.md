@@ -1,6 +1,6 @@
 # Configuration
 
-Setting up pi-tk-workflow, models, extensions, and MCP servers.
+Setting up pi-ticketflow, models, extensions, and MCP servers.
 
 ---
 
@@ -9,7 +9,7 @@ Setting up pi-tk-workflow, models, extensions, and MCP servers.
 ### Interactive Setup (Recommended)
 
 ```bash
-./bin/irf setup
+./bin/tf setup
 ```
 
 Guides you through:
@@ -51,7 +51,7 @@ pi install npm:pi-subagents              # Parallel reviewer subagents
 
 ## Model Configuration
 
-Models are configured in `workflows/irf/config.json`:
+Models are configured in `workflows/tf/config.json`:
 
 ### Default Config
 
@@ -86,9 +86,9 @@ Models are configured in `workflows/irf/config.json`:
 After editing `config.json`:
 
 ```bash
-./bin/irf sync
+./bin/tf sync
 # or
-/irf-sync
+/tf-sync
 ```
 
 This updates `model:` frontmatter in all agent and prompt files.
@@ -170,7 +170,7 @@ pi install npm:pi-mcp-adapter
 
 ### MCP Config Location
 
-MCP config is written to `<target>/.pi/mcp.json` when you run `./bin/irf setup`.
+MCP config is written to `<target>/.pi/mcp.json` when you run `./bin/tf setup`.
 
 Example structure:
 
@@ -200,7 +200,7 @@ Ralph loop settings in `.pi/ralph/config.json`:
   "maxIterationsPerTicket": 5,
   "ticketQuery": "tk ready | head -1 | awk '{print $1}'",
   "completionCheck": "tk ready | grep -q .",
-  "workflow": "/irf",
+  "workflow": "/tf",
   "workflowFlags": "--auto",
   "sleepBetweenTickets": 5000,
   "sleepBetweenRetries": 10000,
@@ -217,7 +217,7 @@ Ralph loop settings in `.pi/ralph/config.json`:
 | `maxIterationsPerTicket` | 5 | Retries per ticket before moving on |
 | `ticketQuery` | `tk ready \| head -1` | Command to pick next ticket |
 | `completionCheck` | `tk ready \| grep -q .` | Command to detect empty backlog |
-| `workflow` | `/irf` | Command to run per ticket |
+| `workflow` | `/tf` | Command to run per ticket |
 | `workflowFlags` | `--auto` | Flags for workflow |
 | `sleepBetweenTickets` | 5000 | Ms to wait between tickets |
 | `sleepBetweenRetries` | 10000 | Ms to wait before retrying when no ticket found |
@@ -239,7 +239,7 @@ pi install npm:pi-review-loop    # Post-chain review with /review-start
 Check your setup:
 
 ```bash
-./bin/irf doctor
+./bin/tf doctor
 ```
 
 Runs preflight checks for:
@@ -298,7 +298,7 @@ pi install npm:pi-prompt-template-model
 - Verify `pi-prompt-template-model` installed (for entry switch)
 - Verify `pi-model-switch` installed (for runtime switches)
 - Check model ID is valid in config.json
-- Run `/irf-sync` after config changes
+- Run `/tf-sync` after config changes
 
 ### Skill not loading
 

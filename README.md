@@ -1,4 +1,4 @@
-# pi-tk-workflow
+# pi-ticketflow
 
 A comprehensive Pi workflow package for ticket-based development using the **Implement → Review → Fix → Close** cycle.
 
@@ -31,38 +31,38 @@ pi install npm:pi-subagents              # Parallel reviewer subagents
 ### Quick Install (via curl)
 
 ```bash
-# Global install (installs irf CLI to ~/.local/bin/)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tk-workflow/main/install.sh | bash -s -- --global
+# Global install (installs tf CLI to ~/.local/bin/)
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --global
 
 # Project install (current directory)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tk-workflow/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash
 
 # Project install (specific path)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tk-workflow/main/install.sh | bash -s -- --project /path/to/project
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --project /path/to/project
 ```
 
 ### Interactive Setup (Recommended after install)
 
-After global install, the `irf` CLI is available:
+After global install, the `tf` CLI is available:
 
 ```bash
 # Interactive setup (installs extensions, configures MCP)
-irf setup
+tf setup
 
 # Sync models from config
-irf sync
+tf sync
 ```
 
-For project installs, use `./.pi/bin/irf` instead.
+For project installs, use `./.pi/bin/tf` instead.
 
 ### Manual Install (from cloned repo)
 
 ```bash
 # Clone first
-git clone https://github.com/legout/pi-tk-workflow.git
-cd pi-tk-workflow
+git clone https://github.com/legout/pi-ticketflow.git
+cd pi-ticketflow
 
-# Global install (adds irf to ~/.local/bin/)
+# Global install (adds tf to ~/.local/bin/)
 ./install.sh --global
 
 # Project install
@@ -74,7 +74,7 @@ cd pi-tk-workflow
 | Component | Global Install | Project Install |
 |-----------|---------------|-----------------|
 | Agents, Skills, Prompts | `~/.pi/agent/` | `.pi/` |
-| irf CLI | `~/.local/bin/irf` | `.pi/bin/irf` |
+| tf CLI | `~/.local/bin/tf` | `.pi/bin/tf` |
 | Config | `~/.pi/agent/workflows/` | `.pi/workflows/` |
 
 ---
@@ -84,7 +84,7 @@ cd pi-tk-workflow
 ### 1. Capture an Idea
 
 ```bash
-/irf-seed "Build a CLI tool for managing database migrations"
+/tf-seed "Build a CLI tool for managing database migrations"
 ```
 
 Creates structured artifacts in `.pi/knowledge/topics/seed-build-a-cli/`.
@@ -92,7 +92,7 @@ Creates structured artifacts in `.pi/knowledge/topics/seed-build-a-cli/`.
 ### 2. Create Tickets
 
 ```bash
-/irf-backlog seed-build-a-cli
+/tf-backlog seed-build-a-cli
 ```
 
 Generates 5-15 small, actionable tickets (1-2 hours each) linked to your seed.
@@ -100,7 +100,7 @@ Generates 5-15 small, actionable tickets (1-2 hours each) linked to your seed.
 ### 3. Run the IRF Workflow
 
 ```
-/irf TICKET-123
+/tf TICKET-123
 ```
 
 Executes the full cycle: Research → Implement → Review → Fix → Close.
@@ -124,7 +124,7 @@ Choose the workflow that matches your situation:
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│  /irf-seed  │ →  │ /irf-backlog │ →  │  /irf       │ →  │  /ralph  │
+│  /tf-seed  │ →  │ /tf-backlog │ →  │  /tf       │ →  │  /ralph  │
 │  "Your idea"│    │   seed-*     │    │  <ticket>   │    │  -start  │
 └─────────────┘    └──────────────┘    └─────────────┘    │(optional)│
                                                           └──────────┘
@@ -132,9 +132,9 @@ Choose the workflow that matches your situation:
 
 **Best for:** Exploring new ideas, prototyping, when requirements are fuzzy
 
-1. Capture your idea with `/irf-seed`
-2. Generate tickets with `/irf-backlog`
-3. Implement with `/irf <ticket>`
+1. Capture your idea with `/tf-seed`
+2. Generate tickets with `/tf-backlog`
+3. Implement with `/tf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
 
 ---
@@ -144,7 +144,7 @@ Choose the workflow that matches your situation:
 
 ```
 ┌────────────┐   ┌──────────────┐   ┌─────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────┐
-│ /irf-plan  │ → │/irf-plan-    │ → │/irf-plan-   │ → │/irf-plan-   │ → │ /irf-backlog │ → │  /irf    │
+│ /tf-plan  │ → │/tf-plan-    │ → │/tf-plan-   │ → │/tf-plan-   │ → │ /tf-backlog │ → │  /tf    │
 │  "Feature" │   │   consult    │   │   revise    │   │   review    │   │    plan-*    │   │ <ticket> │
 └────────────┘   └──────────────┘   └─────────────┘   └─────────────┘   └──────────────┘   └──────────┘
       ↓                                                                                           ↓
@@ -153,12 +153,12 @@ Choose the workflow that matches your situation:
 
 **Best for:** Production features, architecture changes, when you need rigor
 
-1. Create plan with `/irf-plan`
-2. Detect gaps with `/irf-plan-consult`
-3. Apply feedback with `/irf-plan-revise`
-4. Validate with `/irf-plan-review` (must be approved)
-5. Create tickets with `/irf-backlog`
-6. Implement with `/irf <ticket>`
+1. Create plan with `/tf-plan`
+2. Detect gaps with `/tf-plan-consult`
+3. Apply feedback with `/tf-plan-revise`
+4. Validate with `/tf-plan-review` (must be approved)
+5. Create tickets with `/tf-backlog`
+6. Implement with `/tf <ticket>`
 
 ---
 
@@ -167,7 +167,7 @@ Choose the workflow that matches your situation:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│  /irf-seed  │ →  │  /irf-plan  │ →  │   /irf-plan- │ →  │  /irf-backlog│ →  │   /irf   │
+│  /tf-seed  │ →  │  /tf-plan  │ →  │   /tf-plan- │ →  │  /tf-backlog│ →  │   /tf   │
 │  "Big idea" │    │ "Refined    │    │   review     │    │   plan-*     │    │ <ticket> │
 │             │    │  from seed" │    │              │    │              │    │          │
 └─────────────┘    └─────────────┘    └──────────────┘    └─────────────┘    └──────────┘
@@ -176,9 +176,9 @@ Choose the workflow that matches your situation:
 
 **Best for:** Major features, architectural changes, when you need both exploration AND rigor
 
-1. **Explore** with `/irf-seed` - capture the vision, constraints, MVP scope
+1. **Explore** with `/tf-seed` - capture the vision, constraints, MVP scope
 2. **Read** the seed artifacts (especially `seed.md`, `mvp-scope.md`, `constraints.md`)
-3. **Specify** with `/irf-plan` - use the seed content as input for a rigorous plan
+3. **Specify** with `/tf-plan` - use the seed content as input for a rigorous plan
 4. **Iterate** the plan through consult/revise/review if needed
 5. Create tickets and implement
 
@@ -194,7 +194,7 @@ Choose the workflow that matches your situation:
 
 ```
 ┌──────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│/irf-baseline │ →  │ /irf-backlog │ →  │  /irf       │ →  │  /ralph  │
+│/tf-baseline │ →  │ /tf-backlog │ →  │  /tf       │ →  │  /ralph  │
 │  [focus]     │    │  baseline-*  │    │  <ticket>   │    │  -start  │
 └──────────────┘    └──────────────┘    └─────────────┘    │(optional)│
                                                            └──────────┘
@@ -202,9 +202,9 @@ Choose the workflow that matches your situation:
 
 **Best for:** Refactoring, adding features to existing code, modernizing
 
-1. Capture current state with `/irf-baseline` (analyzes risks, tests, dependencies)
-2. Create improvement tickets with `/irf-backlog`
-3. Implement with `/irf <ticket>`
+1. Capture current state with `/tf-baseline` (analyzes risks, tests, dependencies)
+2. Create improvement tickets with `/tf-backlog`
+3. Implement with `/tf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
 
 ---
@@ -214,16 +214,16 @@ Choose the workflow that matches your situation:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│ /irf-spike  │ →  │  /irf-seed  │ →  │ /irf-backlog │ →  │   /irf      │ →  │  /ralph  │
+│ /tf-spike  │ →  │  /tf-seed  │ →  │ /tf-backlog │ →  │   /tf      │ →  │  /ralph  │
 │  "Topic"    │    │  "Decision" │    │    seed-*    │    │   <ticket>  │    │  -start  │
 │ [--parallel]│    │             │    │              │    │             │    │(optional)│
 └─────────────┘    └─────────────┘    └──────────────┘    └─────────────┘    └──────────┘
 ```
 
-1. Research with `/irf-spike` (use `--parallel` for faster research)
-2. Capture decision as `/irf-seed`
-3. Create tickets with `/irf-backlog`
-4. Implement with `/irf <ticket>`
+1. Research with `/tf-spike` (use `--parallel` for faster research)
+2. Capture decision as `/tf-seed`
+3. Create tickets with `/tf-backlog`
+4. Implement with `/tf <ticket>`
 5. (Optional) Run autonomously with `/ralph-start`
 
 ---
@@ -233,15 +233,15 @@ Choose the workflow that matches your situation:
 
 ```
 ┌──────────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│/irf-from-openspec│ →  │  (review     │ →  │   /irf      │ →  │  /ralph  │
+│/tf-from-openspec│ →  │  (review     │ →  │   /tf      │ →  │  /ralph  │
 │   <change-id>    │    │  tickets)    │    │   <ticket>  │    │  -start  │
 └──────────────────┘    └──────────────┘    └─────────────┘    │(optional)│
                                                                └──────────┘
 ```
 
-1. Import from OpenSpec with `/irf-from-openspec`
+1. Import from OpenSpec with `/tf-from-openspec`
 2. Review generated tickets in `tk`
-3. Implement with `/irf <ticket>`
+3. Implement with `/tf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
 
 **Setup:** Ensure OpenSpec change artifacts exist at `openspec/changes/{id}/tasks.md`
@@ -253,7 +253,7 @@ Choose the workflow that matches your situation:
 
 ```
 ┌────────────┐    ┌─────────────┐    ┌────────────────┐    ┌──────────┐
-│   /irf     │ →  │/irf-followups│ →  │     /irf       │ →  │  /ralph  │
+│   /tf     │ →  │/tf-followups│ →  │     /tf       │ →  │  /ralph  │
 │  <ticket>  │    │  review.md   │    │   <followup>   │    │  -start  │
 └────────────┘    └─────────────┘    └────────────────┘    │(optional)│
      ↓                                                      └──────────┘
@@ -262,9 +262,9 @@ Choose the workflow that matches your situation:
 Suggestions)
 ```
 
-1. Run normal implementation with `/irf <ticket>`
-2. Create follow-up tickets from review warnings with `/irf-followups`
-3. Process follow-ups with `/irf <followup-ticket>`
+1. Run normal implementation with `/tf <ticket>`
+2. Create follow-up tickets from review warnings with `/tf-followups`
+3. Process follow-ups with `/tf <followup-ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
 
 ---
@@ -273,13 +273,13 @@ Suggestions)
 
 | Workflow | Use When | Key Commands |
 |----------|----------|--------------|
-| **Greenfield** | New projects/features (exploratory) | `/irf-seed` → `/irf-backlog` |
-| **Seed + Plan** | Complex new features (explore → specify) | `/irf-seed` → `/irf-plan` → review → `/irf-backlog` |
-| **Structured Planning** | Complex features, high-risk (rigorous) | `/irf-plan` → consult → revise → review |
-| **Brownfield** | Existing code, refactoring | `/irf-baseline` → `/irf-backlog` |
-| **Research First** | Unknown tech, architectural decisions | `/irf-spike` → `/irf-seed` |
-| **OpenSpec** | External specifications | `/irf-from-openspec` |
-| **Review-Driven** | Technical debt from reviews | `/irf-followups` |
+| **Greenfield** | New projects/features (exploratory) | `/tf-seed` → `/tf-backlog` |
+| **Seed + Plan** | Complex new features (explore → specify) | `/tf-seed` → `/tf-plan` → review → `/tf-backlog` |
+| **Structured Planning** | Complex features, high-risk (rigorous) | `/tf-plan` → consult → revise → review |
+| **Brownfield** | Existing code, refactoring | `/tf-baseline` → `/tf-backlog` |
+| **Research First** | Unknown tech, architectural decisions | `/tf-spike` → `/tf-seed` |
+| **OpenSpec** | External specifications | `/tf-from-openspec` |
+| **Review-Driven** | Technical debt from reviews | `/tf-followups` |
 
 ---
 
@@ -289,40 +289,40 @@ Suggestions)
 
 | Command | Purpose |
 |---------|---------|
-| `/irf <ticket>` | Execute IRF workflow (Implement → Review → Fix → Close) |
+| `/tf <ticket>` | Execute IRF workflow (Implement → Review → Fix → Close) |
 | `/ralph-start` | Start autonomous ticket processing loop |
 
 ### Planning & Design
 
 | Command | Purpose |
 |---------|---------|
-| `/irf-plan <request>` | Create structured implementation plan |
-| `/irf-plan-consult <plan>` | Review plan for gaps and ambiguities |
-| `/irf-plan-revise <plan>` | Apply consultant/reviewer feedback |
-| `/irf-plan-review <plan>` | High-accuracy validation (PASS/FAIL) |
+| `/tf-plan <request>` | Create structured implementation plan |
+| `/tf-plan-consult <plan>` | Review plan for gaps and ambiguities |
+| `/tf-plan-revise <plan>` | Apply consultant/reviewer feedback |
+| `/tf-plan-review <plan>` | High-accuracy validation (PASS/FAIL) |
 
 ### Research & Discovery
 
 | Command | Purpose |
 |---------|---------|
-| `/irf-seed <idea>` | Capture greenfield idea with MVP scope, constraints, metrics |
-| `/irf-spike <topic>` | Research technical topic (sequential or `--parallel`) |
-| `/irf-baseline [focus]` | Document brownfield codebase (risks, tests, dependencies) |
+| `/tf-seed <idea>` | Capture greenfield idea with MVP scope, constraints, metrics |
+| `/tf-spike <topic>` | Research technical topic (sequential or `--parallel`) |
+| `/tf-baseline [focus]` | Document brownfield codebase (risks, tests, dependencies) |
 
 ### Ticket Creation
 
 | Command | Purpose |
 |---------|---------|
-| `/irf-backlog <topic>` | Generate tickets from seed/baseline/plan |
-| `/irf-backlog-ls [topic]` | List backlog status and ticket counts |
-| `/irf-followups <review>` | Create tickets from review Warnings/Suggestions |
-| `/irf-from-openspec <change>` | Import tickets from OpenSpec changes |
+| `/tf-backlog <topic>` | Generate tickets from seed/baseline/plan |
+| `/tf-backlog-ls [topic]` | List backlog status and ticket counts |
+| `/tf-followups <review>` | Create tickets from review Warnings/Suggestions |
+| `/tf-from-openspec <change>` | Import tickets from OpenSpec changes |
 
 ### Configuration
 
 | Command | Purpose |
 |---------|---------|
-| `/irf-sync` | Sync models from config.json to all agents |
+| `/tf-sync` | Sync models from config.json to all agents |
 
 See [docs/commands.md](docs/commands.md) for complete reference with all flags and options.
 
@@ -334,14 +334,14 @@ This package uses a **skill-centric** architecture:
 
 ```
 skills/              # Domain expertise (reusable)
-  irf-workflow/      # Core implementation workflow
-  irf-planning/      # Research & planning activities
-  irf-config/        # Setup & configuration
+  tf-workflow/      # Core implementation workflow
+  tf-planning/      # Research & planning activities
+  tf-config/        # Setup & configuration
   ralph/             # Autonomous loop orchestration
 
 prompts/             # Command entry points (thin wrappers)
-  irf.md             # References irf-workflow skill
-  irf-seed.md        # References irf-planning skill
+  irf.md             # References tf-workflow skill
+  tf-seed.md        # References tf-planning skill
   ...
 
 agents/              # Subagent execution units
@@ -391,7 +391,7 @@ Topics are automatically linked to tickets via `external-ref`.
 
 ## Configuration
 
-Models are configured in `workflows/irf/config.json`:
+Models are configured in `workflows/tf/config.json`:
 
 ```json
 {
@@ -407,13 +407,13 @@ Apply changes with:
 
 ```bash
 # Global install
-irf sync
+tf sync
 
 # Project install
-./.pi/bin/irf sync
+./.pi/bin/tf sync
 
 # Or via Pi prompt
-/irf-sync
+/tf-sync
 ```
 
 See [docs/configuration.md](docs/configuration.md) for full setup options.
@@ -430,13 +430,13 @@ Ralph enables autonomous ticket processing with:
 
 ```bash
 # After global install:
-irf ralph init          # Initialize Ralph
-irf ralph status        # Check status
-irf ralph lessons       # View lessons
+tf ralph init          # Initialize Ralph
+tf ralph status        # Check status
+tf ralph lessons       # View lessons
 
 # After project install:
-./.pi/bin/irf ralph init
-./.pi/bin/irf ralph status
+./.pi/bin/tf ralph init
+./.pi/bin/tf ralph status
 
 # Start loop (in Pi)
 /ralph-start --max-iterations 50
@@ -449,12 +449,12 @@ See [docs/ralph.md](docs/ralph.md) for the complete guide.
 ## Project Structure
 
 ```
-pi-tk-workflow/
+pi-ticketflow/
 ├── agents/                 # Subagent definitions
 ├── skills/                 # Domain expertise
 ├── prompts/                # Command entry points
 ├── workflows/              # Workflow configurations
-├── bin/irf                 # CLI tool
+├── bin/tf                 # CLI tool
 ├── install.sh              # Installation script
 └── docs/                   # Documentation
 ```
