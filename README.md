@@ -1,93 +1,24 @@
 # pi-tk-workflow
 
-A reusable Pi workflow package for ticket implementation:
-
-**Implement → Review → Fix → Close**
-
-This package bundles the agents, skills, prompts, and workflow config used by the `/irf` command (with `/irf-lite` as a deprecated alias).
-
----
-
-## What's included
+A reusable Pi workflow package for ticket-based development using the **Implement → Review → Fix → Close** cycle.
 
 ```
-agents/                         # Subagent execution units
-  implementer.md                # Core implementation agent
-  reviewer-general.md           # General code review
-  reviewer-spec-audit.md        # Specification audit
-  reviewer-second-opinion.md    # Second opinion review
-  review-merge.md               # Review consolidation
-  researcher.md                 # Research coordinator
-  researcher-fetch.md           # Focused research fetcher
-  fixer.md                      # Fix identified issues
-  closer.md                     # Close ticket and summarize
-
-skills/                         # Domain expertise (skills inject into context)
-  irf-workflow/SKILL.md         # Core IRF implementation workflow
-  irf-planning/SKILL.md         # Research & planning activities
-  irf-config/SKILL.md           # Setup & configuration
-  ralph/SKILL.md                # Autonomous loop orchestration
-
-prompts/                        # Command entry points (thin wrappers)
-  irf.md                        # Standard workflow (model-switch)
-  irf-lite.md                   # Deprecated alias for /irf
-  irf-plan.md                   # Create plan document
-  irf-plan-consult.md           # Gap detection + edits in plan
-  irf-plan-revise.md            # Apply plan feedback
-  irf-plan-review.md            # Validate plan
-  irf-seed.md                   # Capture ideas into seed artifacts
-  irf-backlog.md                # Create tickets from seeds or baselines
-  irf-backlog-ls.md             # List backlog status and tickets
-  irf-spike.md                  # Research spike
-  irf-baseline.md               # Capture project baseline
-  irf-followups.md              # Create tickets from review warnings
-  irf-from-openspec.md          # Bridge from OpenSpec
-  irf-sync.md                   # Sync configuration
-  ralph-start.md                # Start autonomous loop
-
-workflows/implement-review-fix-close/
-  config.json                   # Model & workflow configuration
-  README.md                     # Workflow-specific docs
-
-docs/
-  SKILL_REFACTORING_SUMMARY.md  # Architecture overview
-  migration-to-skills.md        # Migration guide
-  subagent-simplification.md    # Subagent reduction analysis
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│ Implement│ → │  Review  │ → │   Fix    │ → │  Close   │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
 ```
 
 ---
 
-## Architecture
+## Installation
 
-This package uses a **skill-centric** architecture:
+### Prerequisites
 
-1. **Skills** contain domain expertise (`skills/*/SKILL.md`)
-2. **Commands** are thin wrappers with `model:` and `skill:` frontmatter
-3. **Agents** are execution units spawned by skills for parallel work
+- [Pi](https://github.com/mariozechner/pi) installed and configured
+- `tk` CLI in your PATH (ticket management)
+- Language tools for your project (see workflow-specific docs)
 
-### How it works
-
-```
-User types: /irf ABC-123
-
-1. Extension reads frontmatter:
-   model: chutes/moonshotai/Kimi-K2.5-TEE:high
-   skill: irf-workflow
-
-2. Switches to specified model
-3. Injects skill content into system prompt
-4. Executes command body
-```
-
----
-
-## Prerequisites
-
-- Pi installed and configured
-- Ticket CLI: `tk` in PATH
-- Language tools you intend to use (see workflow README)
-
-### Required Pi extensions
+### Required Pi Extensions
 
 ```bash
 pi install npm:pi-prompt-template-model  # Entry model switch via frontmatter
@@ -95,352 +26,179 @@ pi install npm:pi-model-switch           # Runtime model switching
 pi install npm:pi-subagents              # Parallel reviewer subagents
 ```
 
-**Extension roles:**
-- `pi-prompt-template-model` - Reads `model:` and `skill:` frontmatter, handles initial model switch
-- `pi-model-switch` - Runtime model switches during workflow (implement → review → fix)
-- `pi-subagents` - Spawns parallel reviewer subagents
-
-### Optional extensions
-
-```bash
-pi install npm:pi-review-loop    # Post-chain review with /review-start
-pi install npm:pi-mcp-adapter    # MCP tools for research step
-```
-
-### Optional MCP servers
-
-For research steps, install the MCP adapter and configure servers:
-
-```bash
-pi install npm:pi-mcp-adapter
-```
-
-Available MCP servers:
-- context7 - documentation search
-- exa - web search
-- grep_app - code search
-- zai web search / zai web reader / zai vision (requires API key)
-
-> Tip: Run `./bin/irf setup` to install extensions and configure MCP interactively.
-
----
-
-## Installation
-
-### Interactive setup (recommended)
+### Interactive Setup (Recommended)
 
 ```bash
 ./bin/irf setup
 ```
 
-This guides you through:
-- global vs project install
-- optional extensions
-- MCP server configuration + API keys
+This guides you through global vs project install, optional extensions, and MCP configuration.
 
-### Global install (files only)
+### Manual Install
 
 ```bash
+# Global install (recommended)
 ./install.sh --global
-```
 
-Installs into:
-- `~/.pi/agent/agents`
-- `~/.pi/agent/skills`
-- `~/.pi/agent/prompts`
-- `~/.pi/agent/workflows/implement-review-fix-close`
-
-### Project install (files only)
-
-```bash
+# Project install
 ./install.sh --project /path/to/project
 ```
 
-Installs into:
-- `/path/to/project/.pi/agents`
-- `/path/to/project/.pi/skills`
-- `/path/to/project/.pi/prompts`
-- `/path/to/project/.pi/workflows/implement-review-fix-close`
+Files are installed to:
+- **Global**: `~/.pi/agent/{agents,skills,prompts,workflows}/`
+- **Project**: `.pi/{agents,skills,prompts,workflows}/`
 
 ---
 
-## Usage
+## Quick Start
 
-### Implementation Workflows
-
-```bash
-# Standard workflow (model-switch for sequential phases)
-/irf <ticket-id> [--auto] [--no-research] [--with-research] [--plan] [--dry-run]
-                 [--create-followups] [--simplify-tickets] [--final-review-loop]
-
-# Deprecated alias (same behavior)
-/irf-lite <ticket-id> [--auto] [--no-research] [--with-research] [--plan] [--dry-run]
-                      [--create-followups] [--simplify-tickets] [--final-review-loop]
-```
-
-### Planning Workflows
+### 1. Create a Ticket
 
 ```bash
-/irf-plan <request>               # Create a plan document
-/irf-plan-consult <plan-id>        # Gap detection + edits in plan
-/irf-plan-revise <plan-id>         # Apply feedback to plan
-/irf-plan-review <plan-id>         # Validate plan (use --high-accuracy)
-/irf-seed <idea>                   # Capture idea into seed artifacts
-/irf-backlog <seed-baseline-plan>  # Create tickets from seed/baseline/plan
-/irf-backlog-ls [topic]            # List backlog status and tickets
-/irf-spike <topic> [--parallel]    # Research spike
-/irf-baseline [focus]              # Capture brownfield status quo
-/irf-followups <review-path>       # Create follow-up tickets
-/irf-from-openspec <change-id>     # Bridge from OpenSpec
+# Create a ticket using your ticket CLI
+tk create "Add user authentication endpoint"
 ```
 
-### Configuration
+### 2. Run the IRF Workflow
 
-```bash
-/irf-sync                         # Sync models from config
+```
+/irf TICKET-123
 ```
 
-### Ralph Loop
+This executes the full cycle:
+1. **Research** (optional) - Gather context via MCP tools
+2. **Implement** - Write code with model-switch to strong model
+3. **Review** - Parallel subagents review the changes
+4. **Fix** - Address issues with cheap model
+5. **Close** - Mark ticket complete
 
-```bash
-/ralph-start [--max-iterations 50]  # Start autonomous processing
+### 3. Run Autonomously (Optional)
+
+```
+/ralph-start --max-iterations 10
 ```
 
-### Flags
-
-| Flag | Description |
-|------|-------------|
-| `--auto` / `--no-clarify` | Run headless (no confirmation prompts) |
-| `--no-research` | Skip research step |
-| `--with-research` | Force enable research step |
-| `--plan` / `--dry-run` | Show resolved chain and exit |
-| `--create-followups` | Create follow-up tickets after review merge |
-| `--simplify-tickets` | Run `/simplify --create-tickets --last-implementation` (if available) |
-| `--final-review-loop` | Run `/review-start` after chain (if available) |
-| `--parallel` | Use parallel subagents for research (/irf-spike only) |
+Processes tickets in a loop until backlog is empty.
 
 ---
 
-## CLI
+## Commands Overview
 
-### Commands
+| Command | Purpose |
+|---------|---------|
+| `/irf <ticket>` | Execute IRF workflow on a ticket |
+| `/irf-plan <request>` | Create a plan document |
+| `/irf-seed <idea>` | Capture idea into seed artifacts |
+| `/irf-backlog <seed>` | Create tickets from seed/baseline |
+| `/irf-spike <topic>` | Research spike on a topic |
+| `/irf-baseline [focus]` | Capture project baseline |
+| `/irf-sync` | Sync models from config |
+| `/ralph-start` | Start autonomous loop |
 
-```bash
-./bin/irf setup       # Interactive install + extensions + MCP
-./bin/irf sync        # Sync models from config into agent + prompt files
-./bin/irf doctor      # Preflight checks for tools and extensions
-./bin/irf backlog-ls  # List backlog status and tickets
-```
-
-### Ralph Loop Commands
-
-```bash
-./bin/irf ralph init                  # Create .pi/ralph/ directory
-./bin/irf ralph status                # Show current loop state
-./bin/irf ralph reset                 # Clear progress and lessons
-./bin/irf ralph reset --keep-lessons  # Clear progress, keep lessons
-./bin/irf ralph lessons               # Show lessons learned
-./bin/irf ralph lessons prune 20      # Keep only last 20 lessons
-```
-
-### Updating models
-
-Edit `workflows/implement-review-fix-close/config.json` and run:
-
-```bash
-/irf-sync
-# or
-./bin/irf sync
-```
-
-This updates `model:` frontmatter in agent and prompt files.
+See [docs/commands.md](docs/commands.md) for complete reference.
 
 ---
 
-## Workflow Flows
+## Architecture
 
-### `/irf` flow (standard)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  MAIN AGENT                                                 │
-├─────────────────────────────────────────────────────────────┤
-│  0. Research (optional, sequential or parallel)             │
-│  1. Implement (model-switch to implementer model)           │
-├─────────────────────────────────────────────────────────────┤
-│  2. SUBAGENT: Parallel Reviews ← Only subagent step         │
-│     ├─ reviewer-general                                     │
-│     ├─ reviewer-spec-audit                                  │
-│     └─ reviewer-second-opinion                              │
-├─────────────────────────────────────────────────────────────┤
-│  3. Merge reviews (model-switch to cheap model)             │
-│  4. Fix issues (same cheap model)                           │
-│  5. Follow-ups (optional, --create-followups)               │
-│  6. Close ticket (optional/gated)                           │
-│  7. Final review loop (optional, --final-review-loop)       │
-│  8. Simplify tickets (optional, --simplify-tickets)         │
-│  9. Learn & Track (updates .pi/ralph/ if active)            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Ralph-Ready**: Automatically loads lessons from `.pi/ralph/AGENTS.md` and tracks progress.
-
-`/irf-lite` is a deprecated alias for `/irf`.
-
-### Planning workflows
+This package uses a **skill-centric** architecture:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  MAIN AGENT                                                 │
-├─────────────────────────────────────────────────────────────┤
-│  1. model-switch to planning model (cheap)                  │
-│  2. Execute planning task inline                            │
-│  3. Write artifacts to knowledge base                       │
-│  4. [spike only, --parallel] Optional parallel research     │
-└─────────────────────────────────────────────────────────────┘
+skills/              # Domain expertise (reusable)
+  irf-workflow/      # Core implementation workflow
+  irf-planning/      # Research & planning activities
+  irf-config/        # Setup & configuration
+  ralph/             # Autonomous loop orchestration
+
+prompts/             # Command entry points (thin wrappers)
+  irf.md             # References irf-workflow skill
+  irf-plan.md        # References irf-planning skill
+  ...
+
+agents/              # Subagent execution units
+  implementer.md
+  reviewer-*.md
+  fixer.md
+  closer.md
 ```
+
+When you type `/irf`:
+1. Extension reads `model:` and `skill:` frontmatter
+2. Switches to specified model
+3. Injects skill content into context
+4. Executes command
+
+See [docs/architecture.md](docs/architecture.md) for details.
 
 ---
 
-## Key Features
-
-### Ralph-Ready by Default
-
-`/irf` is designed for autonomous operation:
-
-- **Re-anchoring**: Reads `AGENTS.md` and `.pi/ralph/AGENTS.md` at start
-- **Lessons Learned**: Synthesizes and appends lessons after each ticket
-- **Progress Tracking**: Updates `.pi/ralph/progress.md` automatically
-- **Promise Sigil**: Outputs `<promise>TICKET_XXX_COMPLETE</promise>` for loop detection
-
-Works standalone or in a Ralph loop—no configuration needed.
-
-### Small, Self-Contained Tickets
-
-Planning workflows (`/irf-backlog`, `/irf-from-openspec`) create tickets from seeds, baselines, or specs:
-
-- **30 lines or less** per ticket description
-- **1-2 hours** estimated work
-- **Self-contained context** - no need to load full planning docs
-- **Summarized constraints** from seeds, baselines, or specs
-
----
-
-## Model Strategy
+## Configuration
 
 Models are configured in `workflows/implement-review-fix-close/config.json`:
 
-| Role | Default Model | Purpose |
-|------|---------------|---------|
-| implementer | Kimi-K2.5 / Sonnet | Deep reasoning for implementation |
-| reviewer-* | GPT-5.1-mini | Fast, capable review |
-| review-merge | GPT-5.1-mini | Deduplication and consolidation |
-| fixer | GLM-4.7 | Cheap fixes |
-| closer | GLM-4.7 | Cheap summarization |
-| planning | GPT-5.1-mini | Planning workflows |
-| config | GLM-4.7 | Setup and sync |
+```json
+{
+  "models": {
+    "implementer": "chutes/moonshotai/Kimi-K2.5-TEE:high",
+    "reviewer": "openai-codex/gpt-5.1-codex-mini",
+    "fixer": "zai/glm-4.7"
+  }
+}
+```
 
-Run `/irf-sync` after editing config to apply changes to agents and prompts.
+Apply changes with:
+
+```bash
+./bin/irf sync
+# or
+/irf-sync
+```
+
+See [docs/configuration.md](docs/configuration.md) for full setup options including MCP servers.
 
 ---
 
 ## Ralph Loop (Autonomous Processing)
 
-The Ralph Loop enables autonomous ticket processing with re-anchoring and lessons learned.
+Ralph enables autonomous ticket processing with:
 
-### Concept
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  RALPH LOOP                                                  │
-├──────────────────────────────────────────────────────────────┤
-│  while tickets remain:                                       │
-│    1. RE-ANCHOR: Read .pi/ralph/AGENTS.md (lessons learned)  │
-│    2. PICK: Get next ready ticket from backlog               │
-│    3. EXECUTE: Run /irf <ticket> --auto                      │
-│    4. LEARN: Append lessons to .pi/ralph/AGENTS.md           │
-│    5. TRACK: Update .pi/ralph/progress.md                    │
-│    6. PROMISE: Output <promise>COMPLETE</promise> when done  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Files
-
-```
-.pi/ralph/
-├── AGENTS.md      # Lessons learned (read by implementer for re-anchoring)
-├── progress.md    # Loop state and ticket history
-└── config.json    # Loop configuration (max iterations, queries, etc.)
-```
-
-### Setup
+- **Re-anchoring**: Fresh context per ticket
+- **Lessons Learned**: Persistent wisdom in `.pi/ralph/AGENTS.md`
+- **Progress Tracking**: External state survives resets
 
 ```bash
 # Initialize Ralph directory
 ./bin/irf ralph init
 
+# Start loop
+/ralph-start --max-iterations 50
+
 # Check status
 ./bin/irf ralph status
-
-# Start loop in Pi
-/ralph-start --max-iterations 50
 ```
 
-### Key Principles
-
-1. **Re-anchoring**: Each iteration starts fresh, reading lessons from `.pi/ralph/AGENTS.md`
-2. **Lessons Learned**: The closer synthesizes discoveries and appends them for future iterations
-3. **Progress Tracking**: External state in `.pi/ralph/progress.md` survives context resets
-4. **Promise Sigil**: Loop terminates when `<promise>COMPLETE</promise>` is output
+See [docs/ralph.md](docs/ralph.md) for the complete guide.
 
 ---
 
-## Skills Reference
+## Project Structure
 
-### irf-workflow
-
-Core implementation workflow. Contains procedures for:
-- Re-anchor context (loading lessons, knowledge)
-- Research (optional, MCP tools)
-- Implement (model-switch)
-- Parallel reviews (subagent orchestration)
-- Merge reviews (deduplication)
-- Fix issues (quality checks)
-- Close ticket (tk integration)
-- Ralph integration (progress, lessons)
-
-### irf-planning
-
-Research & planning activities. Contains procedures for:
-- Seed capture (idea → artifacts)
-- Backlog generation (seed/baseline → tickets)
-- Research spike (sequential/parallel)
-- Baseline capture (project analysis)
-- Follow-up creation (review → tickets)
-- OpenSpec bridge (spec → tickets)
-
-### irf-config
-
-Setup & maintenance. Contains procedures for:
-- Verifying extensions installed
-- Syncing models to agent files
-- Generating model aliases
-- Checking MCP configuration
-
-### ralph
-
-Autonomous loop orchestration. Contains procedures for:
-- Initializing Ralph directory
-- Starting autonomous loop
-- Extracting lessons
-- Updating progress
-- Pruning old lessons
+```
+pi-tk-workflow/
+├── agents/                 # Subagent definitions
+├── skills/                 # Domain expertise
+├── prompts/                # Command entry points
+├── workflows/              # Workflow configurations
+├── bin/irf                 # CLI tool
+├── install.sh              # Installation script
+└── docs/                   # Documentation
+```
 
 ---
 
-## Notes
+## Next Steps
 
-- Config is read at runtime by the skills
-- Models are applied via `/irf-sync` (updates agent frontmatter)
-- MCP config is written to `<target>/.pi/mcp.json` when you run `./bin/irf setup`
-- All workflows write artifacts to current working directory
+- **Commands**: See [docs/commands.md](docs/commands.md) for detailed command reference
+- **Architecture**: See [docs/architecture.md](docs/architecture.md) to understand how it works
+- **Ralph Loop**: See [docs/ralph.md](docs/ralph.md) for autonomous processing
+- **Configuration**: See [docs/configuration.md](docs/configuration.md) for model setup
