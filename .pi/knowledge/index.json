@@ -12,7 +12,7 @@
         "pi-review-loop",
         "pi-mcp-adapter",
         "mcp",
-        "tfc"
+        "tf"
       ],
       "overview": "topics/pi-tk-workflow-pi-extensions/overview.md",
       "sources": "topics/pi-tk-workflow-pi-extensions/sources.md"
