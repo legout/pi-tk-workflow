@@ -1,4 +1,4 @@
-# pi-ticketflow
+# pi-tickerflow
 
 A comprehensive Pi workflow package for ticket-based development using the **Implement → Review → Fix → Close** cycle.
 
@@ -32,13 +32,13 @@ pi install npm:pi-subagents              # Parallel reviewer subagents
 
 ```bash
 # Global install (installs tf CLI to ~/.local/bin/)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --global
+curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --global
 
 # Project install (current directory)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash
 
 # Project install (specific path)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --project /path/to/project
+curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --project /path/to/project
 ```
 
 ### Interactive Setup (Recommended after install)
@@ -59,8 +59,8 @@ For project installs, use `./.pi/bin/tf` instead.
 
 ```bash
 # Clone first
-git clone https://github.com/legout/pi-ticketflow.git
-cd pi-ticketflow
+git clone https://github.com/legout/pi-tickerflow.git
+cd pi-tickerflow
 
 # Global install (adds tf to ~/.local/bin/)
 ./install.sh --global
@@ -449,7 +449,7 @@ See [docs/ralph.md](docs/ralph.md) for the complete guide.
 ## Project Structure
 
 ```
-pi-ticketflow/
+pi-tickerflow/
 ├── agents/                 # Subagent definitions
 ├── skills/                 # Domain expertise
 ├── prompts/                # Command entry points
