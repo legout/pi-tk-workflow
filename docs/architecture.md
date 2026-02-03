@@ -1,12 +1,12 @@
 # Architecture
 
-How pi-tickerflow is structured and how it works.
+How pi-ticketflow is structured and how it works.
 
 ---
 
 ## Overview
 
-pi-tickerflow uses a **skill-centric** architecture where:
+pi-ticketflow uses a **skill-centric** architecture where:
 
 - **Skills** contain domain expertise and procedures
 - **Commands** are thin wrappers with `model:` and `skill:` frontmatter
@@ -133,7 +133,7 @@ Follow the **TF Workflow Skill** procedures.
 | Implementation | `/tf`, `/ralph-start` | tf-workflow, ralph |
 | Planning | `/tf-plan`, `/tf-plan-consult`, `/tf-plan-revise`, `/tf-plan-review` | tf-planning |
 | Research | `/tf-seed`, `/tf-spike`, `/tf-baseline` | tf-planning |
-| Ticket Creation | `/tf-backlog`, `/tf-backlog-ls`, `/tf-followups`, `/tf-from-openspec` | tf-planning |
+| Ticket Creation | `/tf-backlog`, `/tf-backlog-ls`, `/tf-followups`, `/tf-backlog-from-openspec` | tf-planning |
 | Config | `/tf-sync` | tf-config |
 
 ---

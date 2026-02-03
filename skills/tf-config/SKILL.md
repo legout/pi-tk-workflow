@@ -131,7 +131,7 @@ Update agent **and prompt** files from config:
 | Config Key | Prompt File |
 |------------|-------------|
 | `models.implementer` | `prompts/tf.md`, `prompts/tf-lite.md` |
-| `models.planning` | `prompts/tf-plan.md`, `prompts/tf-plan-consult.md`, `prompts/tf-plan-revise.md`, `prompts/tf-plan-review.md`, `prompts/tf-seed.md`, `prompts/tf-backlog.md`, `prompts/tf-backlog-ls.md`, `prompts/tf-spike.md`, `prompts/tf-from-openspec.md`, `prompts/tf-baseline.md`, `prompts/tf-followups.md` |
+| `models.planning` | `prompts/tf-plan.md`, `prompts/tf-plan-consult.md`, `prompts/tf-plan-revise.md`, `prompts/tf-plan-review.md`, `prompts/tf-seed.md`, `prompts/tf-backlog.md`, `prompts/tf-backlog-ls.md`, `prompts/tf-spike.md`, `prompts/tf-backlog-from-openspec.md`, `prompts/tf-baseline.md`, `prompts/tf-followups.md` |
 | `models.config` | `prompts/tf-sync.md` |
 
 **Steps**:

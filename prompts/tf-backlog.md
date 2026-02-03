@@ -68,7 +68,13 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
      --priority 2 \
      --external-ref "{topic-id}"
    ```
-6. Write `backlog.md` with ticket summary
+6. Infer dependencies (plan only):
+   - Use Work Plan phases or ordered steps to determine sequencing
+   - For phase-based plans: each ticket in phase N depends on all tickets in phase N-1
+   - For ordered lists without phases: chain each ticket to the previous one
+   - Skip dependencies for seed/baseline unless explicitly stated
+   - Apply with `tk dep <id> <dep-id>`
+7. Write `backlog.md` with ticket summary (include dependencies)
 
 ## Ticket Templates
 
@@ -136,6 +142,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
 ## Output
 
 - Tickets created in `tk` (with external-ref linking to source)
+- Dependencies applied via `tk dep` when inferred
 - `backlog.md` written to topic directory
 
 ## Next Steps

@@ -1,6 +1,6 @@
 # Configuration
 
-Setting up pi-tickerflow, models, extensions, and MCP servers.
+Setting up pi-ticketflow, models, extensions, and MCP servers.
 
 ---
 

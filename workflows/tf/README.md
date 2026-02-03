@@ -94,7 +94,7 @@ The chain is triggered by:
 - `/tf-seed <idea>`
 - `/tf-spike <topic>`
 - `/tf-backlog <optional seed path or topic-id>`
-- `/tf-from-openspec <change-id or path>`
+- `/tf-backlog-from-openspec <change-id or path>`
 - `/tf-baseline <optional focus>`
 - `/tf-followups <review path or ticket-id>`
 

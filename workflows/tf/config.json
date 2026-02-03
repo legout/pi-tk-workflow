@@ -65,7 +65,7 @@
     "tf-spike": "planning",
     "tf-baseline": "planning",
     "tf-followups": "planning",
-    "tf-from-openspec": "planning",
+    "tf-backlog-from-openspec": "planning",
     "tf-sync": "general",
     "ralph-start": "worker"
   },

@@ -19,6 +19,62 @@ Step-by-step guides for common development scenarios.
 
 ---
 
+## Vague Idea → Decision Guide
+
+Use this when you have a fuzzy idea and want guidance to converge on scope and approach.
+
+### 1. Start with a clarifying seed
+Capture the idea plus unknowns so you have something concrete to refine.
+
+```
+/tf-seed "Build X for Y (unknowns: pricing model, auth strategy, hosting)"
+```
+
+### 2. Spike the unknowns
+Run a spike for each major uncertainty (use `--parallel` if you want speed).
+
+```
+/tf-spike "Pricing models for X"
+/tf-spike "Auth strategy for Y" --parallel
+```
+
+### 3. Capture decisions with spike references
+Create a new seed (or update your existing one) and **reference the spike IDs** in the prompt. Then add the spike docs to `sources.md` (there is no automatic linking).
+
+```
+/tf-seed "Build X using SSO + magic links based on spike-auth-strategy"
+```
+
+Add to `.pi/knowledge/topics/seed-build-x/sources.md`:
+
+```
+- .pi/knowledge/topics/spike-auth-strategy/spike.md
+```
+
+### 4. Plan if the work is complex
+Use the seed + spike context in your plan prompt.
+
+```
+/tf-plan "Implement X based on seed-build-x and spike-auth-strategy"
+```
+
+### 5. Planning loop (if plan used)
+
+```
+/tf-plan-consult plan-build-x
+/tf-plan-revise plan-build-x
+/tf-plan-review plan-build-x --high-accuracy
+/tf-backlog plan-build-x
+```
+
+If the plan is not needed, go straight to:
+
+```
+/tf-backlog seed-build-x
+```
+
+---
+
 ## Greenfield Development (Seed Only)
 
 Starting a new project or feature from scratch when you want to move fast.
@@ -362,14 +418,14 @@ Working with external specifications.
 ### 1. Create Tickets from OpenSpec
 
 ```
-/tf-from-openspec auth-pkce-support
+/tf-backlog-from-openspec auth-pkce-support
 ```
 
 Reads from `openspec/changes/auth-pkce-support/`:
 - `tasks.md` for task list
 - `proposal.md` and `design.md` for context
 
-Creates tickets tagged with `openspec` and linked to the change.
+Creates tickets tagged with `openspec`, linked to the change, and applies dependencies from task ordering/headings.
 
 ### 2. Implement
 

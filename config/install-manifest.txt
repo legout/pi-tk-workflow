@@ -32,7 +32,7 @@ prompts/tf-seed.md
 prompts/tf-backlog.md
 prompts/tf-backlog-ls.md
 prompts/tf-spike.md
-prompts/tf-from-openspec.md
+prompts/tf-backlog-from-openspec.md
 prompts/tf-baseline.md
 prompts/tf-followups.md
 prompts/tf-sync.md

@@ -1,18 +1,18 @@
 ---
-description: Create tickets from OpenSpec change [tf-planning +codex-mini]
+description: Create backlog from OpenSpec change [tf-planning +codex-mini]
 model: openai-codex/gpt-5.1-codex-mini
 thinking: medium
 skill: tf-planning
 ---
 
-# /tf-from-openspec
+# /tf-backlog-from-openspec
 
-Create small, self-contained TF tickets from an OpenSpec change.
+Create small, self-contained TF tickets from an OpenSpec change and infer dependencies.
 
 ## Usage
 
 ```
-/tf-from-openspec <change-id-or-path>
+/tf-backlog-from-openspec <change-id-or-path>
 ```
 
 ## Arguments
@@ -22,13 +22,13 @@ Create small, self-contained TF tickets from an OpenSpec change.
 ## Examples
 
 ```
-/tf-from-openspec auth-pkce-support
-/tf-from-openspec openspec/changes/auth-pkce-support/
+/tf-backlog-from-openspec auth-pkce-support
+/tf-backlog-from-openspec openspec/changes/auth-pkce-support/
 ```
 
 ## Execution
 
-Follow the **TF Planning Skill** "OpenSpec Bridge" procedure:
+Follow the **TF Planning Skill** "OpenSpec Backlog" procedure:
 
 1. Locate change:
    - Try `openspec/changes/{id}/`
@@ -70,7 +70,12 @@ Follow the **TF Planning Skill** "OpenSpec Bridge" procedure:
      --priority 2 \
      --external-ref "openspec-{change_id}"
    ```
-6. Write `backlog.md` in change directory
+6. Infer dependencies from tasks.md:
+   - Ordered list → chain each ticket to the previous
+   - Headings → treat as phases; phase N depends on phase N-1
+   - Explicit "Depends on" notes override ordering
+   - Apply with `tk dep <id> <dep-id>`
+7. Write `backlog.md` in change directory (include dependencies)
 
 ## Ticket Guidelines
 
@@ -82,6 +87,7 @@ Follow the **TF Planning Skill** "OpenSpec Bridge" procedure:
 ## Output
 
 - Tickets created in `tk` (tagged: tf, openspec, external-ref: openspec-{change_id})
+- Dependencies applied via `tk dep` when inferred
 - `backlog.md` in change directory
 
 ## Next Steps

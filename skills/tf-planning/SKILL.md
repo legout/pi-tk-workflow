@@ -388,12 +388,20 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
      --external-ref "{topic-id}"
    ```
 
-8. **Write backlog.md**:
+8. **Infer dependencies (plan mode only)**:
+   - Track created ticket IDs with their phase/order
+   - Use Work Plan phases/headings to group tickets into phases
+   - For phase-based plans: each ticket in phase N depends on **all** tickets in phase N-1
+   - For ordered lists without phases: chain each ticket to the previous one
+   - Skip dependencies for seed/baseline unless explicitly stated in source docs
+   - Apply with `tk dep <id> <dep-id>` (one command per dependency)
+
+9. **Write backlog.md**:
    ```markdown
    # Backlog: {topic-id}
-   | ID | Title | Est. Hours |
-   |----|-------|------------|
-   | {id} | {title} | 1-2 |
+   | ID | Title | Est. Hours | Depends On |
+   |----|-------|------------|------------|
+   | {id} | {title} | 1-2 | {dep-ids-or-"-"} |
    ```
 
 ---
@@ -541,9 +549,9 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
 
 ---
 
-### Procedure: OpenSpec Bridge
+### Procedure: OpenSpec Backlog
 
-**Purpose**: Convert OpenSpec change into TF tickets.
+**Purpose**: Convert an OpenSpec change into TF backlog tickets and infer dependencies.
 
 **Input**: Change ID or path
 
@@ -594,7 +602,14 @@ Extract `workflow.knowledgeDir` (default: `.pi/knowledge`).
      --external-ref "openspec-{change_id}"
    ```
 
-6. **Write backlog.md** in change directory
+6. **Infer dependencies from tasks.md**:
+   - Track created ticket IDs in task order
+   - If tasks are in a numbered/ordered list: chain each ticket to the previous one
+   - If tasks are grouped by headings: treat each heading as a phase; tasks in phase N depend on all tasks in phase N-1
+   - If tasks explicitly note dependencies (e.g., "Depends on:"): honor those first
+   - Apply with `tk dep <id> <dep-id>`
+
+7. **Write backlog.md** in change directory (include dependencies)
 
 ---
 
@@ -659,4 +674,4 @@ tk create "<title>" \
 | Spike | `topics/{id}/` directory | index.json updated |
 | Baseline | `topics/{id}/` directory | index.json updated |
 | Follow-ups | `followups.md` | Tickets in `tk` |
-| OpenSpec | `backlog.md` | Tickets in `tk` (with external-ref) |
+| OpenSpec Backlog | `backlog.md` | Tickets in `tk` (with external-ref) |

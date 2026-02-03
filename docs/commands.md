@@ -1,6 +1,6 @@
 # Command Reference
 
-Complete reference for all pi-tickerflow commands.
+Complete reference for all pi-ticketflow commands.
 
 ---
 
@@ -248,6 +248,7 @@ Generates 5-15 small tickets:
 
 **Output:**
 - Tickets created in `tk`
+- Dependencies inferred for plan work plans (applied via `tk dep`)
 - `backlog.md` written to topic directory
 
 ---
@@ -293,24 +294,24 @@ Both are out of scope for the original ticket.
 
 ---
 
-### `/tf-from-openspec`
+### `/tf-backlog-from-openspec`
 
-Create tickets from an OpenSpec change.
+Create backlog tickets from an OpenSpec change and infer dependencies.
 
 ```
-/tf-from-openspec <change-id-or-path>
+/tf-backlog-from-openspec <change-id-or-path>
 ```
 
 Reads OpenSpec artifacts:
 - `tasks.md` (required)
 - `proposal.md`, `design.md` (for context)
 
-Creates tickets tagged with `openspec` and linked via `external-ref`.
+Creates tickets tagged with `openspec`, linked via `external-ref`, and applies dependencies from task ordering/headings.
 
 **Example:**
 ```
-/tf-from-openspec auth-pkce-support
-/tf-from-openspec openspec/changes/auth-pkce-support/
+/tf-backlog-from-openspec auth-pkce-support
+/tf-backlog-from-openspec openspec/changes/auth-pkce-support/
 ```
 
 ---

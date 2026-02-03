@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Repository location for remote installs
-REPO_URL="https://raw.githubusercontent.com/legout/pi-tickerflow/main"
+REPO_URL="https://raw.githubusercontent.com/legout/pi-ticketflow/main"
 
 # Detect if script is being piped (not run from a local file)
 is_piped() {
@@ -18,8 +18,8 @@ Usage:
   ./install.sh --project /path/to/project
 
   # Remote install (via curl)
-  curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --global
-  curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --project /path/to/project
+  curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --global
+  curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --project /path/to/project
 
 Options:
   --global              Install into ~/.pi/agent and ~/.local/bin/tf

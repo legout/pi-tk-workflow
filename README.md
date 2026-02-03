@@ -1,4 +1,4 @@
-# pi-tickerflow
+# pi-ticketflow
 
 A comprehensive Pi workflow package for ticket-based development using the **Implement → Review → Fix → Close** cycle.
 
@@ -32,13 +32,13 @@ pi install npm:pi-subagents              # Parallel reviewer subagents
 
 ```bash
 # Global install (installs tf CLI to ~/.local/bin/)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --global
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --global
 
 # Project install (current directory)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash
 
 # Project install (specific path)
-curl -fsSL https://raw.githubusercontent.com/legout/pi-tickerflow/main/install.sh | bash -s -- --project /path/to/project
+curl -fsSL https://raw.githubusercontent.com/legout/pi-ticketflow/main/install.sh | bash -s -- --project /path/to/project
 ```
 
 ### Interactive Setup (Recommended after install)
@@ -59,8 +59,8 @@ For project installs, use `./.pi/bin/tf` instead.
 
 ```bash
 # Clone first
-git clone https://github.com/legout/pi-tickerflow.git
-cd pi-tickerflow
+git clone https://github.com/legout/pi-ticketflow.git
+cd pi-ticketflow
 
 # Global install (adds tf to ~/.local/bin/)
 ./install.sh --global
@@ -136,6 +136,48 @@ Choose the workflow that matches your situation:
 2. Generate tickets with `/tf-backlog`
 3. Implement with `/tf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
+
+---
+
+### 🧭 Vague Idea (Clarify → Spike → Seed → Plan/Backlog)
+**When to use:** Very early ideation with major unknowns
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌──────────────┐
+│  /tf-seed  │ → │ /tf-spike  │ → │  /tf-seed  │ → │ /tf-plan?     │ → /tf-backlog
+│  "idea+?"   │    │ "unknown"   │    │ "decision"  │    │ "specify"     │
+└─────────────┘    └─────────────┘    └─────────────┘    └──────────────┘
+```
+
+1. Capture the idea plus unknowns:
+   ```
+   /tf-seed "Build X (unknowns: pricing, auth, hosting)"
+   ```
+2. Spike the unknowns:
+   ```
+   /tf-spike "Pricing models for X"
+   /tf-spike "Auth strategies for Y" --parallel
+   ```
+3. Capture the decision in a seed **and reference the spike ID**:
+   ```
+   /tf-seed "Build X using SSO + magic links based on spike-auth-strategy"
+   ```
+   Then add the spike docs to `sources.md` (manual):
+   ```
+   - .pi/knowledge/topics/spike-auth-strategy/spike.md
+   ```
+4. If the work is complex, create a plan and run the planning loop:
+   ```
+   /tf-plan "Implement X based on seed-build-x and spike-auth-strategy"
+   /tf-plan-consult plan-build-x
+   /tf-plan-revise plan-build-x
+   /tf-plan-review plan-build-x --high-accuracy
+   /tf-backlog plan-build-x
+   ```
+   If not complex, go straight to:
+   ```
+   /tf-backlog seed-build-x
+   ```
 
 ---
 
@@ -232,17 +274,19 @@ Choose the workflow that matches your situation:
 **When to use:** Working from external specifications or product requirements documents
 
 ```
-┌──────────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
-│/tf-from-openspec│ →  │  (review     │ →  │   /tf      │ →  │  /ralph  │
-│   <change-id>    │    │  tickets)    │    │   <ticket>  │    │  -start  │
-└──────────────────┘    └──────────────┘    └─────────────┘    │(optional)│
-                                                               └──────────┘
+┌────────────────────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐
+│/tf-backlog-from-openspec  │ →  │  (review     │ →  │   /tf      │ →  │  /ralph  │
+│   <change-id>             │    │  tickets)    │    │   <ticket>  │    │  -start  │
+└────────────────────────────┘    └──────────────┘    └─────────────┘    │(optional)│
+                                                                        └──────────┘
 ```
 
-1. Import from OpenSpec with `/tf-from-openspec`
+1. Import from OpenSpec with `/tf-backlog-from-openspec`
 2. Review generated tickets in `tk`
 3. Implement with `/tf <ticket>`
 4. (Optional) Run autonomously with `/ralph-start`
+
+Dependencies are inferred from task ordering/headings and applied with `tk dep`.
 
 **Setup:** Ensure OpenSpec change artifacts exist at `openspec/changes/{id}/tasks.md`
 
@@ -274,11 +318,12 @@ Suggestions)
 | Workflow | Use When | Key Commands |
 |----------|----------|--------------|
 | **Greenfield** | New projects/features (exploratory) | `/tf-seed` → `/tf-backlog` |
+| **Vague Idea** | Early ideation with major unknowns | `/tf-seed` → `/tf-spike` → `/tf-seed` → `/tf-plan?` → `/tf-backlog` |
 | **Seed + Plan** | Complex new features (explore → specify) | `/tf-seed` → `/tf-plan` → review → `/tf-backlog` |
 | **Structured Planning** | Complex features, high-risk (rigorous) | `/tf-plan` → consult → revise → review |
 | **Brownfield** | Existing code, refactoring | `/tf-baseline` → `/tf-backlog` |
 | **Research First** | Unknown tech, architectural decisions | `/tf-spike` → `/tf-seed` |
-| **OpenSpec** | External specifications | `/tf-from-openspec` |
+| **OpenSpec** | External specifications | `/tf-backlog-from-openspec` |
 | **Review-Driven** | Technical debt from reviews | `/tf-followups` |
 
 ---
@@ -313,10 +358,10 @@ Suggestions)
 
 | Command | Purpose |
 |---------|---------|
-| `/tf-backlog <topic>` | Generate tickets from seed/baseline/plan |
+| `/tf-backlog <topic>` | Generate tickets from seed/baseline/plan (plan deps inferred) |
 | `/tf-backlog-ls [topic]` | List backlog status and ticket counts |
 | `/tf-followups <review>` | Create tickets from review Warnings/Suggestions |
-| `/tf-from-openspec <change>` | Import tickets from OpenSpec changes |
+| `/tf-backlog-from-openspec <change>` | Import tickets from OpenSpec changes |
 
 ### Configuration
 
@@ -449,7 +494,7 @@ See [docs/ralph.md](docs/ralph.md) for the complete guide.
 ## Project Structure
 
 ```
-pi-tickerflow/
+pi-ticketflow/
 ├── agents/                 # Subagent definitions
 ├── skills/                 # Domain expertise
 ├── prompts/                # Command entry points

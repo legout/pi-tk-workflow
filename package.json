@@ -1,7 +1,7 @@
 {
-  "name": "pi-tickerflow",
+  "name": "pi-ticketflow",
   "version": "0.1.0",
-  "description": "Pi tickerflow: plan → research → implement → review → fix → close.",
+  "description": "Pi ticketflow: plan → research → implement → review → fix → close.",
   "private": true,
   "keywords": ["pi-package", "pi-workflow"],
   "bin": {
