@@ -6,6 +6,14 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_HELPER=""
 CONFIG_HELPER_SUPPORTS_FLAGS=false
 
+# Fallback for dev mode: use scripts/tf_config.py from the repo
+if [ -f "$ROOT_DIR/scripts/tf_config.py" ]; then
+  CONFIG_HELPER="$ROOT_DIR/scripts/tf_config.py"
+  if grep -q 'add_argument("--base"' "$CONFIG_HELPER"; then
+    CONFIG_HELPER_SUPPORTS_FLAGS=true
+  fi
+fi
+
 usage() {
   cat <<'EOF'
 Ticketflow CLI
@@ -340,6 +348,11 @@ resolve_python_cmd() {
 }
 
 set_config_helper() {
+  # Don't overwrite if already set (e.g., from ROOT_DIR for dev mode)
+  if [ -n "$CONFIG_HELPER" ] && [ -f "$CONFIG_HELPER" ]; then
+    return
+  fi
+
   CONFIG_HELPER="$TF_BASE/scripts/tf_config.py"
   CONFIG_HELPER_SUPPORTS_FLAGS=false
   if [ -f "$CONFIG_HELPER" ] && grep -q 'add_argument("--base"' "$CONFIG_HELPER"; then
@@ -381,6 +394,12 @@ require_project_tf() {
     echo "Missing tf_config.py at $CONFIG_HELPER" >&2
     echo "Run 'tf init' to scaffold project files." >&2
     exit 1
+  fi
+
+  # Update CONFIG_HELPER_SUPPORTS_FLAGS based on the actual file
+  CONFIG_HELPER_SUPPORTS_FLAGS=false
+  if grep -q 'add_argument("--base"' "$CONFIG_HELPER"; then
+    CONFIG_HELPER_SUPPORTS_FLAGS=true
   fi
 }
 
