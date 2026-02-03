@@ -105,15 +105,41 @@ Run this at the start of EVERY ticket implementation to prevent context rot.
 
 Skip if: `--no-research` flag OR (`workflow.enableResearcher` is false AND `--with-research` not set)
 
+**Non-negotiable artifact rule (prevents silent skipping):**
+If the research step is **active** (i.e. not skipped by `--no-research` and enabled/forced by config/flags), you **MUST ensure** a research artifact exists at:
+- `{artifactDir}/research.md`
+
+If you decide that no additional research is required, still write a **minimal stub** that states that research was enabled but nothing was needed.
+
 **With existing research:**
 - If `{artifactDir}/research.md` exists and is sufficient, use it
 - Back-compat: if `{knowledgeDir}/tickets/{ticket}.md` exists, read it and migrate to `{artifactDir}/research.md`
 
-**Fresh research:**
+**Fresh research (best effort):**
 1. Check available MCP tools (context7, exa, grep_app, zai-web-search)
+   - MCP config may be project-local (`.pi/mcp.json`) or global (`~/.pi/agent/mcp.json`).
+   - If MCP tools are unavailable, fall back to local repo docs.
 2. If `workflow.researchParallelAgents` > 1 and `researcher-fetch` is available, spawn parallel fetches (docs/web/code). Otherwise, query sequentially.
 3. Synthesize findings
 4. Write to `{artifactDir}/research.md`
+
+**Minimal stub template (OK when there is nothing to research):**
+```markdown
+# Research: {ticket-id}
+
+## Status
+Research enabled. No additional external research was performed.
+
+## Rationale
+- <why research was not needed / ticket is straightforward>
+
+## Context Reviewed
+- `tk show {ticket-id}`
+- Repo docs / existing topic knowledge
+
+## Sources
+- (none)
+```
 
 ### Procedure: Implement
 

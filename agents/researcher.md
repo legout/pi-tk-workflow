@@ -20,13 +20,21 @@ Research the ticket or topic described in the Task input.
 1. **Determine input**:
    - If Task input looks like a ticket ID, run `tk show <ticket-id>` to gather details.
    - Otherwise treat the input as a topic description.
-2. **Check knowledge base**:
-   - Read `.pi/knowledge/tickets/<ticket-id>.md` if it exists.
-   - If sufficient, summarize and reuse findings.
-3. **Gather sources**:
+
+2. **Prepare artifact directory (ticket only)**:
+   - If you have a ticket ID, ensure the directory exists:
+     - `.pi/knowledge/tickets/<ticket-id>/`
+   - If you are invoked with a working directory already set to the ticket artifact dir, you can write `research.md` directly.
+
+3. **Check knowledge base** (ticket only):
+   - Preferred: `.pi/knowledge/tickets/<ticket-id>/research.md`
+   - Back-compat: `.pi/knowledge/tickets/<ticket-id>.md` (if found, reuse and consider migrating into the new location)
+
+4. **Gather sources**:
    - Use available tools (MCP if configured) or local docs/README files.
    - Focus on relevant APIs, patterns, and constraints.
-4. **Write `research.md`** with summary and sources.
+
+5. **Write `research.md`** with summary and sources.
 
 ## Output Format (research.md)
 

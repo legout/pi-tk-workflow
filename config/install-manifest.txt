@@ -4,6 +4,9 @@
 # CLI tool (will be installed to bin/tf)
 bin/tf
 
+# Needed so `tf setup` can be run from an already-installed workflow
+config/install-manifest.txt
+
 # Helper scripts for CLI
 scripts/tf_config.py
 
