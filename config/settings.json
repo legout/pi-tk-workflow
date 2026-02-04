@@ -151,5 +151,13 @@
       ".venv/**",
       "vendor/**"
     ]
+  },
+  "ralph": {
+    "parallelWorkers": 1,
+    "parallelWorktreesDir": ".tf/ralph/worktrees",
+    "parallelAllowUntagged": false,
+    "componentTagPrefix": "component:",
+    "parallelKeepWorktrees": false,
+    "parallelAutoMerge": true
   }
 }

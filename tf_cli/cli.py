@@ -312,3 +312,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         return install_main(argv[1:])
 
     return run_legacy(argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
