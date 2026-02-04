@@ -153,25 +153,78 @@ def run_legacy(args: list[str]) -> int:
 
 def render_uvx_shim(uvx_source: str, local_install: bool = False) -> str:
     if local_install:
-        return f"""#!/usr/bin/env python3
+        return """#!/usr/bin/env python3
 import os
 import shutil
+import subprocess
 import sys
+from pathlib import Path
+
+
+def read_root_file(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+def find_repo_root():
+    env_root = os.environ.get("TF_REPO_ROOT", "").strip()
+    if env_root:
+        path = Path(env_root).expanduser()
+        if path.exists():
+            return path
+
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        cli_root_file = parent / ".tf/cli-root"
+        root_text = read_root_file(cli_root_file)
+        if root_text:
+            path = Path(root_text).expanduser()
+            if path.exists():
+                return path
+
+    home_root_file = Path.home() / ".tf/cli-root"
+    root_text = read_root_file(home_root_file)
+    if root_text:
+        path = Path(root_text).expanduser()
+        if path.exists():
+            return path
+
+    return None
+
+
+def can_import_tf_cli(python, env=None) -> bool:
+    try:
+        result = subprocess.run(
+            [python, "-c", "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('tf_cli.cli') else 1)"],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
 
 
 def main() -> None:
-    # Try local Python module first (works offline)
+    args = sys.argv[1:]
     python = shutil.which("python3") or shutil.which("python")
-    if python:
-        try:
-            os.execvpe(python, [python, "-m", "tf_cli.cli", *sys.argv[1:]], os.environ.copy())
-        except FileNotFoundError:
-            pass
+    repo_root = find_repo_root()
 
-    # Fallback to uvx (requires internet)
+    if python and repo_root:
+        env = os.environ.copy()
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = str(repo_root) + (os.pathsep + existing if existing else "")
+        if can_import_tf_cli(python, env):
+            os.execvpe(python, [python, "-m", "tf_cli.cli", *args], env)
+
+    if python and can_import_tf_cli(python):
+        os.execvpe(python, [python, "-m", "tf_cli.cli", *args], os.environ.copy())
+
     uvx = shutil.which("uvx")
     if uvx:
-        os.execvpe("uvx", ["uvx", "--from", "{uvx_source}", "tf", *sys.argv[1:]], os.environ.copy())
+        os.execvpe("uvx", ["uvx", "--from", "{uvx_source}", "tf", *args], os.environ.copy())
 
     print("ERROR: Neither Python module nor uvx available", file=sys.stderr)
     raise SystemExit(1)
@@ -179,8 +232,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-"""
-    return f"""#!/usr/bin/env python3
+""".format(uvx_source=uvx_source)
+    return """#!/usr/bin/env python3
 import os
 import shutil
 import sys
@@ -196,7 +249,47 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-"""
+""".format(uvx_source=uvx_source)
+
+
+def install_local_package(repo_root: Optional[Path], uvx_source: str) -> bool:
+    python = sys.executable
+
+    def run_pip_install():
+        if repo_root:
+            cmd = [python, "-m", "pip", "install", "-e", str(repo_root)]
+        else:
+            cmd = [python, "-m", "pip", "install", str(uvx_source)]
+        return subprocess.run(cmd, capture_output=True, text=True)
+
+    result = run_pip_install()
+    if result.returncode == 0:
+        print("Installed locally via pip for offline use")
+        return True
+
+    output = (result.stderr or "").strip() or (result.stdout or "").strip()
+    if "No module named pip" in output:
+        ensure = subprocess.run(
+            [python, "-m", "ensurepip", "--upgrade"],
+            capture_output=True,
+            text=True,
+        )
+        if ensure.returncode == 0:
+            result = run_pip_install()
+            if result.returncode == 0:
+                print("Installed locally via pip for offline use")
+                return True
+            output = (result.stderr or "").strip() or (result.stdout or "").strip()
+        else:
+            ensure_output = (ensure.stderr or "").strip() or (ensure.stdout or "").strip()
+            if ensure_output:
+                output = f"{output}\n{ensure_output}" if output else ensure_output
+
+    if output:
+        print(f"WARNING: Local pip install failed: {output}", file=sys.stderr)
+    else:
+        print("WARNING: Local pip install failed.", file=sys.stderr)
+    return False
 
 
 def install_main(argv: list[str]) -> int:
@@ -273,21 +366,7 @@ def install_main(argv: list[str]) -> int:
     # Install locally via pip for offline use if requested
     if local_install and not shim_source:
         try:
-            import subprocess
-            if repo_root:
-                result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "-e", str(repo_root)],
-                    capture_output=True, text=True
-                )
-            else:
-                result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", str(uvx_source)],
-                    capture_output=True, text=True
-                )
-            if result.returncode == 0:
-                print("Installed locally via pip for offline use")
-            else:
-                print(f"WARNING: Local pip install failed: {result.stderr}", file=sys.stderr)
+            install_local_package(repo_root, uvx_source)
         except Exception as e:
             print(f"WARNING: Could not install locally: {e}", file=sys.stderr)
 
