@@ -49,6 +49,8 @@ Ralph Subcommands:
   ralph status   Show current loop state and statistics
   ralph reset    Clear progress (optionally keep lessons)
   ralph lessons  Show or prune lessons learned
+  ralph start    Run loop via pi -c (uses /tf)
+  ralph run      Run one ticket via pi -c (uses /tf)
 
 Agentsmd Subcommands:
   agentsmd init [path]     Create minimal AGENTS.md (defaults: uv, current dir)
@@ -186,6 +188,11 @@ if [ -z "$TARGET_BASE" ] && [ "$COMMAND" != "track" ]; then
       ;;
     *)
       if [ -d ".tf" ] && [ -d ".pi" ]; then
+        TARGET_BASE="$(pwd)/.pi"
+        TF_BASE="$(pwd)/.tf"
+        SCOPE_FLAG="-l"
+        IS_GLOBAL=false
+      elif [ -d ".tf" ]; then
         TARGET_BASE="$(pwd)/.pi"
         TF_BASE="$(pwd)/.tf"
         SCOPE_FLAG="-l"
@@ -1563,9 +1570,12 @@ Usage:
   tf ralph reset        Clear progress (use --keep-lessons to preserve lessons)
   tf ralph lessons      Show lessons learned
   tf ralph lessons prune [N]  Keep only last N lessons (default: 20)
+  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run]  Run loop via pi -c (uses /tf)
+  tf ralph run [ticket-id] [--dry-run]                               Run a single ticket via pi -c (uses /tf)
 
-The Ralph loop itself is started via Pi prompt:
+The Ralph loop can be started via Pi prompt or CLI:
   /ralph-start [--max-iterations N]
+  tf ralph start [--max-iterations N] [--parallel N]
 
 Files:
   .tf/ralph/AGENTS.md    Lessons learned (read by implementer)
@@ -1661,7 +1671,13 @@ PROGRESS_EOF
   "includeKnowledgeBase": true,
   "includePlanningDocs": true,
   "promiseOnComplete": true,
-  "lessonsMaxCount": 50
+  "lessonsMaxCount": 50,
+  "parallelWorkers": 1,
+  "parallelWorktreesDir": ".tf/ralph/worktrees",
+  "parallelAllowUntagged": false,
+  "componentTagPrefix": "component:",
+  "parallelKeepWorktrees": false,
+  "parallelAutoMerge": false
 }
 CONFIG_EOF
     echo "Created $RALPH_DIR/config.json"
@@ -1890,6 +1906,840 @@ PY
   esac
 }
 
+ralph_sleep_ms() {
+  local local_ms="${1:-0}"
+  if [ -z "$local_ms" ] || [ "$local_ms" -le 0 ] 2>/dev/null; then
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$local_ms" <<'PY' | xargs sleep
+import sys
+ms = int(sys.argv[1])
+print(ms / 1000)
+PY
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1; then
+    python - "$local_ms" <<'PY' | xargs sleep
+import sys
+ms = int(sys.argv[1])
+print(ms / 1000)
+PY
+    return 0
+  fi
+  sleep "$(awk "BEGIN {print $local_ms/1000}")"
+}
+
+ralph_config_value() {
+  local key="$1"
+  local default="$2"
+  local config_path="$RALPH_DIR/config.json"
+
+  if [ ! -f "$config_path" ]; then
+    echo "$default"
+    return 0
+  fi
+
+  local py=""
+  if command -v python3 >/dev/null 2>&1; then
+    py="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+
+  if [ -z "$py" ]; then
+    echo "$default"
+    return 0
+  fi
+
+  "$py" - "$config_path" "$key" "$default" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+key = sys.argv[2]
+default = sys.argv[3]
+
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+except Exception:
+    print(default)
+    raise SystemExit(0)
+
+val = data.get(key, None)
+if val is None:
+    print(default)
+elif isinstance(val, bool):
+    print("true" if val else "false")
+elif isinstance(val, (int, float)):
+    print(val)
+else:
+    print(val)
+PY
+}
+
+ralph_prompt_exists() {
+  if [ -f ".pi/prompts/tf.md" ] || [ -f "$HOME/.pi/agent/prompts/tf.md" ]; then
+    return 0
+  fi
+  echo "Missing /tf prompt. Install via: tf setup --project <path> or tf setup --global" >&2
+  return 1
+}
+
+ralph_sanitize_ticket_query() {
+  local query="$1"
+  if echo "$query" | grep -Eq '(^|[[:space:]])tf[[:space:]]+next([[:space:]]|$)'; then
+    echo "[warn] ticketQuery uses 'tf next' (recursive). Using default tk-ready query." >&2
+    echo "tk ready | head -1 | awk '{print \$1}'"
+    return 0
+  fi
+  echo "$query"
+}
+
+ralph_ticket_list_query() {
+  local query="$1"
+  if echo "$query" | grep -q "tk ready"; then
+    local simplified
+    simplified=$(echo "$query" | sed -E 's/\|[[:space:]]*head -1//g; s/\|[[:space:]]*awk .*$//g')
+    echo "$simplified"
+    return 0
+  fi
+  echo "tk ready"
+}
+
+ralph_select_parallel_tickets() {
+  local max="$1"
+  local allow_untagged="$2"
+  local tag_prefix="$3"
+  local list_query="$4"
+
+  local ready
+  ready=$(eval "$list_query" 2>/dev/null | awk '{print $1}')
+  if [ -z "$ready" ]; then
+    return 0
+  fi
+
+  local py=""
+  if command -v python3 >/dev/null 2>&1; then
+    py="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+
+  if [ -z "$py" ]; then
+    echo "$ready" | head -1
+    return 0
+  fi
+
+  RALPH_READY_LIST="$ready" \
+  RALPH_MAX_PARALLEL="$max" \
+  RALPH_ALLOW_UNTAGGED="$allow_untagged" \
+  RALPH_TAG_PREFIX="$tag_prefix" \
+  "$py" - <<'PY'
+import os
+import re
+import subprocess
+
+ready = [line.strip() for line in os.environ.get("RALPH_READY_LIST", "").splitlines() if line.strip()]
+max_parallel = int(os.environ.get("RALPH_MAX_PARALLEL", "1"))
+allow_untagged = os.environ.get("RALPH_ALLOW_UNTAGGED", "false").lower() == "true"
+tag_prefix = os.environ.get("RALPH_TAG_PREFIX", "component:")
+
+
+def extract_components(ticket_id: str):
+    try:
+        proc = subprocess.run(["tk", "show", ticket_id], capture_output=True, text=True, check=False)
+    except Exception:
+        return None
+    text = proc.stdout
+    in_front = False
+    tags = []
+    for line in text.splitlines():
+        if line.strip() == "---":
+            in_front = not in_front
+            continue
+        if in_front and line.startswith("tags:"):
+            value = line.split(":", 1)[1].strip()
+            if value.startswith("[") and value.endswith("]"):
+                value = value[1:-1]
+            tags = [t.strip() for t in value.split(",") if t.strip()]
+            break
+    components = [t for t in tags if t.startswith(tag_prefix)]
+    if not components:
+        if not allow_untagged:
+            return None
+        return {"__untagged__"}
+    return set(components)
+
+
+selected = []
+used = set()
+for ticket in ready:
+    comps = extract_components(ticket)
+    if comps is None:
+        continue
+    if comps & used:
+        continue
+    selected.append(ticket)
+    used.update(comps)
+    if len(selected) >= max_parallel:
+        break
+
+print("\n".join(selected))
+PY
+}
+
+ralph_lock_acquire() {
+  local lock_path="$RALPH_DIR/lock"
+  if [ -f "$lock_path" ]; then
+    local pid
+    pid=$(head -1 "$lock_path" | awk '{print $1}')
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      echo "Ralph loop already running (pid $pid). Remove $lock_path if stale." >&2
+      return 1
+    fi
+  fi
+  echo "$$ $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$lock_path"
+  return 0
+}
+
+ralph_lock_release() {
+  local lock_path="$RALPH_DIR/lock"
+  if [ -f "$lock_path" ]; then
+    rm -f "$lock_path"
+  fi
+}
+
+ralph_knowledge_dir() {
+  local settings_path="$TF_BASE/config/settings.json"
+  if [ ! -f "$settings_path" ]; then
+    echo ".tf/knowledge"
+    return 0
+  fi
+
+  local py=""
+  if command -v python3 >/dev/null 2>&1; then
+    py="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+
+  if [ -z "$py" ]; then
+    echo ".tf/knowledge"
+    return 0
+  fi
+
+  "$py" - "$settings_path" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+except Exception:
+    print(".tf/knowledge")
+    raise SystemExit(0)
+
+workflow = data.get("workflow", {}) if isinstance(data, dict) else {}
+print(workflow.get("knowledgeDir", ".tf/knowledge"))
+PY
+}
+
+ralph_set_state() {
+  local state="$1"
+  local progress_path="$RALPH_DIR/progress.md"
+  local now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  if [ ! -f "$progress_path" ]; then
+    return 0
+  fi
+
+  local py=""
+  if command -v python3 >/dev/null 2>&1; then
+    py="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+
+  if [ -z "$py" ]; then
+    return 0
+  fi
+
+  "$py" - "$progress_path" "$state" "$now" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+state = sys.argv[2]
+now = sys.argv[3]
+
+text = ""
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+except Exception:
+    raise SystemExit(0)
+
+if "## Current State" not in text:
+    raise SystemExit(0)
+
+lines = text.splitlines()
+out = []
+for line in lines:
+    if line.startswith("- Status:"):
+        out.append(f"- Status: {state}")
+        continue
+    if line.startswith("- Current ticket:"):
+        out.append("- Current ticket: (none)")
+        continue
+    if line.startswith("- Started:"):
+        if "(not started)" in line:
+            out.append(f"- Started: {now}")
+        else:
+            out.append(line)
+        continue
+    if line.startswith("- Last updated:"):
+        out.append(f"- Last updated: {now}")
+        continue
+    out.append(line)
+
+with open(path, "w", encoding="utf-8") as f:
+    f.write("\n".join(out) + "\n")
+PY
+}
+
+ralph_update_state() {
+  local ticket="$1"
+  local status="$2"
+  local error_msg="$3"
+  local artifact_root="${4:-}"
+
+  local progress_path="$RALPH_DIR/progress.md"
+  local agents_path="$RALPH_DIR/AGENTS.md"
+  local knowledge_dir
+  if [ -n "$artifact_root" ]; then
+    knowledge_dir="$artifact_root"
+  else
+    knowledge_dir=$(ralph_knowledge_dir)
+  fi
+
+  local artifact_dir="$knowledge_dir/tickets/$ticket"
+  local close_summary="$artifact_dir/close-summary.md"
+  local review_path="$artifact_dir/review.md"
+
+  local fallback_summary="$ticket"
+  if command -v tk >/dev/null 2>&1; then
+    local title
+    title=$(tk show "$ticket" 2>/dev/null | awk 'BEGIN{infront=0} /^---$/{infront=!infront; next} !infront && /^# /{print substr($0,3); exit}')
+    if [ -n "$title" ]; then
+      fallback_summary="$title"
+    fi
+  fi
+
+  local now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  local py=""
+  if command -v python3 >/dev/null 2>&1; then
+    py="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+
+  if [ -z "$py" ]; then
+    return 0
+  fi
+
+  "$py" - "$progress_path" "$agents_path" "$ticket" "$status" "$now" "$fallback_summary" "$error_msg" "$close_summary" "$review_path" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+progress_path = Path(sys.argv[1])
+agents_path = Path(sys.argv[2])
+ticket = sys.argv[3]
+status = sys.argv[4]
+now = sys.argv[5]
+fallback_summary = sys.argv[6]
+error_msg = sys.argv[7]
+close_summary = Path(sys.argv[8])
+review_path = Path(sys.argv[9])
+
+summary = fallback_summary
+commit = ""
+
+if close_summary.exists():
+    text = close_summary.read_text(encoding="utf-8")
+    for line in text.splitlines():
+        m = re.match(r"\s*[-*]?\s*Summary\s*:\s*(.+)$", line)
+        if m:
+            summary = m.group(1).strip()
+            break
+    for line in text.splitlines():
+        m = re.match(r"\s*[-*]?\s*Commit\s*:\s*(.+)$", line)
+        if m:
+            commit = m.group(1).strip()
+            break
+
+crit = maj = minor = 0
+if review_path.exists():
+    for line in review_path.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"\s*[-*]?\s*Critical\s*:\s*(\d+)", line, re.IGNORECASE)
+        if m:
+            crit = int(m.group(1))
+        m = re.match(r"\s*[-*]?\s*Major\s*:\s*(\d+)", line, re.IGNORECASE)
+        if m:
+            maj = int(m.group(1))
+        m = re.match(r"\s*[-*]?\s*Minor\s*:\s*(\d+)", line, re.IGNORECASE)
+        if m:
+            minor = int(m.group(1))
+
+# Extract lessons if present
+lesson_block = ""
+if close_summary.exists():
+    lines = close_summary.read_text(encoding="utf-8").splitlines()
+    in_lessons = False
+    buffer = []
+    for line in lines:
+        if re.match(r"^#{2,3}\s+Lessons Learned", line):
+            in_lessons = True
+            continue
+        if in_lessons and re.match(r"^#{2,3}\s+", line):
+            break
+        if in_lessons:
+            buffer.append(line)
+    lesson_block = "\n".join([l.rstrip() for l in buffer]).strip()
+
+# Update progress
+if progress_path.exists():
+    text = progress_path.read_text(encoding="utf-8")
+else:
+    text = "# Ralph Loop Progress\n\n## Current State\n\n- Status: RUNNING\n- Current ticket: (none)\n- Started: {}\n- Last updated: {}\n\n## Statistics\n\n- Tickets completed: 0\n- Tickets failed: 0\n- Total iterations: 0\n\n## History\n\n<!-- Auto-appended entries below -->\n".format(now, now)
+
+lines = text.splitlines()
+completed = failed = total = 0
+for line in lines:
+    m = re.match(r"- Tickets completed: (\d+)", line)
+    if m:
+        completed = int(m.group(1))
+    m = re.match(r"- Tickets failed: (\d+)", line)
+    if m:
+        failed = int(m.group(1))
+    m = re.match(r"- Total iterations: (\d+)", line)
+    if m:
+        total = int(m.group(1))
+
+if status == "FAILED":
+    failed += 1
+else:
+    completed += 1
+
+total += 1
+
+out = []
+for line in lines:
+    if line.startswith("- Status:"):
+        out.append("- Status: RUNNING")
+        continue
+    if line.startswith("- Current ticket:"):
+        out.append("- Current ticket: (none)")
+        continue
+    if line.startswith("- Started:"):
+        if "(not started)" in line:
+            out.append(f"- Started: {now}")
+        else:
+            out.append(line)
+        continue
+    if line.startswith("- Last updated:"):
+        out.append(f"- Last updated: {now}")
+        continue
+    if line.startswith("- Tickets completed:"):
+        out.append(f"- Tickets completed: {completed}")
+        continue
+    if line.startswith("- Tickets failed:"):
+        out.append(f"- Tickets failed: {failed}")
+        continue
+    if line.startswith("- Total iterations:"):
+        out.append(f"- Total iterations: {total}")
+        continue
+    out.append(line)
+
+entry_lines = [
+    f"- {ticket}: {status} ({now})",
+    f"  - Summary: {summary}",
+    f"  - Issues: Critical({crit})/Major({maj})/Minor({minor})",
+    f"  - Status: {status}",
+]
+if commit:
+    entry_lines.append(f"  - Commit: {commit}")
+if error_msg:
+    entry_lines.append(f"  - Error: {error_msg}")
+
+entry = "\n".join(entry_lines)
+marker = "<!-- Auto-appended entries below -->"
+if marker in out:
+    idx = out.index(marker)
+    out = out[:idx+1] + [entry] + out[idx+1:]
+else:
+    out.append(entry)
+
+progress_path.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+# Append lessons if present
+if lesson_block and agents_path.exists():
+    header = f"\n## Lesson from {ticket} ({now})\n\n"
+    agents_path.write_text(agents_path.read_text(encoding="utf-8") + header + lesson_block + "\n", encoding="utf-8")
+PY
+}
+
+ralph_run_ticket() {
+  local ticket="$1"
+  local workflow="$2"
+  local flags="$3"
+  local dry_run="$4"
+
+  if [ -z "$ticket" ]; then
+    echo "No ticket specified." >&2
+    return 1
+  fi
+
+  if ! command -v pi >/dev/null 2>&1; then
+    echo "pi not found in PATH; cannot run workflow." >&2
+    return 1
+  fi
+
+  if ! ralph_prompt_exists; then
+    return 1
+  fi
+
+  local cmd="$workflow $ticket"
+  if [ -n "$flags" ]; then
+    cmd="$cmd $flags"
+  fi
+
+  if [ "$dry_run" = "true" ]; then
+    echo "Dry run: pi -c \"$cmd\""
+    return 0
+  fi
+
+  echo "Running: pi -c \"$cmd\""
+  pi -c "$cmd"
+}
+
+ralph_run() {
+  local ticket_override=""
+  local dry_run="false"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --dry-run)
+        dry_run="true"
+        shift
+        ;;
+      --help|-h)
+        echo "Usage: tf ralph run [ticket-id] [--dry-run]" >&2
+        return 1
+        ;;
+      *)
+        if [ -z "$ticket_override" ]; then
+          ticket_override="$1"
+          shift
+        else
+          echo "Too many arguments for ralph run" >&2
+          return 1
+        fi
+        ;;
+    esac
+  done
+
+  local ticket_query
+  ticket_query=$(ralph_sanitize_ticket_query "$(ralph_config_value "ticketQuery" "tk ready | head -1 | awk '{print \$1}'")")
+
+  local workflow
+  workflow=$(ralph_config_value "workflow" "/tf")
+
+  local workflow_flags
+  workflow_flags=$(ralph_config_value "workflowFlags" "--auto")
+
+  local ticket="$ticket_override"
+  if [ -z "$ticket" ]; then
+    ticket=$(eval "$ticket_query" 2>/dev/null | head -1 | awk '{print $1}')
+  fi
+
+  if [ -z "$ticket" ]; then
+    echo "No ready tickets found." >&2
+    return 1
+  fi
+
+  ralph_run_ticket "$ticket" "$workflow" "$workflow_flags" "$dry_run"
+  local rc=$?
+  if [ "$dry_run" = "true" ]; then
+    return $rc
+  fi
+  if [ $rc -ne 0 ]; then
+    ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)"
+    return $rc
+  fi
+  ralph_update_state "$ticket" "COMPLETE" ""
+}
+
+ralph_start() {
+  local max_override=""
+  local dry_run="false"
+  local parallel_override=""
+  local no_parallel="false"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --max-iterations)
+        max_override="$2"
+        shift 2
+        ;;
+      --max-iterations=*)
+        max_override="${1#--max-iterations=}"
+        shift
+        ;;
+      --parallel)
+        parallel_override="$2"
+        shift 2
+        ;;
+      --parallel=*)
+        parallel_override="${1#--parallel=}"
+        shift
+        ;;
+      --no-parallel)
+        no_parallel="true"
+        shift
+        ;;
+      --dry-run)
+        dry_run="true"
+        shift
+        ;;
+      --help|-h)
+        echo "Usage: tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run]" >&2
+        return 1
+        ;;
+      *)
+        echo "Unknown option for ralph start: $1" >&2
+        return 1
+        ;;
+    esac
+  done
+
+  local max_iterations
+  max_iterations=$(ralph_config_value "maxIterations" "50")
+  if [ -n "$max_override" ]; then
+    max_iterations="$max_override"
+  fi
+
+  local ticket_query
+  ticket_query=$(ralph_sanitize_ticket_query "$(ralph_config_value "ticketQuery" "tk ready | head -1 | awk '{print \$1}'")")
+
+  local completion_check
+  completion_check=$(ralph_config_value "completionCheck" "tk ready | grep -q .")
+
+  local sleep_between
+  sleep_between=$(ralph_config_value "sleepBetweenTickets" "5000")
+
+  local sleep_retries
+  sleep_retries=$(ralph_config_value "sleepBetweenRetries" "10000")
+
+  local workflow
+  workflow=$(ralph_config_value "workflow" "/tf")
+
+  local workflow_flags
+  workflow_flags=$(ralph_config_value "workflowFlags" "--auto")
+
+  local promise_on_complete
+  promise_on_complete=$(ralph_config_value "promiseOnComplete" "true")
+
+  local parallel_workers
+  parallel_workers=$(ralph_config_value "parallelWorkers" "1")
+  if [ -n "$parallel_override" ]; then
+    parallel_workers="$parallel_override"
+  fi
+  if [ "$no_parallel" = "true" ]; then
+    parallel_workers="1"
+  fi
+
+  local use_parallel="$parallel_workers"
+  local repo_root=""
+  if [ "$use_parallel" -gt 1 ]; then
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    if [ -z "$repo_root" ]; then
+      echo "[warn] git repo not found; falling back to serial." >&2
+      use_parallel="1"
+    fi
+  fi
+
+  if [ "$dry_run" != "true" ]; then
+    if ! ralph_lock_acquire; then
+      return 1
+    fi
+    trap 'ralph_lock_release' EXIT
+    ralph_set_state "RUNNING"
+  fi
+
+  local iteration=0
+
+  if [ "$use_parallel" -le 1 ]; then
+    while [ "$iteration" -lt "$max_iterations" ]; do
+      if ! eval "$completion_check" >/dev/null 2>&1; then
+        echo "No ready tickets. Ralph loop complete."
+        if [ "$dry_run" != "true" ]; then
+          ralph_set_state "COMPLETE"
+        fi
+        if [ "$promise_on_complete" = "true" ]; then
+          echo "<promise>COMPLETE</promise>"
+        fi
+        return 0
+      fi
+
+      local ticket
+      ticket=$(eval "$ticket_query" 2>/dev/null | head -1 | awk '{print $1}')
+
+      if [ -z "$ticket" ]; then
+        ralph_sleep_ms "$sleep_retries"
+        continue
+      fi
+
+      ralph_run_ticket "$ticket" "$workflow" "$workflow_flags" "$dry_run"
+      local rc=$?
+      if [ "$dry_run" != "true" ]; then
+        if [ $rc -ne 0 ]; then
+          ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)"
+          return $rc
+        fi
+        ralph_update_state "$ticket" "COMPLETE" ""
+      fi
+
+      iteration=$((iteration + 1))
+      ralph_sleep_ms "$sleep_between"
+    done
+
+    echo "Max iterations reached ($max_iterations)."
+    if [ "$dry_run" != "true" ]; then
+      ralph_set_state "COMPLETE"
+    fi
+    if [ "$promise_on_complete" = "true" ]; then
+      echo "<promise>COMPLETE</promise>"
+    fi
+    return 0
+  fi
+
+  local worktrees_dir
+  worktrees_dir=$(ralph_config_value "parallelWorktreesDir" ".tf/ralph/worktrees")
+  if [[ "$worktrees_dir" != /* ]]; then
+    worktrees_dir="$repo_root/$worktrees_dir"
+  fi
+
+  local allow_untagged
+  allow_untagged=$(ralph_config_value "parallelAllowUntagged" "false")
+
+  local tag_prefix
+  tag_prefix=$(ralph_config_value "componentTagPrefix" "component:")
+
+  local keep_worktrees
+  keep_worktrees=$(ralph_config_value "parallelKeepWorktrees" "false")
+
+  mkdir -p "$worktrees_dir"
+
+  local list_query
+  list_query=$(ralph_ticket_list_query "$ticket_query")
+
+  while [ "$iteration" -lt "$max_iterations" ]; do
+    if ! eval "$completion_check" >/dev/null 2>&1; then
+      echo "No ready tickets. Ralph loop complete."
+      if [ "$dry_run" != "true" ]; then
+        ralph_set_state "COMPLETE"
+      fi
+      if [ "$promise_on_complete" = "true" ]; then
+        echo "<promise>COMPLETE</promise>"
+      fi
+      return 0
+    fi
+
+    local remaining
+    remaining=$((max_iterations - iteration))
+
+    local batch_size="$use_parallel"
+    if [ "$remaining" -lt "$batch_size" ]; then
+      batch_size="$remaining"
+    fi
+
+    local selected
+    selected=$(ralph_select_parallel_tickets "$batch_size" "$allow_untagged" "$tag_prefix" "$list_query")
+
+    if [ -z "$selected" ]; then
+      local fallback_ticket
+      fallback_ticket=$(eval "$ticket_query" 2>/dev/null | head -1 | awk '{print $1}')
+      if [ -z "$fallback_ticket" ]; then
+        ralph_sleep_ms "$sleep_retries"
+        continue
+      fi
+      selected="$fallback_ticket"
+    fi
+
+    if [ "$dry_run" = "true" ]; then
+      for ticket in $selected; do
+        echo "Dry run: pi -c \"$workflow $ticket $workflow_flags\" (worktree)"
+      done
+      iteration=$((iteration + $(echo "$selected" | wc -l | tr -d ' ')))
+      ralph_sleep_ms "$sleep_between"
+      continue
+    fi
+
+    declare -A pid_ticket
+    declare -A pid_worktree
+
+    for ticket in $selected; do
+      local worktree_path="$worktrees_dir/$ticket"
+      git -C "$repo_root" worktree remove -f "$worktree_path" >/dev/null 2>&1 || true
+      if ! git -C "$repo_root" worktree add -B "ralph/$ticket" "$worktree_path" HEAD >/dev/null 2>&1; then
+        ralph_update_state "$ticket" "FAILED" "worktree add failed" "$repo_root/.tf/knowledge"
+        continue
+      fi
+      (
+        cd "$worktree_path" || exit 1
+        ralph_run_ticket "$ticket" "$workflow" "$workflow_flags" "false"
+      ) &
+      local pid=$!
+      pid_ticket[$pid]="$ticket"
+      pid_worktree[$pid]="$worktree_path"
+    done
+
+    for pid in "${!pid_ticket[@]}"; do
+      wait "$pid"
+      local rc=$?
+      local ticket="${pid_ticket[$pid]}"
+      local worktree="${pid_worktree[$pid]}"
+      if [ $rc -ne 0 ]; then
+        ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)" "$worktree/.tf/knowledge"
+        return $rc
+      fi
+      ralph_update_state "$ticket" "COMPLETE" "" "$worktree/.tf/knowledge"
+
+      if [ "$keep_worktrees" != "true" ]; then
+        git -C "$repo_root" worktree remove -f "$worktree" >/dev/null 2>&1 || rm -rf "$worktree"
+      fi
+    done
+
+    iteration=$((iteration + $(echo "$selected" | wc -l | tr -d ' ')))
+    ralph_sleep_ms "$sleep_between"
+  done
+
+  echo "Max iterations reached ($max_iterations)."
+  if [ "$dry_run" != "true" ]; then
+    ralph_set_state "COMPLETE"
+  fi
+  if [ "$promise_on_complete" = "true" ]; then
+    echo "<promise>COMPLETE</promise>"
+  fi
+}
+
 ralph_cmd() {
   require_project_tf
 
@@ -1908,6 +2758,12 @@ ralph_cmd() {
       ;;
     lessons)
       ralph_lessons "$@"
+      ;;
+    start)
+      ralph_start "$@"
+      ;;
+    run)
+      ralph_run "$@"
       ;;
     ""|help|--help|-h)
       ralph_usage

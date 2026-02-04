@@ -24,25 +24,53 @@ Start the Ralph autonomous loop for continuous ticket processing.
 
 - Ralph initialized: `./.tf/bin/tf ralph init`
 - Tickets ready in backlog: `tk ready`
-- `/tf` working standalone
+- `/tf` prompt installed (global or project)
+
+## Preflight: Ensure `/tf` Prompt Exists
+
+Before starting, confirm the prompt is available **as a Pi prompt** (not a shell command):
+
+```bash
+# Project-local prompt (if installed)
+ls .pi/prompts/tf.md 2>/dev/null
+
+# Global prompt (fallback)
+ls ~/.pi/agent/prompts/tf.md 2>/dev/null
+```
+
+If neither exists, install prompts:
+
+```bash
+tf setup --project <path>   # or: tf update --project <path>
+# or
+ tf setup --global          # or: tf update --global
+```
 
 ## Execution
 
-Follow the **Ralph Skill** "Start Loop" procedure:
+For robustness, **delegate to the CLI loop runner** instead of re-implementing the loop in this prompt:
 
-```
-FOR iteration = 1 TO maxIterations:
-  1. READ STATE - Load config, progress, lessons
-  2. GET TICKET - `tk ready | head -1`
-  3. RE-ANCHOR - Load lessons, ticket, knowledge
-  4. EXECUTE - Run `/tf {ticket} --auto`
-  5. PARSE RESULT - Check promise sigil
-  6. UPDATE STATE - Progress, statistics, lessons
-  7. SLEEP - Wait between tickets
-END FOR
+```bash
+tf ralph start --max-iterations N
 
-Output: <promise>COMPLETE</promise> (if promiseOnComplete)
+# Parallel (worktrees + component tags)
+tf ralph start --max-iterations N --parallel 2
 ```
+
+The CLI runner handles:
+- `/tf` invocation via `pi -c` (fresh process per ticket)
+- Progress updates in `.tf/ralph/progress.md`
+- Optional lessons extraction into `.tf/ralph/AGENTS.md`
+- Locking to prevent concurrent loops
+- Completion handling (`<promise>COMPLETE</promise>`)
+
+Parallel runs use **component tags** in ticket frontmatter:
+```
+tags: [component:delta, component:checkpoint]
+```
+Tickets only run concurrently when their component tags do not overlap.
+
+This avoids prompt/subagent confusion and guarantees fresh context per ticket.
 
 ## How It Works
 
