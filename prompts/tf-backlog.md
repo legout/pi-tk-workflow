@@ -38,6 +38,28 @@ Generate small, actionable implementation tickets from seed (greenfield), baseli
 /tf-backlog baseline-myapp --no-deps --no-component-tags --no-links
 ```
 
+### Hint-Based Override Example
+
+When seed content contains ordering keywords, tickets are reordered accordingly:
+
+```
+# Seed contains: "Setup project", "Implement auth", "Test endpoints"
+/tf-backlog seed-myapi
+# Creates tickets in order: Setup → Implement → Test (not creation order)
+```
+
+Keywords detected: `setup`/`configure` (first), `define`/`design` (before implement), `implement` (before test), `test` (last).
+
+### --no-deps Example
+
+Create backlog without automatic dependency chaining:
+
+```
+/tf-backlog seed-standalone-tasks --no-deps
+```
+
+Useful when tasks are truly independent and can be worked on in any order.
+
 ## Execution
 
 Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" procedure:
