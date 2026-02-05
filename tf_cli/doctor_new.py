@@ -236,7 +236,9 @@ def sync_version_file(project_root: Path, package_version: str) -> bool:
         return False
 
 
-def check_version_consistency(project_root: Path, fix: bool = False) -> bool:
+def check_version_consistency(
+    project_root: Path, fix: bool = False, dry_run: bool = False
+) -> bool:
     """Check that version is consistent across version sources.
 
     Currently checks:
@@ -249,9 +251,10 @@ def check_version_consistency(project_root: Path, fix: bool = False) -> bool:
     Args:
         project_root: Path to the project root
         fix: If True, auto-fix VERSION file to match package.json
+        dry_run: If True, show what would be changed without writing files
 
     Returns:
-        True if consistent (or fixed), False if mismatch and not fixed
+        True if consistent (or would be fixed), False if mismatch and not fixed
     """
     package_file = project_root / "package.json"
     package_version = get_package_version(project_root)
@@ -276,7 +279,12 @@ def check_version_consistency(project_root: Path, fix: bool = False) -> bool:
         normalized_file = normalize_version(version_file_version)
 
         if normalized_file != normalized_package:
-            if fix:
+            if dry_run:
+                print(
+                    f"[dry-run] Would update VERSION file from {version_file_version} to {package_version}"
+                )
+                return False
+            elif fix:
                 if sync_version_file(project_root, package_version):
                     print(
                         f"[fixed] VERSION file updated from {version_file_version} to {package_version}"
@@ -296,7 +304,12 @@ def check_version_consistency(project_root: Path, fix: bool = False) -> bool:
             return True
     else:
         # VERSION file doesn't exist
-        if fix:
+        if dry_run:
+            print(
+                f"[dry-run] Would create VERSION file with version {package_version}"
+            )
+            return False
+        elif fix:
             if sync_version_file(project_root, package_version):
                 print(f"[fixed] VERSION file created with version {package_version}")
                 return True
@@ -336,7 +349,9 @@ def run_doctor(args: argparse.Namespace) -> int:
     check_mcp_config(config, target_base)
 
     print("Version consistency:")
-    version_ok = check_version_consistency(project_root, fix=args.fix)
+    version_ok = check_version_consistency(
+        project_root, fix=args.fix, dry_run=args.dry_run
+    )
     if not version_ok:
         failed.append(True)
 
@@ -353,6 +368,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project", help="Operate on project at <path>")
     parser.add_argument(
         "--fix", action="store_true", help="Auto-fix VERSION file to match package.json"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what --fix would change without writing files",
     )
     return parser
 
