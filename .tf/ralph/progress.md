@@ -1,22 +1,52 @@
-
-- ptw-cn2e: COMPLETE 2026-02-05T15:58:00Z
-  - Summary: Add ticket linking in tf-backlog using tk link
-  - Issues: Critical 0, Major 0, Minor 1
-  - Status: COMPLETE
-- ptw-cn2e: COMPLETE (2026-02-05T15:02:02Z)
+- ptw-cn2e: COMPLETE (2026-02-05T15:58:00Z)
   - Summary: Add ticket linking in tf-backlog using tk link
   - Issues: Critical(0)/Major(0)/Minor(1)
   - Status: COMPLETE
-- ptw-ffbq: FAILED (2026-02-05T15:02:59Z)
-  - Summary: Add tf --version CLI flag to expose version
-  - Issues: Critical(0)/Major(0)/Minor(0)
-  - Status: FAILED
-  - Error: pi -p failed (exit 1)
 - ptw-ffbq: COMPLETE (2026-02-05T16:00:46Z)
   - Summary: Add tf --version CLI flag to expose version
   - Issues: Critical(0)/Major(0)/Minor(0)
   - Status: COMPLETE
 - ptw-g8z8: COMPLETE (2026-02-05T16:00:55Z)
   - Summary: Add error handling for VERSION file read errors in doctor command
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-u01e: COMPLETE (2026-02-05T16:25:00Z)
+  - Summary: Extend version check to support git tags as third version source
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Status: COMPLETE
+- ptw-u01e: COMPLETE (2026-02-05T16:29:52Z)
+  - Summary: Extend version check to support git tags as third version source - Verify package.json version matches git tag for release validation.
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Status: COMPLETE
+- ptw-ueyl: COMPLETE (2026-02-05T16:34:00Z)
+  - Summary: Implement tf --version (and -V) across entry points
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Status: COMPLETE
+- ptw-ueyl: COMPLETE (2026-02-05T16:34:04Z)
+  - Summary: Implement tf --version (and -V) across entry points
+  - Issues: Critical(0)/Major(0)/Minor(3)
+  - Status: COMPLETE
+- ptw-v5tg: COMPLETE (2026-02-05T16:34:13Z)
+  - Summary: Add minimal smoke test for tf --version
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-v5tg: COMPLETE (2026-02-05T16:35:53Z)
+  - Summary: Add minimal smoke test for tf --version
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-vy5u: COMPLETE (2026-02-05T16:38:59Z)
+  - Summary: Document versioning + release steps in README/docs
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-xwlc: COMPLETE (2026-02-05T16:40:38Z)
+  - Summary: Update tf-backlog to apply component tags by default
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-ykvx: COMPLETE (2026-02-05T16:43:36Z)
+  - Summary: Add integration tests for version check in run_doctor CLI flow
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-ztdh: COMPLETE (2026-02-05T16:43:45Z)
+  - Summary: Document shared component classifier between /tf-backlog and /tf-tags-suggest
   - Issues: Critical(0)/Major(0)/Minor(0)
   - Status: COMPLETE
