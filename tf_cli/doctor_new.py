@@ -164,6 +164,74 @@ def check_mcp_config(config: Dict, target_base: Path) -> None:
         print(f"[ok] mcp.json ({mcp_file})")
 
 
+def get_package_version(project_root: Path) -> Optional[str]:
+    """Read version from package.json if it exists.
+    
+    Returns the version string if found and valid, None otherwise.
+    Validates that the version is a non-empty string.
+    """
+    package_file = project_root / "package.json"
+    if not package_file.exists():
+        return None
+    package_data = read_json(package_file)
+    if not package_data:
+        return None
+    version = package_data.get("version")
+    # Validate version is a non-empty string
+    if not isinstance(version, str) or not version.strip():
+        return None
+    return version.strip()
+
+
+def get_version_file_version(project_root: Path) -> Optional[str]:
+    """Read version from VERSION file if it exists.
+    
+    Returns the version string if found and non-empty, None otherwise.
+    """
+    version_file = project_root / "VERSION"
+    if not version_file.exists():
+        return None
+    try:
+        content = version_file.read_text(encoding="utf-8").strip()
+        return content if content else None
+    except Exception:
+        return None
+
+
+def check_version_consistency(project_root: Path) -> None:
+    """Check that version is consistent across version sources.
+    
+    Currently checks:
+    - package.json (canonical source)
+    - VERSION file (optional, should match if present)
+    
+    Prints warnings on mismatch. Safe to run offline.
+    """
+    package_file = project_root / "package.json"
+    package_version = get_package_version(project_root)
+    version_file_version = get_version_file_version(project_root)
+    
+    # If no package.json, nothing to check
+    if not package_file.exists():
+        print("[info] No package.json found, skipping version check")
+        return
+    
+    # If package.json exists but version is invalid/missing
+    if package_version is None:
+        print("[info] package.json found but version field is missing or invalid")
+        return
+    
+    print(f"[ok] package.json version: {package_version}")
+    
+    # Check VERSION file consistency if it exists
+    if version_file_version is not None:
+        if version_file_version != package_version:
+            print(f"[warn] VERSION file ({version_file_version}) does not match package.json ({package_version})")
+            print("       To fix: update VERSION file to match package.json, or remove VERSION file")
+        else:
+            print(f"[ok] VERSION file matches package.json: {version_file_version}")
+
+
 def run_doctor(args: argparse.Namespace) -> int:
     target_base, _, project_root = resolve_target_base(args)
 
@@ -192,6 +260,9 @@ def run_doctor(args: argparse.Namespace) -> int:
         print("[info] No checkers configured")
 
     check_mcp_config(config, target_base)
+
+    print("Version consistency:")
+    check_version_consistency(project_root)
 
     if failed:
         print("Ticketflow doctor: failed")
