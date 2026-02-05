@@ -390,6 +390,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     if argv and argv[0] == "install":
         return install_main(argv[1:])
 
+    if argv and argv[0] == "new":
+        from . import new_cli
+        return new_cli.main(argv[1:])
+
     return run_legacy(argv)
 
 

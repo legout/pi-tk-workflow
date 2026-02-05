@@ -51,7 +51,11 @@ tf setup --project <path>   # or: tf update --project <path>
 For robustness, **delegate to the CLI loop runner** instead of re-implementing the loop in this prompt:
 
 ```bash
+# Basic run
 tf ralph start --max-iterations N
+
+# With workflow flags
+tf ralph start --max-iterations N --flags "--create-followups --final-review-loop"
 
 # Parallel (worktrees + component tags)
 tf ralph start --max-iterations N --parallel 2

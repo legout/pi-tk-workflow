@@ -1571,12 +1571,13 @@ Usage:
   tf ralph reset        Clear progress (use --keep-lessons to preserve lessons)
   tf ralph lessons      Show lessons learned
   tf ralph lessons prune [N]  Keep only last N lessons (default: 20)
-  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run]  Run loop via pi -c (uses /tf)
-  tf ralph run [ticket-id] [--dry-run]                               Run a single ticket via pi -c (uses /tf)
+  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--flags '...']  Run loop via pi -c (uses /tf)
+  tf ralph run [ticket-id] [--dry-run] [--flags '...']                               Run a single ticket via pi -c (uses /tf)
 
 The Ralph loop can be started via Pi prompt or CLI:
   /ralph-start [--max-iterations N]
   tf ralph start [--max-iterations N] [--parallel N]
+  tf ralph start --max-iterations N --flags "--create-followups --final-review-loop"
 
 Files:
   .tf/ralph/AGENTS.md    Lessons learned (read by main workflow agent)
@@ -2433,6 +2434,7 @@ ralph_run_ticket() {
 ralph_run() {
   local ticket_override=""
   local dry_run="false"
+  local flags_override=""
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -2440,8 +2442,16 @@ ralph_run() {
         dry_run="true"
         shift
         ;;
+      --flags)
+        flags_override="$2"
+        shift 2
+        ;;
+      --flags=*)
+        flags_override="${1#--flags=}"
+        shift
+        ;;
       --help|-h)
-        echo "Usage: tf ralph run [ticket-id] [--dry-run]" >&2
+        echo "Usage: tf ralph run [ticket-id] [--dry-run] [--flags '...']" >&2
         return 1
         ;;
       *)
@@ -2464,6 +2474,9 @@ ralph_run() {
 
   local workflow_flags
   workflow_flags=$(ralph_config_value "workflowFlags" "--auto")
+  if [ -n "$flags_override" ]; then
+    workflow_flags="$workflow_flags $flags_override"
+  fi
 
   local ticket="$ticket_override"
   if [ -z "$ticket" ]; then
@@ -2492,6 +2505,7 @@ ralph_start() {
   local dry_run="false"
   local parallel_override=""
   local no_parallel="false"
+  local flags_override=""
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -2519,8 +2533,16 @@ ralph_start() {
         dry_run="true"
         shift
         ;;
+      --flags)
+        flags_override="$2"
+        shift 2
+        ;;
+      --flags=*)
+        flags_override="${1#--flags=}"
+        shift
+        ;;
       --help|-h)
-        echo "Usage: tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run]" >&2
+        echo "Usage: tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--flags '...']" >&2
         return 1
         ;;
       *)
@@ -2553,6 +2575,9 @@ ralph_start() {
 
   local workflow_flags
   workflow_flags=$(ralph_config_value "workflowFlags" "--auto")
+  if [ -n "$flags_override" ]; then
+    workflow_flags="$workflow_flags $flags_override"
+  fi
 
   local promise_on_complete
   promise_on_complete=$(ralph_config_value "promiseOnComplete" "true")
