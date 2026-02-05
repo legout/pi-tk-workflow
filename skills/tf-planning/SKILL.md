@@ -469,10 +469,15 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
 ```markdown
 # Backlog: {topic-id}
 
-| ID   | Title   | Est. Hours | Depends On       |
-| ---- | ------- | ---------- | ---------------- |
-| {id} | {title} | 1-2        | {dep-ids-or-"-"} |
+| ID   | Title   | Est. Hours | Depends On | Components | Links |
+| ---- | ------- | ---------- | ---------- | ---------- | ----- |
+| {id} | {title} | 1-2        | {deps}     | {tags}     | {links} |
 ```
+
+Where:
+- `{deps}`: Comma-separated dependency IDs, or `-` if none
+- `{tags}`: Comma-separated component tags (e.g., `tf, backlog, frontend`), or `-` if none
+- `{links}`: Comma-separated linked ticket IDs, or `-` if none
 
 ---
 
