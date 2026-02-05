@@ -386,6 +386,39 @@ def normalize_version(version: str) -> str:
     return version
 
 
+def get_git_tag_version(project_root: Path) -> Optional[str]:
+    """Read version from current git tag if on a tagged commit.
+
+    Uses `git describe --tags --exact-match` to check if the current
+    commit has an exact tag match. Returns the tag name if found,
+    None otherwise. Tags are normalized (v prefix stripped).
+
+    Args:
+        project_root: Path to the project root (must be in a git repo)
+
+    Returns:
+        Tag name string if on a tagged commit, None otherwise
+    """
+    try:
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--exact-match"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            tag = result.stdout.strip()
+            # Normalize tag (strip v prefix) for consistent comparison
+            return normalize_version(tag)
+        return None
+    except FileNotFoundError:
+        # git not installed
+        return None
+    except Exception:
+        # Any other error (not a git repo, etc.)
+        return None
+
+
 def sync_version_file(project_root: Path, canonical_version: str) -> bool:
     """Sync VERSION file to match the canonical manifest version.
 
@@ -424,6 +457,7 @@ def check_version_consistency(
     - Cargo.toml (Rust)
     - package.json (Node.js)
     - VERSION file (optional, should match if present)
+    - Git tag (optional, validates release version matches tag)
 
     Warns if multiple manifests exist with different versions.
     Version strings are normalized (v prefix stripped) before comparison.
@@ -439,6 +473,7 @@ def check_version_consistency(
     """
     canonical_version, found_manifests, all_versions = detect_manifest_versions(project_root)
     version_file_version = get_version_file_version(project_root)
+    git_tag_version = get_git_tag_version(project_root)
 
     # If no package manifests found, nothing to check
     if not found_manifests:
@@ -475,6 +510,16 @@ def check_version_consistency(
                 print(f"       Mismatch: {manifest} = {version}")
             print("       Consider aligning versions across all manifests")
             # Don't fail the check for manifest mismatches, just warn
+
+    # Check git tag consistency if on a tagged commit
+    if git_tag_version is not None:
+        normalized_canonical = normalize_version(canonical_version)
+        if git_tag_version != normalized_canonical:
+            print(f"[warn] Git tag ({git_tag_version}) does not match {found_manifests[0]} ({canonical_version})")
+            print("       This may indicate a version mismatch in the release")
+            # Don't fail the check for git tag mismatch, just warn
+        else:
+            print(f"[ok] Git tag matches: {git_tag_version}")
 
     # Check VERSION file consistency if it exists
     if version_file_version is not None:

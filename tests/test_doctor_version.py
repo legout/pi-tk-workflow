@@ -22,6 +22,7 @@ from tf_cli.doctor_new import (
     check_version_consistency,
     detect_manifest_versions,
     get_cargo_version,
+    get_git_tag_version,
     get_package_version,
     get_pyproject_version,
     get_version_file_version,
@@ -740,3 +741,149 @@ version = "5.0.0"
         assert version_file.read_text().strip() == "5.0.0"
         captured = capsys.readouterr()
         assert "VERSION file created" in captured.out
+
+
+class TestGetGitTagVersion:
+    """Tests for get_git_tag_version function."""
+
+    def test_returns_tag_when_on_tagged_commit(self, tmp_path: Path) -> None:
+        """Should return tag name when on a tagged commit."""
+        import subprocess
+
+        # Initialize git repo and create a tag
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Create a file and commit
+        (tmp_path / "test.txt").write_text("test")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Create tag
+        subprocess.run(["git", "tag", "v1.2.3"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = get_git_tag_version(tmp_path)
+        
+        # Tag should be normalized (v prefix stripped)
+        assert result == "1.2.3"
+
+    def test_returns_none_when_not_on_tagged_commit(self, tmp_path: Path) -> None:
+        """Should return None when not on a tagged commit."""
+        import subprocess
+
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Create a file and commit
+        (tmp_path / "test.txt").write_text("test")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = get_git_tag_version(tmp_path)
+        
+        assert result is None
+
+    def test_returns_none_when_not_git_repo(self, tmp_path: Path) -> None:
+        """Should return None when not in a git repo."""
+        result = get_git_tag_version(tmp_path)
+        
+        assert result is None
+
+    def test_normalizes_v_prefix(self, tmp_path: Path) -> None:
+        """Should normalize tags with v/V prefix."""
+        import subprocess
+
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        (tmp_path / "test.txt").write_text("test")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Test uppercase V prefix
+        subprocess.run(["git", "tag", "V2.0.0"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = get_git_tag_version(tmp_path)
+        
+        assert result == "2.0.0"
+
+
+class TestGitTagVersionCheck:
+    """Tests for git tag version checking in check_version_consistency."""
+
+    def test_shows_ok_when_git_tag_matches(self, tmp_path: Path, capsys) -> None:
+        """Should show [ok] when git tag matches manifest version."""
+        import subprocess
+
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Create package.json
+        package_file = tmp_path / "package.json"
+        package_file.write_text(json.dumps({"version": "1.2.3"}))
+        
+        # Commit and tag
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "tag", "v1.2.3"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = check_version_consistency(tmp_path)
+        
+        assert result is True
+        captured = capsys.readouterr()
+        assert "[ok] Git tag matches: 1.2.3" in captured.out
+
+    def test_shows_warning_when_git_tag_mismatches(self, tmp_path: Path, capsys) -> None:
+        """Should show [warn] when git tag doesn't match manifest version."""
+        import subprocess
+
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        # Create package.json with version 1.2.3
+        package_file = tmp_path / "package.json"
+        package_file.write_text(json.dumps({"version": "1.2.3"}))
+        
+        # Commit and tag with different version
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "tag", "v2.0.0"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = check_version_consistency(tmp_path)
+        
+        # Should not fail, just warn
+        assert result is True
+        captured = capsys.readouterr()
+        assert "[warn] Git tag (2.0.0) does not match package.json (1.2.3)" in captured.out
+
+    def test_no_git_tag_check_when_not_tagged(self, tmp_path: Path, capsys) -> None:
+        """Should skip git tag check when not on a tagged commit."""
+        import subprocess
+
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
+        
+        package_file = tmp_path / "package.json"
+        package_file.write_text(json.dumps({"version": "1.2.3"}))
+        
+        # Commit but don't tag
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, capture_output=True, check=True)
+        
+        result = check_version_consistency(tmp_path)
+        
+        assert result is True
+        captured = capsys.readouterr()
+        # Should not mention git tag at all
+        assert "Git tag" not in captured.out
