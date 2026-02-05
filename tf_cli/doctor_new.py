@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -62,7 +61,9 @@ def resolve_target_base(args: argparse.Namespace) -> tuple[Path, bool, Path]:
     else:
         project_root = find_project_root()
         if project_root is None:
-            print("No .tf directory found. Run in a project with .tf/.", file=sys.stderr)
+            print(
+                "No .tf directory found. Run in a project with .tf/.", file=sys.stderr
+            )
             raise SystemExit(1)
     tf_base = project_root / ".tf"
     if not tf_base.is_dir():
@@ -118,7 +119,9 @@ def get_pi_list_cache() -> str:
         return ""
 
 
-def check_extension(name: str, target_base: Path, list_out: str, optional: bool, failed: List[bool]) -> None:
+def check_extension(
+    name: str, target_base: Path, list_out: str, optional: bool, failed: List[bool]
+) -> None:
     global_path = Path.home() / ".pi/agent/extensions" / name
     project_path = target_base / "extensions" / name
 
@@ -147,7 +150,9 @@ def check_mcp_config(config: Dict, target_base: Path) -> None:
         return
     mcp_file = target_base / "mcp.json"
     if not mcp_file.exists():
-        print(f"[info] mcp.json not found at {mcp_file} (MCP research optional; run 'tf new login')")
+        print(
+            f"[info] mcp.json not found at {mcp_file} (MCP research optional; run 'tf new login')"
+        )
         return
 
     try:
@@ -166,7 +171,7 @@ def check_mcp_config(config: Dict, target_base: Path) -> None:
 
 def get_package_version(project_root: Path) -> Optional[str]:
     """Read version from package.json if it exists.
-    
+
     Returns the version string if found and valid, None otherwise.
     Validates that the version is a non-empty string.
     """
@@ -185,7 +190,7 @@ def get_package_version(project_root: Path) -> Optional[str]:
 
 def get_version_file_version(project_root: Path) -> Optional[str]:
     """Read version from VERSION file if it exists.
-    
+
     Returns the version string if found and non-empty, None otherwise.
     """
     version_file = project_root / "VERSION"
@@ -200,55 +205,105 @@ def get_version_file_version(project_root: Path) -> Optional[str]:
 
 def normalize_version(version: str) -> str:
     """Normalize a version string by stripping leading 'v' or 'V' prefix.
-    
+
     Args:
         version: The version string to normalize
-        
+
     Returns:
         Normalized version string (no v prefix)
     """
-    if version.lower().startswith('v'):
+    if version.lower().startswith("v"):
         return version[1:]
     return version
 
 
-def check_version_consistency(project_root: Path) -> None:
+def sync_version_file(project_root: Path, package_version: str) -> bool:
+    """Sync VERSION file to match package.json version.
+
+    Args:
+        project_root: Path to the project root
+        package_version: The version string from package.json
+
+    Returns:
+        True if the file was created/updated, False otherwise
+    """
+    version_file = project_root / "VERSION"
+    try:
+        version_file.write_text(package_version + "\n", encoding="utf-8")
+        return True
+    except Exception as exc:
+        print(f"[error] Failed to write VERSION file at {version_file}: {exc}")
+        return False
+
+
+def check_version_consistency(project_root: Path, fix: bool = False) -> bool:
     """Check that version is consistent across version sources.
-    
+
     Currently checks:
     - package.json (canonical source)
     - VERSION file (optional, should match if present)
-    
+
     Version strings are normalized (v prefix stripped) before comparison.
     Prints warnings on mismatch. Safe to run offline.
+
+    Args:
+        project_root: Path to the project root
+        fix: If True, auto-fix VERSION file to match package.json
+
+    Returns:
+        True if consistent (or fixed), False if mismatch and not fixed
     """
     package_file = project_root / "package.json"
     package_version = get_package_version(project_root)
     version_file_version = get_version_file_version(project_root)
-    
+
     # If no package.json, nothing to check
     if not package_file.exists():
         print("[info] No package.json found, skipping version check")
-        return
-    
+        return True
+
     # If package.json exists but version is invalid/missing
     if package_version is None:
         print("[info] package.json found but version field is missing or invalid")
-        return
-    
+        return True
+
     print(f"[ok] package.json version: {package_version}")
-    
+
     # Check VERSION file consistency if it exists
     if version_file_version is not None:
         # Normalize versions for comparison (strip v prefix)
         normalized_package = normalize_version(package_version)
         normalized_file = normalize_version(version_file_version)
-        
+
         if normalized_file != normalized_package:
-            print(f"[warn] VERSION file ({version_file_version}) does not match package.json ({package_version})")
-            print("       To fix: update VERSION file to match package.json, or remove VERSION file")
+            if fix:
+                if sync_version_file(project_root, package_version):
+                    print(
+                        f"[fixed] VERSION file updated from {version_file_version} to {package_version}"
+                    )
+                    return True
+                return False
+            else:
+                print(
+                    f"[warn] VERSION file ({version_file_version}) does not match package.json ({package_version})"
+                )
+                print(
+                    "       To fix: run 'tf doctor --fix' or update VERSION file manually"
+                )
+                return False
         else:
             print(f"[ok] VERSION file matches package.json: {version_file_version}")
+            return True
+    else:
+        # VERSION file doesn't exist
+        if fix:
+            if sync_version_file(project_root, package_version):
+                print(f"[fixed] VERSION file created with version {package_version}")
+                return True
+            return False
+        else:
+            print("[info] No VERSION file found (optional)")
+            return True
 
 
 def run_doctor(args: argparse.Namespace) -> int:
@@ -281,7 +336,9 @@ def run_doctor(args: argparse.Namespace) -> int:
     check_mcp_config(config, target_base)
 
     print("Version consistency:")
-    check_version_consistency(project_root)
+    version_ok = check_version_consistency(project_root, fix=args.fix)
+    if not version_ok:
+        failed.append(True)
 
     if failed:
         print("Ticketflow doctor: failed")
@@ -294,6 +351,9 @@ def run_doctor(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="tf new doctor")
     parser.add_argument("--project", help="Operate on project at <path>")
+    parser.add_argument(
+        "--fix", action="store_true", help="Auto-fix VERSION file to match package.json"
+    )
     return parser
 
 

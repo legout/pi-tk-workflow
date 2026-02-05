@@ -1,7 +1,19 @@
 import sys
 from typing import Optional, List
 
-from . import agentsmd_new, backlog_ls_new, doctor_new, init_new, login_new, next_new, ralph_new, setup_new, sync_new, track_new, update_new
+from . import (
+    agentsmd_new,
+    backlog_ls_new,
+    doctor_new,
+    init_new,
+    login_new,
+    next_new,
+    ralph_new,
+    setup_new,
+    sync_new,
+    track_new,
+    update_new,
+)
 
 
 def usage() -> None:
@@ -11,7 +23,7 @@ def usage() -> None:
 Usage:
   tf new agentsmd <subcommand> [path]
   tf new backlog-ls [topic-id-or-path]
-  tf new doctor [--project <path>]
+  tf new doctor [--project <path>] [--fix]
   tf new init [--project <path>]
   tf new login [--project <path>] [--global]
   tf new next [--project <path>]
