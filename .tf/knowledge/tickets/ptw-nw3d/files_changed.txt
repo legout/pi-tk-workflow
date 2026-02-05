@@ -1,0 +1,6 @@
+tf_cli/version.py
+tf_cli/__init__.py
+tf_cli/_version.py
+tf_cli/cli.py
+tf_cli/new_cli.py
+tests/test_cli_version.py

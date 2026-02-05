@@ -7,25 +7,10 @@ import urllib.request
 from pathlib import Path
 from typing import Optional
 
+from tf_cli.version import get_version
+
 DEFAULT_UVX_SOURCE = "git+https://github.com/legout/pi-ticketflow"
 DEFAULT_RAW_REPO_URL = "https://raw.githubusercontent.com/legout/pi-ticketflow/main"
-
-
-def get_version() -> str:
-    """Read version from VERSION file in repo root or package."""
-    repo_root = resolve_repo_root()
-    if repo_root:
-        version_file = repo_root / "VERSION"
-        if version_file.is_file():
-            return version_file.read_text(encoding="utf-8").strip()
-
-    # Fallback: try to find VERSION relative to this file
-    here = Path(__file__).resolve().parent.parent
-    version_file = here / "VERSION"
-    if version_file.is_file():
-        return version_file.read_text(encoding="utf-8").strip()
-
-    return "unknown"
 
 
 def read_root_file(path: Path) -> str:

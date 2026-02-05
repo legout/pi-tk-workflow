@@ -15,6 +15,7 @@ from . import (
     track_new,
     update_new,
 )
+from .version import get_version
 
 
 def usage() -> None:
@@ -62,6 +63,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if not argv or argv[0] in {"-h", "--help", "help"}:
         usage()
+        return 0
+
+    if argv[0] in {"--version", "-v", "-V"}:
+        print(get_version())
         return 0
 
     command = argv[0]

@@ -11,7 +11,8 @@ from unittest import mock
 
 import pytest
 
-from tf_cli.cli import get_version, main
+from tf_cli.cli import main
+from tf_cli.version import get_version
 
 
 class TestGetVersion:
@@ -22,7 +23,7 @@ class TestGetVersion:
         version_file = tmp_path / "VERSION"
         version_file.write_text("1.2.3\n")
         
-        with mock.patch("tf_cli.cli.resolve_repo_root", return_value=tmp_path):
+        with mock.patch("tf_cli.version._resolve_repo_root", return_value=tmp_path):
             result = get_version()
         
         assert result == "1.2.3"
@@ -31,7 +32,7 @@ class TestGetVersion:
         """Should return 'unknown' when VERSION file doesn't exist."""
         # Mock both repo_root and the fallback path to not exist
         with (
-            mock.patch("tf_cli.cli.resolve_repo_root", return_value=tmp_path),
+            mock.patch("tf_cli.version._resolve_repo_root", return_value=tmp_path),
             mock.patch.object(Path, "is_file", return_value=False),
         ):
             result = get_version()
@@ -42,7 +43,7 @@ class TestGetVersion:
         """Should return 'unknown' when repo root cannot be resolved."""
         # Mock both repo_root as None and the fallback path to not exist
         with (
-            mock.patch("tf_cli.cli.resolve_repo_root", return_value=None),
+            mock.patch("tf_cli.version._resolve_repo_root", return_value=None),
             mock.patch.object(Path, "is_file", return_value=False),
         ):
             result = get_version()
@@ -54,11 +55,10 @@ class TestGetVersion:
         version_file = tmp_path / "VERSION"
         version_file.write_text("  1.2.3  \n")
         
-        with mock.patch("tf_cli.cli.resolve_repo_root", return_value=tmp_path):
+        with mock.patch("tf_cli.version._resolve_repo_root", return_value=tmp_path):
             result = get_version()
         
         assert result == "1.2.3"
-
 
 
 
@@ -88,7 +88,7 @@ class TestMainVersionFlag:
         version_file = tmp_path / "VERSION"
         version_file.write_text("0.1.0\n")
         
-        with mock.patch("tf_cli.cli.resolve_repo_root", return_value=tmp_path):
+        with mock.patch("tf_cli.version._resolve_repo_root", return_value=tmp_path):
             result = main(["--version"])
         
         assert result == 0

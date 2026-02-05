@@ -1,16 +1,8 @@
-"""Version information for tf_cli."""
-import os
+"""Version information for tf_cli (deprecated, use tf_cli.version instead).
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+This module is kept for backward compatibility.
+Prefer importing from tf_cli.version or tf_cli directly.
+"""
+from tf_cli.version import get_version, __version__
 
-
-def _read_version() -> str:
-    """Read version from VERSION file with fallback."""
-    try:
-        with open(os.path.join(_ROOT, "VERSION")) as f:
-            return f.read().strip()
-    except (FileNotFoundError, IOError):
-        return "unknown"
-
-
-__version__ = _read_version()
+__all__ = ["__version__", "get_version"]
