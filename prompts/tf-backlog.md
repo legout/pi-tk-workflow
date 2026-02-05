@@ -12,13 +12,17 @@ Generate small, actionable implementation tickets from seed (greenfield), baseli
 ## Usage
 
 ```
-/tf-backlog <seed-baseline-or-plan-path-or-topic-id>
+/tf-backlog <seed-baseline-or-plan-path-or-topic-id> [--no-deps]
 ```
 
 ## Arguments
 
 - `$1` - Path to seed/baseline/plan directory or topic ID (`seed-*`, `baseline-*`, or `plan-*`)
 - If omitted: auto-locates if exactly one seed, baseline, or plan exists
+
+## Options
+
+- `--no-deps` - Skip automatic dependency inference for seed/baseline backlogs
 
 ## Examples
 
@@ -45,6 +49,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
 6. Create via `tk create`:
 
    **Seed:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -55,6 +60,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
    ```
 
    **Baseline:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -65,6 +71,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
    ```
 
    **Plan:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -73,74 +80,109 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
      --priority 2 \
      --external-ref "{topic-id}"
    ```
-7. Infer dependencies (plan only):
+
+7. Infer dependencies:
+
+   **Plan mode:**
    - Use Work Plan phases or ordered steps to determine sequencing
    - For phase-based plans: each ticket in phase N depends on all tickets in phase N-1
    - For ordered lists without phases: chain each ticket to the previous one
-   - Skip dependencies for seed/baseline unless explicitly stated
    - Apply with `tk dep <id> <dep-id>`
+
+   **Seed mode (if `--no-deps` NOT provided):**
+   - **Default chain**: Create a simple linear dependency chain in ticket creation order
+   - Each ticket N depends on ticket N-1 (the previous one created)
+   - Apply with `tk dep <id> <dep-id>`
+   - **Hint-based override**: If seed content suggests a different order (e.g., keywords like "define", "implement", "test", "setup", "configure"), adjust the chain to match the logical sequence:
+     - "Setup" or "Configure" tasks come first
+     - "Define" or "Design" tasks come before "Implement"
+     - "Implement" tasks come before "Test"
+   - Conservative: prefer the default chain over uncertain deps; skip deps if the order is ambiguous
+
+   **Baseline mode:**
+   - Skip dependencies unless explicitly stated in source docs
+   - Apply with `tk dep <id> <dep-id>`
+
 8. Write `backlog.md` with ticket summary (include dependencies)
 
 ## Ticket Templates
 
 **Seed**
+
 ```markdown
 ## Task
+
 <Single-sentence description>
 
 ## Context
+
 <2-3 sentences from seed>
 
 ## Acceptance Criteria
+
 - [ ] <criterion 1>
 - [ ] <criterion 2>
 - [ ] <criterion 3>
 
 ## Constraints
+
 <Relevant constraints>
 
 ## References
+
 - Seed: <topic-id>
 ```
 
 **Baseline**
+
 ```markdown
 ## Task
+
 <Single-sentence description>
 
 ## Context
+
 <2-3 sentences from baseline/risk/test inventory>
 
 ## Acceptance Criteria
+
 - [ ] <criterion 1>
 - [ ] <criterion 2>
 - [ ] <criterion 3>
 
 ## Constraints
+
 <Relevant constraints>
 
 ## References
+
 - Baseline: <topic-id>
 - Source: risk-map.md|test-inventory.md|dependency-map.md
 ```
 
 **Plan**
+
 ```markdown
 ## Task
+
 <Single-sentence description>
 
 ## Context
+
 <2-3 sentences from plan summary/requirements>
 
 ## Acceptance Criteria
+
 - [ ] <criterion 1>
 - [ ] <criterion 2>
 - [ ] <criterion 3>
 
 ## Constraints
+
 <Relevant constraints>
 
 ## References
+
 - Plan: <topic-id>
 ```
 
@@ -153,6 +195,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
 ## Next Steps
 
 Start implementation:
+
 ```
 /tf <ticket-id>
 ```

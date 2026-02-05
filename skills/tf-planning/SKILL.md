@@ -19,6 +19,7 @@ Expertise for upstream planning activities - everything that happens BEFORE impl
 ## Key Principle: Small, Self-Contained Tickets
 
 All ticket creation in this skill follows these rules:
+
 - **30 lines or less** in description
 - **1-2 hours** estimated work
 - **Self-contained** - includes all needed context
@@ -27,6 +28,7 @@ All ticket creation in this skill follows these rules:
 ## Configuration
 
 Read workflow config (project):
+
 - `.tf/config/settings.json`
 
 Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
@@ -48,14 +50,16 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Example: "Refactor auth flow" → `plan-refactor-auth-flow`
 
 2. **Create directory**:
+
    ```bash
    mkdir -p "{knowledgeDir}/topics/{topic-id}"
    ```
 
 3. **Write `plan.md`** (single source of truth):
+
    ```markdown
    ---
-   id: {topic-id}
+   id: { topic-id }
    status: draft
    last_updated: YYYY-MM-DD
    ---
@@ -63,35 +67,45 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    # Plan: <title>
 
    ## Summary
+
    <1–2 paragraphs>
 
    ## Requirements
+
    - ...
 
    ## Constraints
+
    - ...
 
    ## Assumptions
+
    - ...
 
    ## Risks & Gaps
+
    - ...
 
    ## Work Plan (phases / tickets)
+
    1. ...
 
    ## Acceptance Criteria
+
    - [ ] ...
 
    ## Open Questions
+
    - ...
 
    ---
 
    ## Consultant Notes (Metis)
+
    - YYYY-MM-DD: <gap detection / ambiguity flags>
 
    ## Reviewer Notes (Momus)
+
    - YYYY-MM-DD: PASS|FAIL
      - Blockers:
        - ...
@@ -204,6 +218,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Example: "Build a CLI" → `seed-build-a-cli`
 
 2. **Create directory**:
+
    ```bash
    mkdir -p "{knowledgeDir}/topics/{topic-id}"
    ```
@@ -211,30 +226,38 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
 3. **Write artifacts**:
 
    **overview.md**:
+
    ```markdown
    # {topic-id}
+
    Brief 2-3 sentence summary.
 
    ## Keywords
+
    - keyword1
    - keyword2
    ```
 
    **seed.md**:
+
    ```markdown
    # Seed: {idea}
 
    ## Vision
+
    What problem does this solve?
 
    ## Core Concept
+
    High-level solution description
 
    ## Key Features
+
    1. Feature one
    2. Feature two
 
    ## Open Questions
+
    - Question 1?
    ```
 
@@ -303,71 +326,89 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Skip any ticket whose normalized title matches an existing ticket from backlog/existing list
    - If a ticket overlaps an existing one, note it in backlog.md as skipped (do not create)
 
-
    **Seed ticket template:**
+
    ```markdown
    ## Task
+
    <Single-sentence description>
 
    ## Context
+
    <2-3 sentences summarizing relevant context>
 
    ## Acceptance Criteria
+
    - [ ] <criterion 1>
    - [ ] <criterion 2>
    - [ ] <criterion 3>
 
    ## Constraints
+
    - <relevant constraint>
 
    ## References
+
    - Seed: <topic-id>
    ```
 
    **Baseline ticket template:**
+
    ```markdown
    ## Task
+
    <Single-sentence description>
 
    ## Context
+
    <2-3 sentences summarizing relevant context>
 
    ## Acceptance Criteria
+
    - [ ] <criterion 1>
    - [ ] <criterion 2>
    - [ ] <criterion 3>
 
    ## Constraints
+
    - <relevant constraint>
 
    ## References
+
    - Baseline: <topic-id>
    - Source: risk-map.md|test-inventory.md|dependency-map.md
    ```
 
    **Plan ticket template:**
+
    ```markdown
    ## Task
+
    <Single-sentence description>
 
    ## Context
+
    <2-3 sentences from the plan summary/requirements>
 
    ## Acceptance Criteria
+
    - [ ] <criterion 1>
    - [ ] <criterion 2>
    - [ ] <criterion 3>
 
    ## Constraints
+
    - <relevant constraint>
 
    ## References
+
    - Plan: <topic-id>
    ```
 
 8. **Create via `tk`**:
 
    **Seed:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -378,6 +419,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    ```
 
    **Baseline:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -388,6 +430,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    ```
 
    **Plan:**
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -397,21 +440,39 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
      --external-ref "{topic-id}"
    ```
 
-9. **Infer dependencies (plan mode only)**:
+9. **Infer dependencies**:
+
+   **Plan mode:**
    - Track created ticket IDs with their phase/order
    - Use Work Plan phases/headings to group tickets into phases
    - For phase-based plans: each ticket in phase N depends on **all** tickets in phase N-1
    - For ordered lists without phases: chain each ticket to the previous one
-   - Skip dependencies for seed/baseline unless explicitly stated in source docs
+   - Apply with `tk dep <id> <dep-id>` (one command per dependency)
+
+   **Seed mode (unless `--no-deps` flag provided):**
+   - **Default chain**: Create a simple linear dependency chain in ticket creation order
+   - Each ticket N depends on ticket N-1 (the previous ticket created)
+   - Apply with `tk dep <id> <dep-id>` (one command per dependency)
+   - **Hint-based override**: If seed content suggests a different order, adjust the chain:
+     - Look for keywords in titles/descriptions: "setup", "configure", "define", "design", "implement", "test"
+     - "Setup"/"Configure" → comes first
+     - "Define"/"Design" → comes before "Implement"
+     - "Implement" → comes before "Test"
+   - Conservative: prefer the default chain over uncertain deps; skip if ambiguous
+
+   **Baseline mode:**
+   - Skip dependencies unless explicitly stated in source docs
    - Apply with `tk dep <id> <dep-id>` (one command per dependency)
 
 10. **Write backlog.md**:
-   ```markdown
-   # Backlog: {topic-id}
-   | ID | Title | Est. Hours | Depends On |
-   |----|-------|------------|------------|
-   | {id} | {title} | 1-2 | {dep-ids-or-"-"} |
-   ```
+
+```markdown
+# Backlog: {topic-id}
+
+| ID   | Title   | Est. Hours | Depends On       |
+| ---- | ------- | ---------- | ---------------- |
+| {id} | {title} | 1-2        | {dep-ids-or-"-"} |
+```
 
 ---
 
@@ -447,11 +508,11 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - If a single topic is requested: print full backlog table + summary
    - If multiple topics: print summary table:
      ```markdown
-     | Topic | Type | Backlog | Tickets |
-     |-------|------|---------|---------|
-     | seed-foo | seed | yes | 8 (TKT-1, TKT-2, TKT-3…) |
-     | plan-auth-rewrite | plan | yes | 5 (TKT-4, TKT-5…) |
-     | baseline-bar | baseline | no | 0 |
+     | Topic             | Type     | Backlog | Tickets                  |
+     | ----------------- | -------- | ------- | ------------------------ |
+     | seed-foo          | seed     | yes     | 8 (TKT-1, TKT-2, TKT-3…) |
+     | plan-auth-rewrite | plan     | yes     | 5 (TKT-4, TKT-5…)        |
+     | baseline-bar      | baseline | no      | 0                        |
      ```
 
 ---
@@ -482,12 +543,13 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Synthesize in main agent
 
    **Parallel mode** (`--parallel` flag):
+
    ```json
    {
      "tasks": [
-       {"agent": "researcher-fetch", "task": "Docs: {topic}"},
-       {"agent": "researcher-fetch", "task": "Web: {topic}"},
-       {"agent": "researcher-fetch", "task": "Code: {topic}"}
+       { "agent": "researcher-fetch", "task": "Docs: {topic}" },
+       { "agent": "researcher-fetch", "task": "Web: {topic}" },
+       { "agent": "researcher-fetch", "task": "Code: {topic}" }
      ]
    }
    ```
@@ -509,6 +571,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
 **Steps**:
 
 1. **Determine topic ID**:
+
    ```bash
    repo_name=$(basename $(pwd))
    topic_id="baseline-${repo_name}"
@@ -554,6 +617,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Extract Suggestions section
 
 3. **Create ticket per item**:
+
    ```bash
    tk create "<title>" \
      --description "## Origin\nFrom review of: {ticket}\nFile: {file}\nLine: {line}\n\n## Issue\n{description}" \
@@ -587,28 +651,36 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
    - Split large tasks into 1-2 hour chunks
 
 4. **Create tickets** with template:
+
    ```markdown
    ## Task
+
    <Specific task>
 
    ## Context
+
    <2-3 sentences from OpenSpec>
 
    ## Technical Details
+
    <Key decisions affecting this task>
 
    ## Acceptance Criteria
+
    - [ ] <criterion 1>
    - [ ] Tests added
 
    ## Constraints
+
    <Relevant constraints>
 
    ## References
+
    - OpenSpec Change: {change_id}
    ```
 
 5. **Create via `tk`**:
+
    ```bash
    tk create "<title>" \
      --description "<description>" \
@@ -632,6 +704,7 @@ Extract `workflow.knowledgeDir` (default: `.tf/knowledge`).
 ## Common Tool Usage
 
 ### Model Switching
+
 All procedures use model-switch pattern with meta-model resolution:
 
 1. Look up `prompts.{command}` in config → get meta-model key (e.g., "planning")
@@ -641,10 +714,12 @@ All procedures use model-switch pattern with meta-model resolution:
    ```
 
 For example, for `/tf-plan`:
+
 - `prompts.tf-plan` → "planning"
 - `metaModels.planning.model` → "openai-codex/gpt-5.1-codex-mini"
 
 ### Ticket Creation Pattern
+
 ```bash
 tk create "<title>" \
   --description "<markdown description>" \
@@ -655,6 +730,7 @@ tk create "<title>" \
 ```
 
 ### Knowledge Base Structure
+
 ```
 .tf/knowledge/
 ├── index.json              # Registry of all topics
@@ -688,15 +764,15 @@ tk create "<title>" \
 
 ## Output Summary
 
-| Procedure | Primary Output | Secondary Output |
-|-----------|---------------|------------------|
-| Plan Interview | `plan.md` | index.json updated |
-| Plan Consultant | `plan.md` | status = consulted |
-| Plan Revision | `plan.md` | status = revised |
-| Plan Review | `plan.md` | status = approved/blocked |
-| Seed Capture | `topics/{id}/` directory | index.json updated |
-| Backlog | `backlog.md` | Tickets in `tk` (with external-ref) |
-| Spike | `topics/{id}/` directory | index.json updated |
-| Baseline | `topics/{id}/` directory | index.json updated |
-| Follow-ups | `followups.md` | Tickets in `tk` |
-| OpenSpec Backlog | `backlog.md` | Tickets in `tk` (with external-ref) |
+| Procedure        | Primary Output           | Secondary Output                    |
+| ---------------- | ------------------------ | ----------------------------------- |
+| Plan Interview   | `plan.md`                | index.json updated                  |
+| Plan Consultant  | `plan.md`                | status = consulted                  |
+| Plan Revision    | `plan.md`                | status = revised                    |
+| Plan Review      | `plan.md`                | status = approved/blocked           |
+| Seed Capture     | `topics/{id}/` directory | index.json updated                  |
+| Backlog          | `backlog.md`             | Tickets in `tk` (with external-ref) |
+| Spike            | `topics/{id}/` directory | index.json updated                  |
+| Baseline         | `topics/{id}/` directory | index.json updated                  |
+| Follow-ups       | `followups.md`           | Tickets in `tk`                     |
+| OpenSpec Backlog | `backlog.md`             | Tickets in `tk` (with external-ref) |
