@@ -49,8 +49,8 @@ Ralph Subcommands:
   ralph status   Show current loop state and statistics
   ralph reset    Clear progress (optionally keep lessons)
   ralph lessons  Show or prune lessons learned
-  ralph start    Run loop via pi -c (uses /tf)
-  ralph run      Run one ticket via pi -c (uses /tf)
+  ralph start    Run loop via pi -p (uses /tf)
+  ralph run      Run one ticket via pi -p (uses /tf)
 
 Agentsmd Subcommands:
   agentsmd init [path]     Create minimal AGENTS.md (defaults: uv, current dir)
@@ -1571,8 +1571,8 @@ Usage:
   tf ralph reset        Clear progress (use --keep-lessons to preserve lessons)
   tf ralph lessons      Show lessons learned
   tf ralph lessons prune [N]  Keep only last N lessons (default: 20)
-  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--flags '...']  Run loop via pi -c (uses /tf)
-  tf ralph run [ticket-id] [--dry-run] [--flags '...']                               Run a single ticket via pi -c (uses /tf)
+  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--flags '...']  Run loop via pi -p (uses /tf)
+  tf ralph run [ticket-id] [--dry-run] [--flags '...']                               Run a single ticket via pi -p (uses /tf)
 
 The Ralph loop can be started via Pi prompt or CLI:
   /ralph-start [--max-iterations N]
@@ -2425,12 +2425,12 @@ ralph_run_ticket() {
   fi
 
   if [ "$dry_run" = "true" ]; then
-    echo "Dry run: pi -c \"$cmd\""
+    echo "Dry run: pi -p \"$cmd\""
     return 0
   fi
 
-  echo "Running: pi -c \"$cmd\""
-  pi -c "$cmd"
+  echo "Running: pi -p \"$cmd\""
+  pi -p "$cmd"
 }
 
 ralph_run() {
@@ -2496,7 +2496,7 @@ ralph_run() {
     return $rc
   fi
   if [ $rc -ne 0 ]; then
-    ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)"
+    ralph_update_state "$ticket" "FAILED" "pi -p failed (exit $rc)"
     return $rc
   fi
   ralph_update_state "$ticket" "COMPLETE" ""
@@ -2638,7 +2638,7 @@ ralph_start() {
       local rc=$?
       if [ "$dry_run" != "true" ]; then
         if [ $rc -ne 0 ]; then
-          ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)"
+          ralph_update_state "$ticket" "FAILED" "pi -p failed (exit $rc)"
           return $rc
         fi
         ralph_update_state "$ticket" "COMPLETE" ""
@@ -2713,7 +2713,7 @@ ralph_start() {
 
     if [ "$dry_run" = "true" ]; then
       for ticket in $selected; do
-        echo "Dry run: pi -c \"$workflow $ticket $workflow_flags\" (worktree)"
+        echo "Dry run: pi -p \"$workflow $ticket $workflow_flags\" (worktree)"
       done
       iteration=$((iteration + $(echo "$selected" | wc -l | tr -d ' ')))
       ralph_sleep_ms "$sleep_between"
@@ -2745,7 +2745,7 @@ ralph_start() {
       local ticket="${pid_ticket[$pid]}"
       local worktree="${pid_worktree[$pid]}"
       if [ $rc -ne 0 ]; then
-        ralph_update_state "$ticket" "FAILED" "pi -c failed (exit $rc)" "$worktree/.tf/knowledge"
+        ralph_update_state "$ticket" "FAILED" "pi -p failed (exit $rc)" "$worktree/.tf/knowledge"
         return $rc
       fi
       ralph_update_state "$ticket" "COMPLETE" "" "$worktree/.tf/knowledge"

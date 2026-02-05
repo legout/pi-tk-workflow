@@ -1,7 +1,7 @@
 import sys
 from typing import Optional, List
 
-from . import init_new, login_new, next_new, ralph_new, sync_new, track_new, update_new
+from . import agentsmd_new, backlog_ls_new, doctor_new, init_new, login_new, next_new, ralph_new, sync_new, track_new, update_new
 
 
 def usage() -> None:
@@ -9,6 +9,9 @@ def usage() -> None:
         """Ticketflow (new Python CLI)
 
 Usage:
+  tf new agentsmd <subcommand> [path]
+  tf new backlog-ls [topic-id-or-path]
+  tf new doctor [--project <path>]
   tf new init [--project <path>]
   tf new login [--project <path>] [--global]
   tf new next [--project <path>]
@@ -18,13 +21,16 @@ Usage:
   tf new update [--project <path>] [--global]
 
 Commands:
-  init    Create .tf project scaffolding
-  login   Configure API keys for web search and MCP servers
-  next    Print the next ready ticket id
-  ralph   Python implementation of Ralph loop (start/run)
-  sync    Sync model frontmatter from config
-  track   Append a file to files_changed.txt
-  update  Download latest agents/skills/prompts
+  agentsmd   AGENTS.md management (init/status/validate/fix/update)
+  backlog-ls List backlog status for seed/baseline/plan topics
+  doctor     Preflight checks for tk/pi/extensions/checkers
+  init       Create .tf project scaffolding
+  login      Configure API keys for web search and MCP servers
+  next       Print the next ready ticket id
+  ralph      Python implementation of Ralph loop (start/run)
+  sync       Sync model frontmatter from config
+  track      Append a file to files_changed.txt
+  update     Download latest agents/skills/prompts
 """
     )
 
@@ -40,6 +46,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     command = argv[0]
     rest = argv[1:]
 
+    if command == "agentsmd":
+        return agentsmd_new.main(rest)
+    if command == "backlog-ls":
+        return backlog_ls_new.main(rest)
+    if command == "doctor":
+        return doctor_new.main(rest)
     if command == "init":
         return init_new.main(rest)
     if command == "login":

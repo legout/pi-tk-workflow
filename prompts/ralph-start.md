@@ -62,7 +62,7 @@ tf ralph start --max-iterations N --parallel 2
 ```
 
 The CLI runner handles:
-- `/tf` invocation via `pi -c` (fresh process per ticket)
+- `/tf` invocation via `pi -p` (fresh process per ticket)
 - Progress updates in `.tf/ralph/progress.md`
 - Optional lessons extraction into `.tf/ralph/AGENTS.md`
 - Locking to prevent concurrent loops
