@@ -132,6 +132,32 @@ Runs the full TF cycle on each ticket.
 
 Processes remaining tickets automatically.
 
+### 6. Refine Backlog (Optional)
+
+When `/tf-backlog` inference is incomplete, use these manual correction tools:
+
+**Typical sequence:**
+```
+/tf-backlog seed-build-a-cli      # Generate initial tickets
+/tf-tags-suggest --apply          # Add missing component tags
+/tf-deps-sync --apply             # Sync parent/child dependencies
+```
+
+**What each tool does:**
+- `/tf-tags-suggest` - Suggests `component:*` tags for parallel scheduling safety
+- `/tf-deps-sync` - Ensures parent tickets are reflected in `deps` field
+
+**Manual linking:**
+If automatic inference misses a dependency, link manually:
+```
+tk link CHILD-123 PARENT-456
+```
+
+**When to run:**
+- After `/tf-backlog` if tags or dependencies look incomplete
+- Before `/ralph-start` to ensure safe parallel scheduling
+- Any time you modify ticket relationships manually
+
 ---
 
 ## Seed + Plan Combo

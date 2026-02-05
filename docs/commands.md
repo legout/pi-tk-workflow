@@ -276,6 +276,14 @@ Generates 5-15 small tickets (skipping duplicates already listed in `backlog.md`
 - Dependencies inferred for plan work plans (applied via `tk dep`)
 - `backlog.md` written to topic directory
 
+**Fallback Workflow:**
+When inference is incomplete, correct with:
+```
+/tf-tags-suggest --apply    # Add missing component tags
+/tf-deps-sync --apply       # Sync parent/child dependencies
+tk link CHILD PARENT        # Manual linking if needed
+```
+
 ---
 
 ### `/tf-backlog-ls`
@@ -293,6 +301,65 @@ List backlog status and tickets.
 ```
 /tf-backlog-ls
 /tf-backlog-ls seed-build-a-cli
+```
+
+---
+
+### `/tf-tags-suggest`
+
+Suggest missing `component:*` tags for open tickets.
+
+```
+/tf-tags-suggest [--apply] [--status open|in_progress|all] [--limit N]
+```
+
+**Flags:**
+| Flag | Description |
+|------|-------------|
+| `--apply` | Apply suggested tags to ticket files |
+| `--status` | Filter tickets (default: open,in_progress) |
+| `--limit` | Limit number of tickets processed |
+
+**Purpose:**
+Component tags enable safe parallel scheduling in Ralph. Run this after `/tf-backlog` if tickets lack component tags.
+
+**Example:**
+```
+/tf-tags-suggest
+/tf-tags-suggest --apply
+/tf-tags-suggest --apply --status open
+```
+
+---
+
+### `/tf-deps-sync`
+
+Sync parent-child relationships into ticket `deps`.
+
+```
+/tf-deps-sync [--apply] [--status open|in_progress|all]
+```
+
+**Flags:**
+| Flag | Description |
+|------|-------------|
+| `--apply` | Apply missing parent deps using `tk dep` |
+| `--status` | Filter tickets (default: open,in_progress) |
+
+**Purpose:**
+Ensures parent tickets are reflected in `deps` for proper sequencing. Run this after `/tf-backlog` if dependencies look incomplete.
+
+**Example:**
+```
+/tf-deps-sync
+/tf-deps-sync --apply
+/tf-deps-sync --apply --status all
+```
+
+**Manual fallback:**
+If automatic sync misses a dependency, link manually:
+```
+tk link CHILD-123 PARENT-456
 ```
 
 ---
