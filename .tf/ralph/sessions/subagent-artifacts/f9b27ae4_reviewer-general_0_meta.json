@@ -1,0 +1,19 @@
+{
+  "runId": "f9b27ae4",
+  "agent": "reviewer-general",
+  "task": "ptw-7zri",
+  "exitCode": 1,
+  "usage": {
+    "input": 31933,
+    "output": 2470,
+    "cacheRead": 327635,
+    "cacheWrite": 0,
+    "cost": 0.23113949999999997,
+    "turns": 23
+  },
+  "model": "openai-codex/gpt-5.1-codex-mini",
+  "durationMs": 113516,
+  "toolCount": 22,
+  "error": "read failed (exit 1): ENOENT: no such file or directory, access '/Users/volker/coding/libs/pi-tk-workflow/.tf/knowledge/tickets/ptw-7zri/ticket.md'",
+  "timestamp": 1770302880133
+}

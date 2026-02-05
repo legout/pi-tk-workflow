@@ -1,0 +1,19 @@
+{
+  "runId": "e35e80ec",
+  "agent": "reviewer-spec-audit",
+  "task": "ptw-9ze6",
+  "exitCode": 127,
+  "usage": {
+    "input": 41836,
+    "output": 6121,
+    "cacheRead": 369852,
+    "cacheWrite": 0,
+    "cost": 0.3282786,
+    "turns": 20
+  },
+  "model": "openai-codex/gpt-5.2-codex",
+  "durationMs": 163981,
+  "toolCount": 20,
+  "error": "bash failed (exit 127): /bin/bash: ./.tf/bin/tf: No such file or directory\n\n\nCommand exited with code 127",
+  "timestamp": 1770302021986
+}

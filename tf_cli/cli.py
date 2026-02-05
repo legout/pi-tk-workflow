@@ -11,6 +11,23 @@ DEFAULT_UVX_SOURCE = "git+https://github.com/legout/pi-ticketflow"
 DEFAULT_RAW_REPO_URL = "https://raw.githubusercontent.com/legout/pi-ticketflow/main"
 
 
+def get_version() -> str:
+    """Read version from VERSION file in repo root or package."""
+    repo_root = resolve_repo_root()
+    if repo_root:
+        version_file = repo_root / "VERSION"
+        if version_file.is_file():
+            return version_file.read_text(encoding="utf-8").strip()
+
+    # Fallback: try to find VERSION relative to this file
+    here = Path(__file__).resolve().parent.parent
+    version_file = here / "VERSION"
+    if version_file.is_file():
+        return version_file.read_text(encoding="utf-8").strip()
+
+    return "unknown"
+
+
 def read_root_file(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
@@ -87,7 +104,7 @@ def raw_base_from_source(source: str) -> Optional[str]:
         return None
 
     cleaned = cleaned.split("#", 1)[0].split("?", 1)[0]
-    cleaned = cleaned[len("https://github.com/"):]
+    cleaned = cleaned[len("https://github.com/") :]
     if cleaned.endswith(".git"):
         cleaned = cleaned[:-4]
 
@@ -146,7 +163,10 @@ def run_legacy(args: list[str]) -> int:
     legacy = find_legacy_script()
     if not legacy:
         print("ERROR: Legacy shell CLI not found.", file=sys.stderr)
-        print("Run 'tf install' from the repo, or reinstall using install.sh.", file=sys.stderr)
+        print(
+            "Run 'tf install' from the repo, or reinstall using install.sh.",
+            file=sys.stderr,
+        )
         return 1
     return subprocess.call(["bash", str(legacy), *args])
 
@@ -281,7 +301,9 @@ def install_local_package(repo_root: Optional[Path], uvx_source: str) -> bool:
                 return True
             output = (result.stderr or "").strip() or (result.stdout or "").strip()
         else:
-            ensure_output = (ensure.stderr or "").strip() or (ensure.stdout or "").strip()
+            ensure_output = (ensure.stderr or "").strip() or (
+                ensure.stdout or ""
+            ).strip()
             if ensure_output:
                 output = f"{output}\n{ensure_output}" if output else ensure_output
 
@@ -297,12 +319,23 @@ def install_main(argv: list[str]) -> int:
         prog="tf install",
         description="Install the Ticketflow CLI shim.",
     )
-    parser.add_argument("--repo", help="Path to the repo root (defaults to current directory)")
+    parser.add_argument(
+        "--repo", help="Path to the repo root (defaults to current directory)"
+    )
     parser.add_argument("--source", help="uvx --from source (git URL or path)")
     parser.add_argument("--project", help="Install into <path>/.tf/bin/tf")
     parser.add_argument("--path", help="Install shim to an explicit path")
-    parser.add_argument("--global", dest="global_install", action="store_true", help="Install to ~/.local/bin (default)")
-    parser.add_argument("--force-local", action="store_true", help="Also install locally via pip for offline use")
+    parser.add_argument(
+        "--global",
+        dest="global_install",
+        action="store_true",
+        help="Install to ~/.local/bin (default)",
+    )
+    parser.add_argument(
+        "--force-local",
+        action="store_true",
+        help="Also install locally via pip for offline use",
+    )
 
     args = parser.parse_args(argv)
 
@@ -343,7 +376,7 @@ def install_main(argv: list[str]) -> int:
             shim_source = candidate
 
     local_install = args.force_local or bool(repo_root)
-    
+
     if shim_source:
         shutil.copy2(shim_source, dest)
         dest.chmod(dest.stat().st_mode | 0o111)
@@ -354,7 +387,10 @@ def install_main(argv: list[str]) -> int:
         print(f"Installed shim to: {dest}")
         print(f"Recorded repo root: {cli_root_file}")
     else:
-        dest.write_text(render_uvx_shim(str(uvx_source), local_install=local_install), encoding="utf-8")
+        dest.write_text(
+            render_uvx_shim(str(uvx_source), local_install=local_install),
+            encoding="utf-8",
+        )
         dest.chmod(dest.stat().st_mode | 0o111)
 
         print(f"Installed shim to: {dest}")
@@ -378,7 +414,7 @@ def install_main(argv: list[str]) -> int:
             print("")
             print("WARNING: ~/.local/bin is not in your PATH")
             print("Add this to your shell profile:")
-            print("  export PATH=\"$HOME/.local/bin:$PATH\"")
+            print('  export PATH="$HOME/.local/bin:$PATH"')
 
     return 0
 
@@ -387,11 +423,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
+    # Handle --version/-v before other commands
+    if argv and argv[0] in ("--version", "-v"):
+        print(get_version())
+        return 0
+
     if argv and argv[0] == "install":
         return install_main(argv[1:])
 
     if argv and argv[0] == "new":
         from . import new_cli
+
         return new_cli.main(argv[1:])
 
     return run_legacy(argv)

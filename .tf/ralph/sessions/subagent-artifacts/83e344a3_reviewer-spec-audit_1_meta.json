@@ -1,0 +1,18 @@
+{
+  "runId": "83e344a3",
+  "agent": "reviewer-spec-audit",
+  "task": "ptw-5pax",
+  "exitCode": 0,
+  "usage": {
+    "input": 89290,
+    "output": 1838,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 8
+  },
+  "model": "openai-codex/gpt-5.2-codex",
+  "durationMs": 34892,
+  "toolCount": 15,
+  "timestamp": 1770300932154
+}

@@ -1,0 +1,19 @@
+{
+  "runId": "e35e80ec",
+  "agent": "reviewer-general",
+  "task": "ptw-9ze6",
+  "exitCode": 0,
+  "usage": {
+    "input": 12930,
+    "output": 315,
+    "cacheRead": 34294,
+    "cacheWrite": 0,
+    "cost": 0.053803199999999995,
+    "turns": 5
+  },
+  "model": "openai-codex/gpt-5.1-codex-mini",
+  "durationMs": 27454,
+  "toolCount": 4,
+  "error": "Cloud Code Assist API error (503): No capacity available for model claude-sonnet-4-5 on the server",
+  "timestamp": 1770301885418
+}

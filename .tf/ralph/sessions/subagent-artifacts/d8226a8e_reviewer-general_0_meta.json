@@ -1,0 +1,19 @@
+{
+  "runId": "d8226a8e",
+  "agent": "reviewer-general",
+  "task": "ptw-a6h2",
+  "exitCode": 1,
+  "usage": {
+    "input": 126991,
+    "output": 1738,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 10
+  },
+  "model": "openai-codex/gpt-5.1-codex-mini",
+  "durationMs": 40693,
+  "toolCount": 12,
+  "error": "read failed (exit 1): ENOENT: no such file or directory, access '/Users/volker/coding/libs/pi-tk-workflow/doctor_new.py'",
+  "timestamp": 1770302290300
+}

@@ -1,0 +1,19 @@
+{
+  "runId": "a62db303",
+  "agent": "reviewer-second-opinion",
+  "task": "ptw-1t5q",
+  "exitCode": 1,
+  "usage": {
+    "input": 45095,
+    "output": 1397,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 5
+  },
+  "model": "github-copilot/grok-code-fast-1",
+  "durationMs": 25707,
+  "toolCount": 4,
+  "error": "read failed (exit 1): ENOENT: no such file or directory, access '/Users/volker/coding/libs/pi-tk-workflow/.tf/config/settings.json'",
+  "timestamp": 1770300683084
+}

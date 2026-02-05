@@ -1,0 +1,19 @@
+{
+  "runId": "b4a27ceb",
+  "agent": "reviewer-spec-audit",
+  "task": "ptw-5yxe",
+  "exitCode": 1,
+  "usage": {
+    "input": 55302,
+    "output": 1352,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 5
+  },
+  "model": "openai-codex/gpt-5.2-codex",
+  "durationMs": 36087,
+  "toolCount": 7,
+  "error": "read failed (exit 1): ENOENT: no such file or directory, access '/Users/volker/coding/libs/pi-tk-workflow/.tf/config/settings.json'",
+  "timestamp": 1770301198246
+}

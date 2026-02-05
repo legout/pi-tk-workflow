@@ -1,0 +1,19 @@
+{
+  "runId": "f9b27ae4",
+  "agent": "reviewer-spec-audit",
+  "task": "ptw-7zri",
+  "exitCode": 0,
+  "usage": {
+    "input": 12294,
+    "output": 232,
+    "cacheRead": 10963,
+    "cacheWrite": 0,
+    "cost": 0.043650900000000006,
+    "turns": 3
+  },
+  "model": "openai-codex/gpt-5.2-codex",
+  "durationMs": 19065,
+  "toolCount": 3,
+  "error": "Cloud Code Assist API error (429): You have exhausted your capacity on this model. Your quota will reset after 0s.",
+  "timestamp": 1770302785658
+}

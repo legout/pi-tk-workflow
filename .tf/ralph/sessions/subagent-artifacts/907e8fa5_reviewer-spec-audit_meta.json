@@ -1,0 +1,19 @@
+{
+  "runId": "907e8fa5",
+  "agent": "reviewer-spec-audit",
+  "task": "ptw-7zri\n\n---\n**Output:** Write your findings to: /tmp/pi-reviewer-spec-audit-907e8fa5/review-spec.md",
+  "exitCode": 0,
+  "usage": {
+    "input": 0,
+    "output": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 1
+  },
+  "model": "openai-codex/gpt-5.2-codex",
+  "durationMs": 11458,
+  "toolCount": 0,
+  "error": "Cloud Code Assist API error (429): You have exhausted your capacity on this model. Your quota will reset after 3h49m28s.",
+  "timestamp": 1770303043481
+}

@@ -1,0 +1,1 @@
+Now let me check the rest of the codebase for any other uses of the `normalize_version` function to ensure this change is safe:

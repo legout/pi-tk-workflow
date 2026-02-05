@@ -1,0 +1,19 @@
+{
+  "runId": "0a588da5",
+  "agent": "reviewer-general",
+  "task": "ptw-0un2",
+  "exitCode": 1,
+  "usage": {
+    "input": 23631,
+    "output": 1939,
+    "cacheRead": 206809,
+    "cacheWrite": 0,
+    "cost": 0.16202070000000002,
+    "turns": 16
+  },
+  "model": "openai-codex/gpt-5.1-codex-mini",
+  "durationMs": 89939,
+  "toolCount": 15,
+  "error": "bash failed (exit 1): cat: .tf/knowledge/tickets/ptw-0un2/ticket.md: No such file or directory\n\n\nCommand exited with code 1",
+  "timestamp": 1770302597209
+}

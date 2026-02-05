@@ -1,0 +1,31 @@
+{
+  "topics": [
+    {
+      "id": "seed-add-versioning",
+      "title": "Add versioning",
+      "keywords": [
+        "versioning",
+        "semantic-versioning",
+        "changelog",
+        "release"
+      ],
+      "overview": "topics/seed-add-versioning/overview.md",
+      "sources": "topics/seed-add-versioning/sources.md"
+    },
+    {
+      "id": "seed-backlog-deps-and-tags",
+      "title": "Auto-add deps and component tags in /tf-backlog",
+      "keywords": [
+        "backlog",
+        "dependencies",
+        "component-tags",
+        "ticket-creation",
+        "workflow",
+        "automation"
+      ],
+      "overview": "topics/seed-backlog-deps-and-tags/overview.md",
+      "sources": "topics/seed-backlog-deps-and-tags/sources.md"
+    }
+  ],
+  "updated": "2026-02-05"
+}
