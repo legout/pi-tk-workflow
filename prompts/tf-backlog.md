@@ -12,7 +12,7 @@ Generate small, actionable implementation tickets from seed (greenfield), baseli
 ## Usage
 
 ```
-/tf-backlog <seed-baseline-or-plan-path-or-topic-id> [--no-deps] [--no-component-tags] [--no-links]
+/tf-backlog <seed-baseline-or-plan-path-or-topic-id> [--no-deps] [--no-component-tags] [--no-links] [--links-only]
 ```
 
 ## Arguments
@@ -25,6 +25,7 @@ Generate small, actionable implementation tickets from seed (greenfield), baseli
 - `--no-deps` - Skip automatic dependency inference for seed/baseline backlogs
 - `--no-component-tags` - Skip automatic component tag assignment during ticket creation
 - `--no-links` - Skip automatic linking of related tickets
+- `--links-only` - Run only linking on existing backlog tickets (no new tickets created). Useful for retroactive linking of existing backlogs.
 
 ## Examples
 
@@ -60,20 +61,39 @@ Create backlog without automatic dependency chaining:
 
 Useful when tasks are truly independent and can be worked on in any order.
 
+### --links-only Example
+
+Run linking on existing backlog without creating new tickets:
+
+```
+/tf-backlog seed-myfeature --links-only
+```
+
+Useful when:
+- A backlog was created before the linking feature existed
+- You want to retroactively link related tickets in an existing backlog
+- Tickets were created manually but you want automatic linking applied
+
 ## Execution
 
 Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" procedure:
 
+**Special case: `--links-only` mode**
+- If `--links-only` is provided: Skip ticket creation (steps 5-7), go directly to linking step
+- Load existing tickets from `backlog.md` instead of creating new ones
+- Apply linking criteria to existing tickets
+- Update `backlog.md` with links column
+
 1. Locate topic directory
 2. Detect mode (seed vs baseline vs plan)
 3. Read relevant artifacts and plan status (warn if plan not approved)
-4. Load existing tickets to avoid duplicates:
+4. Load existing tickets to avoid duplicates (or to link, if `--links-only`):
    - Read `backlog.md` if it exists
    - Read `existing-tickets.md` if present (from `/tf-baseline`)
    - Run `tk list --help` (or `tk help`) to discover listing/search options
    - If `tk` supports listing/search, pull open tickets with tags like `tf`, `baseline`, or `backlog`
-5. Create 5-15 small tickets (1-2 hours each, 30 lines max), skipping duplicates (record skipped items in backlog.md)
-6. Create via `tk create`:
+5. Create 5-15 small tickets (1-2 hours each, 30 lines max), skipping duplicates (record skipped items in backlog.md). **Skip this step if `--links-only` provided.**
+6. Create via `tk create` (skip if `--links-only` provided):
 
    **Seed:**
 
@@ -108,7 +128,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
      --external-ref "{topic-id}"
    ```
 
-7. Infer dependencies:
+7. Infer dependencies (skip if `--links-only` provided):
 
    **Plan mode:**
    - Use Work Plan phases or ordered steps to determine sequencing
@@ -131,7 +151,7 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
    - Skip dependencies unless explicitly stated in source docs
    - Apply with `tk dep <id> <dep-id>`
 
-8. **Apply component tags by default** (skip if `--no-component-tags` provided):
+8. **Apply component tags by default** (skip if `--no-component-tags` or `--links-only` provided):
    - For each ticket, analyze title and description using the shared component classifier
    - Import and use `tf_cli.component_classifier.classify_components()` - the same
      module used by `/tf-tags-suggest` to ensure consistent suggestions:
@@ -153,7 +173,8 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
    - If skipped, users can re-run tagging later via `/tf-tags-suggest --apply`
 
 9. Link related tickets (if `--no-links` NOT provided):
-   - Link tickets that are tightly related for discoverability
+   - **If `--links-only`**: Load existing tickets from `backlog.md`, apply linking to those
+   - **Otherwise**: Link newly created tickets that are tightly related for discoverability
    - **Criteria** (conservative - under-linking preferred):
      - Same component tags + adjacent in creation order
      - Title similarity (significant shared words)
@@ -245,10 +266,16 @@ Follow the **TF Planning Skill** "Backlog Generation (Seed, Baseline, or Plan)" 
 
 ## Output
 
+**Normal mode:**
 - Tickets created in `tk` (with external-ref linking to source)
 - Dependencies applied via `tk dep` when inferred
 - Related tickets linked via `tk link` when applicable
 - `backlog.md` written to topic directory
+
+**`--links-only` mode:**
+- No new tickets created
+- Existing tickets from `backlog.md` linked via `tk link` when applicable
+- `backlog.md` updated with Links column
 
 ## Next Steps
 
