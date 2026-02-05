@@ -83,6 +83,15 @@ class TestMainVersionFlag:
         captured = capsys.readouterr()
         assert captured.out.strip() == "1.2.3"
 
+    def test_V_flag_prints_version(self, capsys) -> None:
+        """Should print version and exit 0 with -V flag."""
+        with mock.patch("tf_cli.cli.get_version", return_value="1.2.3"):
+            result = main(["-V"])
+        
+        assert result == 0
+        captured = capsys.readouterr()
+        assert captured.out.strip() == "1.2.3"
+
     def test_version_flag_with_actual_version_file(self, tmp_path: Path, capsys) -> None:
         """Integration test: should read and print actual VERSION file."""
         version_file = tmp_path / "VERSION"

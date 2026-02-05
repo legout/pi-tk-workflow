@@ -15,6 +15,27 @@ if [ -f "$ROOT_DIR/scripts/tf_config.py" ]; then
   fi
 fi
 
+# Version retrieval helper
+get_tf_version() {
+  local version_file="$ROOT_DIR/VERSION"
+  if [ -f "$version_file" ]; then
+    cat "$version_file" 2>/dev/null | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || echo "unknown"
+  else
+    echo "unknown"
+  fi
+}
+
+# Handle version flags before main argument parsing
+# This early exit is intentional: version flags should work even if repo is misconfigured
+if [ "$#" -ge 1 ]; then
+  case "$1" in
+    --version|-v|-V)
+      echo "$(get_tf_version)"
+      exit 0
+      ;;
+  esac
+fi
+
 usage() {
   cat <<'EOF'
 Ticketflow CLI
@@ -37,7 +58,8 @@ Commands:
   login       Configure API keys (Perplexity, Context7, Exa, ZAI)
   sync        Sync agent models from workflow config into agent files
   update      Download latest agents, skills, and prompts
-  doctor      Preflight checks for tk/pi/extensions/checkers
+  doctor      Preflight checks for tk/pi/extensions/checkers/version
+              Options: --fix (auto-fix VERSION file), --dry-run (show changes)
   next        Print the next open and ready ticket id
   backlog-ls  List backlog status and tickets for seed/baseline topics
   track       Append file paths to files_changed.txt (deduped)
@@ -59,6 +81,7 @@ Agentsmd Subcommands:
   agentsmd fix [path]      Auto-fix common issues (backup created)
 
 Options:
+  --version, -v, -V        Print version and exit
   --global                 Install/sync Pi files in ~/.pi/agent (setup/login only)
   --project <path>         Operate on project at <path> (uses <path>/.pi + <path>/.tf)
   --file <path>            Output files_changed.txt path (track only)
@@ -133,8 +156,8 @@ while [ "$#" -gt 0 ]; do
       done
       ;;
     -* )
-      # For ralph command, pass options through to subcommand
-      if [ "$COMMAND" = "ralph" ]; then
+      # For ralph and doctor commands, pass options through to subcommand
+      if [ "$COMMAND" = "ralph" ] || [ "$COMMAND" = "doctor" ]; then
         ARGS+=("$1")
         shift
       else
@@ -1372,7 +1395,151 @@ track_file() {
   echo "Tracked: $tracked_path"
 }
 
+# Version checking helpers for doctor
+get_package_version() {
+  local project_root="$1"
+  local package_file="$project_root/package.json"
+  
+  if [ ! -f "$package_file" ]; then
+    return 0
+  fi
+  
+  local version
+  version=$(python3 - "$package_file" <<'PY'
+import json
+import sys
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as f:
+        data = json.load(f)
+    version = data.get("version")
+    if isinstance(version, str) and version.strip():
+        print(version.strip())
+except Exception:
+    pass
+PY
+) 2>/dev/null || true
+  
+  if [ -n "$version" ]; then
+    echo "$version"
+  fi
+}
+
+get_version_file_version() {
+  local project_root="$1"
+  local version_file="$project_root/VERSION"
+  
+  if [ ! -f "$version_file" ]; then
+    return 0
+  fi
+  
+  local content
+  content=$(cat "$version_file" 2>/dev/null | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//') || true
+  
+  if [ -n "$content" ]; then
+    echo "$content"
+  fi
+}
+
+normalize_version() {
+  local version="$1"
+  # Strip leading v or V
+  echo "$version" | sed 's/^[vV]//'
+}
+
+sync_version_file() {
+  local project_root="$1"
+  local package_version="$2"
+  local version_file="$project_root/VERSION"
+  
+  printf '%s\n' "$package_version" > "$version_file"
+}
+
+check_version_consistency() {
+  local project_root="$1"
+  local fix="$2"
+  local dry_run="$3"
+  local package_file="$project_root/package.json"
+  
+  local package_version
+  package_version=$(get_package_version "$project_root")
+  local version_file_version
+  version_file_version=$(get_version_file_version "$project_root")
+  
+  # If no package.json, nothing to check
+  if [ ! -f "$package_file" ]; then
+    echo "[info] No package.json found, skipping version check"
+    return 0
+  fi
+  
+  # If package.json exists but version is invalid/missing
+  if [ -z "$package_version" ]; then
+    echo "[info] package.json found but version field is missing or invalid"
+    return 0
+  fi
+  
+  echo "[ok] package.json version: $package_version"
+  
+  # Check VERSION file consistency if it exists
+  if [ -n "$version_file_version" ]; then
+    local normalized_package
+    normalized_package=$(normalize_version "$package_version")
+    local normalized_file
+    normalized_file=$(normalize_version "$version_file_version")
+    
+    if [ "$normalized_file" != "$normalized_package" ]; then
+      if [ "$dry_run" = "true" ]; then
+        echo "[dry-run] Would update VERSION file from $version_file_version to $package_version"
+        return 1
+      elif [ "$fix" = "true" ]; then
+        sync_version_file "$project_root" "$package_version"
+        echo "[fixed] VERSION file updated from $version_file_version to $package_version"
+        return 0
+      else
+        echo "[warn] VERSION file ($version_file_version) does not match package.json ($package_version)"
+        echo "       To fix: run 'tf doctor --fix' or update VERSION file manually"
+        return 1
+      fi
+    else
+      echo "[ok] VERSION file matches package.json: $version_file_version"
+      return 0
+    fi
+  else
+    # VERSION file doesn't exist
+    if [ "$dry_run" = "true" ]; then
+      echo "[dry-run] Would create VERSION file with version $package_version"
+      return 1
+    elif [ "$fix" = "true" ]; then
+      sync_version_file "$project_root" "$package_version"
+      echo "[fixed] VERSION file created with version $package_version"
+      return 0
+    else
+      echo "[info] No VERSION file found (optional)"
+      return 0
+    fi
+  fi
+}
+
 doctor() {
+  local fix="false"
+  local dry_run="false"
+  
+  # Parse doctor-specific arguments
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --fix)
+        fix="true"
+        shift
+        ;;
+      --dry-run)
+        dry_run="true"
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
   require_project_tf
 
   local failed=0
@@ -1544,6 +1711,14 @@ print("\n".join(missing))
     fi
   else
     echo "[missing] python (required to read checkers config)"
+    failed=1
+  fi
+
+  # Version consistency check
+  echo "Version consistency:"
+  local project_root
+  project_root="$(dirname "$TF_BASE")"
+  if ! check_version_consistency "$project_root" "$fix" "$dry_run"; then
     failed=1
   fi
 
@@ -3832,7 +4007,7 @@ case "$COMMAND" in
     update_assets
     ;;
   doctor)
-    doctor
+    doctor "${ARGS[@]}"
     ;;
   next)
     if [ "${#ARGS[@]}" -gt 0 ]; then

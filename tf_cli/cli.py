@@ -410,8 +410,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
-    # Handle --version/-v before other commands
-    if argv and argv[0] in ("--version", "-v"):
+    # Handle --version/-v/-V before other commands
+    if argv and argv[0] in ("--version", "-v", "-V"):
         print(get_version())
         return 0
 
