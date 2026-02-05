@@ -212,7 +212,7 @@ def normalize_version(version: str) -> str:
     Returns:
         Normalized version string (no v prefix)
     """
-    if version.lower().startswith("v"):
+    if version.startswith(("v", "V")):
         return version[1:]
     return version
 
