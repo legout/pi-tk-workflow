@@ -50,3 +50,15 @@
   - Summary: Document shared component classifier between /tf-backlog and /tf-tags-suggest
   - Issues: Critical(0)/Major(0)/Minor(0)
   - Status: COMPLETE
+- ptw-ztdh: COMPLETE (2026-02-05T16:46:58Z)
+  - Summary: Update tf-tags-suggest to share classifier logic
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-8f4r: COMPLETE (2026-02-05T16:47:43Z)
+  - Summary: Add --no-links example to tf-backlog prompt
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+- ptw-f1: COMPLETE (2026-02-05T16:47:52Z)
+  - Summary: Document --no-deps flag in Backlog Generation procedure
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
