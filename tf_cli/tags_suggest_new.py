@@ -1,5 +1,7 @@
 """Suggest component tags for tickets using the conservative keyword classifier."""
 
+from __future__ import annotations
+
 import argparse
 import json
 import sys
