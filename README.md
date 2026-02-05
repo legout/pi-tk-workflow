@@ -575,6 +575,31 @@ pi-ticketflow/
 
 ---
 
+## Development
+
+### Running Tests
+
+The project includes both unit tests (pytest) and smoke tests (stdlib-only):
+
+```bash
+# Run all pytest tests
+pytest
+
+# Run smoke test (no pytest required)
+python tests/smoke_test_version.py
+
+# Or make it executable first
+chmod +x tests/smoke_test_version.py
+./tests/smoke_test_version.py
+```
+
+The smoke test validates:
+- `tf --version` exits with code 0
+- Output is non-empty
+- Output matches SemVer format (e.g., `0.1.0`, `1.2.3-alpha.1`)
+
+---
+
 ## Documentation
 
 - **[docs/commands.md](docs/commands.md)** - Complete command reference
