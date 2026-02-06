@@ -38,6 +38,7 @@ DEFAULTS: Dict[str, Any] = {
     "parallelKeepWorktrees": False,
     "parallelAutoMerge": True,
     "logLevel": "normal",  # quiet, normal, verbose, debug
+    "captureJson": False,  # Capture Pi JSON mode output for debugging
 }
 
 
@@ -47,8 +48,8 @@ def usage() -> None:
         """Ralph (new Python CLI)
 
 Usage:
-  tf ralph run [ticket-id] [--dry-run] [--verbose|--debug|--quiet] [--flags '...']
-  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--verbose|--debug|--quiet] [--flags '...']
+  tf ralph run [ticket-id] [--dry-run] [--verbose|--debug|--quiet] [--capture-json] [--flags '...']
+  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--verbose|--debug|--quiet] [--capture-json] [--flags '...']
 
 Verbosity Options:
   --verbose         Enable verbose output (INFO + DEBUG events)
@@ -56,15 +57,21 @@ Verbosity Options:
   --quiet           Minimal output (errors only)
   (default)         Normal output (INFO events only)
 
+JSON Capture Options:
+  --capture-json    Capture Pi JSON mode output to .tf/ralph/logs/<ticket>.jsonl
+                    (experimental, for debugging tool execution)
+
 Environment Variables:
-  RALPH_LOG_LEVEL   Set log level: quiet, normal, verbose, debug
-  RALPH_VERBOSE     Set to 1 to enable verbose mode
-  RALPH_DEBUG       Set to 1 to enable debug mode
-  RALPH_QUIET       Set to 1 to enable quiet mode
+  RALPH_LOG_LEVEL       Set log level: quiet, normal, verbose, debug
+  RALPH_VERBOSE         Set to 1 to enable verbose mode
+  RALPH_DEBUG           Set to 1 to enable debug mode
+  RALPH_QUIET           Set to 1 to enable quiet mode
+  RALPH_CAPTURE_JSON    Set to 1 to enable JSON mode capture (same as --capture-json)
 
 Notes:
   - CLI flags take precedence over environment variables
   - Parallel mode uses git worktrees + component tags (same as legacy).
+  - JSON capture is opt-in; JSONL may contain file paths or snippets.
 """
     )
 
@@ -186,6 +193,8 @@ def run_ticket(
     cwd: Optional[Path] = None,
     logger: Optional[RalphLogger] = None,
     mode: str = "serial",
+    capture_json: bool = False,
+    logs_dir: Optional[Path] = None,
 ) -> int:
     log = logger or create_logger(mode=mode)
     if not ticket:
@@ -205,17 +214,35 @@ def run_ticket(
     cmd = build_cmd(workflow, ticket, flags)
     session_flag = f" --session {session_path}" if session_path else ""
 
+    # Determine JSON capture path if enabled
+    jsonl_path: Optional[Path] = None
+    if capture_json and logs_dir:
+        jsonl_path = logs_dir / f"{ticket}.jsonl"
+
     if dry_run:
         prefix = " (worktree)" if cwd else ""
-        log.info(f"Dry run: pi -p{session_flag} \"{cmd}\"{prefix}", ticket=ticket)
+        json_flag = " --mode json" if capture_json else ""
+        log.info(f"Dry run: pi -p{json_flag}{session_flag} \"{cmd}\"{prefix}", ticket=ticket)
         return 0
 
-    log.info(f"Running: pi -p{session_flag} \"{cmd}\"", ticket=ticket)
+    json_flag_str = " --mode json" if capture_json else ""
+    log.info(f"Running: pi -p{json_flag_str}{session_flag} \"{cmd}\"", ticket=ticket)
     args = ["pi", "-p"]
+    if capture_json:
+        args.append("--mode")
+        args.append("json")
     if session_path:
         args += ["--session", str(session_path)]
     args.append(cmd)
-    result = subprocess.run(args, cwd=cwd)
+
+    if jsonl_path:
+        # Ensure logs directory exists
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        with open(jsonl_path, "w", encoding="utf-8") as jsonl_file:
+            result = subprocess.run(args, cwd=cwd, stdout=jsonl_file, stderr=subprocess.STDOUT)
+        log.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path))
+    else:
+        result = subprocess.run(args, cwd=cwd)
     return result.returncode
 
 
@@ -601,16 +628,20 @@ def update_state(
         agents_path.write_text(agents_path.read_text(encoding="utf-8") + header + lesson_block + "\n", encoding="utf-8")
 
 
-def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel]]:
+def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel], bool]:
     ticket_override: Optional[str] = None
     dry_run = False
     flags_override: Optional[str] = None
     log_level: Optional[LogLevel] = None
+    capture_json = False
     idx = 0
     while idx < len(args):
         arg = args[idx]
         if arg == "--dry-run":
             dry_run = True
+            idx += 1
+        elif arg == "--capture-json":
+            capture_json = True
             idx += 1
         elif arg == "--verbose":
             log_level = LogLevel.VERBOSE
@@ -638,7 +669,7 @@ def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str],
                 idx += 1
             else:
                 raise ValueError("Too many arguments for ralph run")
-    return ticket_override, dry_run, flags_override, log_level
+    return ticket_override, dry_run, flags_override, log_level, capture_json
 
 
 def parse_start_args(args: List[str]) -> Dict[str, Any]:
@@ -649,6 +680,7 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         "no_parallel": False,
         "flags_override": None,
         "log_level": None,
+        "capture_json": False,
     }
     idx = 0
     while idx < len(args):
@@ -684,6 +716,9 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         elif arg == "--quiet":
             options["log_level"] = LogLevel.QUIET
             idx += 1
+        elif arg == "--capture-json":
+            options["capture_json"] = True
+            idx += 1
         elif arg == "--flags":
             if idx + 1 >= len(args):
                 raise ValueError("Missing value after --flags")
@@ -702,7 +737,7 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
 
 def ralph_run(args: List[str]) -> int:
     try:
-        ticket_override, dry_run, flags_override, cli_log_level = parse_run_args(args)
+        ticket_override, dry_run, flags_override, cli_log_level, cli_capture_json = parse_run_args(args)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -724,6 +759,15 @@ def ralph_run(args: List[str]) -> int:
 
     config = load_config(ralph_dir)
 
+    # Resolve capture_json from CLI flag, env var, or config (in that order)
+    capture_json = cli_capture_json
+    if not capture_json:
+        env_capture = os.environ.get("RALPH_CAPTURE_JSON", "").strip()
+        if env_capture in ("1", "true", "yes"):
+            capture_json = True
+    if not capture_json:
+        capture_json = parse_bool(config.get("captureJson", DEFAULTS["captureJson"]), DEFAULTS["captureJson"])
+
     ticket_query = sanitize_ticket_query(str(config.get("ticketQuery", DEFAULTS["ticketQuery"])), logger)
     workflow = str(config.get("workflow", DEFAULTS["workflow"]))
     workflow_flags = str(config.get("workflowFlags", DEFAULTS["workflowFlags"]))
@@ -742,6 +786,11 @@ def ralph_run(args: List[str]) -> int:
         DEFAULTS["sessionPerTicket"],
     )
 
+    # Set up logs directory for JSON capture
+    logs_dir: Optional[Path] = None
+    if capture_json:
+        logs_dir = ralph_dir / "logs"
+
     ticket = ticket_override or select_ticket(ticket_query)
     if not ticket:
         logger.error("No ready tickets found")
@@ -758,7 +807,17 @@ def ralph_run(args: List[str]) -> int:
         else:
             session_path = session_dir / f"loop-{utc_now()}.jsonl"
 
-    rc = run_ticket(ticket, workflow, workflow_flags, dry_run, session_path=session_path, logger=logger, mode="serial")
+    rc = run_ticket(
+        ticket,
+        workflow,
+        workflow_flags,
+        dry_run,
+        session_path=session_path,
+        logger=logger,
+        mode="serial",
+        capture_json=capture_json,
+        logs_dir=logs_dir,
+    )
     if dry_run:
         logger.log_ticket_complete(ticket, "DRY_RUN", mode="serial")
         return rc
@@ -796,6 +855,21 @@ def ralph_start(args: List[str]) -> int:
         return 1
 
     config = load_config(ralph_dir)
+
+    # Resolve capture_json from CLI flag, env var, or config (in that order)
+    capture_json = options.get("capture_json", False)
+    if not capture_json:
+        env_capture = os.environ.get("RALPH_CAPTURE_JSON", "").strip()
+        if env_capture in ("1", "true", "yes"):
+            capture_json = True
+    if not capture_json:
+        capture_json = parse_bool(config.get("captureJson", DEFAULTS["captureJson"]), DEFAULTS["captureJson"])
+
+    # Set up logs directory for JSON capture
+    logs_dir: Optional[Path] = None
+    if capture_json:
+        logs_dir = ralph_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
     max_iterations = options["max_iterations"] or int(config.get("maxIterations", DEFAULTS["maxIterations"]))
     sleep_between = int(config.get("sleepBetweenTickets", DEFAULTS["sleepBetweenTickets"]))
@@ -896,6 +970,8 @@ def ralph_start(args: List[str]) -> int:
                     session_path=session_path,
                     logger=ticket_logger,
                     mode="serial",
+                    capture_json=capture_json,
+                    logs_dir=logs_dir,
                 )
                 ticket_logger.log_command_executed(ticket, cmd, rc, mode="serial", iteration=iteration)
                 if not options["dry_run"]:
@@ -981,12 +1057,13 @@ def ralph_start(args: List[str]) -> int:
                 for ticket in selected:
                     cmd = build_cmd(workflow, ticket, workflow_flags)
                     session_note = f" --session {session_dir / (ticket + '.jsonl')}" if session_dir else ""
-                    logger.info(f"Dry run: pi -p{session_note} \"{cmd}\" (worktree)", ticket=ticket)
+                    json_note = " --mode json" if capture_json else ""
+                    logger.info(f"Dry run: pi -p{json_note}{session_note} \"{cmd}\" (worktree)", ticket=ticket)
                 iteration += len(selected)
                 time.sleep(sleep_between / 1000)
                 continue
 
-            processes: List[Tuple[subprocess.Popen, str, Path]] = []
+            processes: List[Tuple[subprocess.Popen, str, Path, Optional[Any]]] = []
             for ticket in selected:
                 worktree_path = worktrees_dir / ticket
                 # Remove any existing worktree first
@@ -1016,16 +1093,38 @@ def ralph_start(args: List[str]) -> int:
                 if session_dir:
                     session_path = session_dir / f"{ticket}.jsonl"
 
+                # Determine JSON capture path if enabled
+                jsonl_path: Optional[Path] = None
+                if capture_json and logs_dir:
+                    jsonl_path = logs_dir / f"{ticket}.jsonl"
+
                 cmd = build_cmd(workflow, ticket, workflow_flags)
                 args = ["pi", "-p"]
+                if capture_json:
+                    args.append("--mode")
+                    args.append("json")
                 if session_path:
                     args += ["--session", str(session_path)]
                 args.append(cmd)
-                proc = subprocess.Popen(args, cwd=worktree_path)
-                processes.append((proc, ticket, worktree_path))
 
-            for proc, ticket, worktree_path in processes:
+                if jsonl_path:
+                    # Ensure logs directory exists (per-worktree path for parallel mode)
+                    worktree_logs = worktree_path / ".tf/ralph/logs"
+                    worktree_logs.mkdir(parents=True, exist_ok=True)
+                    jsonl_file = open(worktree_logs / f"{ticket}.jsonl", "w", encoding="utf-8")
+                    proc = subprocess.Popen(args, cwd=worktree_path, stdout=jsonl_file, stderr=subprocess.STDOUT)
+                    processes.append((proc, ticket, worktree_path, jsonl_file))
+                else:
+                    proc = subprocess.Popen(args, cwd=worktree_path)
+                    processes.append((proc, ticket, worktree_path, None))
+
+            for proc, ticket, worktree_path, jsonl_file in processes:
                 rc = proc.wait()
+                if jsonl_file is not None:
+                    jsonl_file.close()
+                    # Log where the JSONL was written (relative to worktree)
+                    jsonl_path = worktree_path / ".tf/ralph/logs" / f"{ticket}.jsonl"
+                    logger.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path), mode="parallel")
                 cmd = build_cmd(workflow, ticket, workflow_flags)
                 logger.log_command_executed(ticket, cmd, rc, mode="parallel", iteration=iteration)
                 if rc != 0:
