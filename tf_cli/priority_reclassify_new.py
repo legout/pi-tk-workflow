@@ -5,9 +5,91 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Tuple
+
+
+@dataclass
+class ClassificationResult:
+    """Result of priority classification."""
+    priority: str  # P0-P4 or "unknown"
+    bucket: str  # rubric bucket name
+    reason: str  # human-readable explanation
+    confidence: str  # high/medium/low/unknown
+
+
+# Rubric definitions with keywords and bucket names
+RUBRIC = {
+    "P0": {
+        "bucket": "critical-risk",
+        "description": "System down, data loss, security breach, blocking all work",
+        "keywords": {
+            "security": ["security", "vulnerability", "cve", "exploit", "breach", "xss", "injection", "auth bypass", "unauthorized"],
+            "data": ["data loss", "corruption", "rollback", "recovery", "data integrity"],
+            "system": ["outage", "down", "crash", "crashes", "crashing", "crash loop", "oom", "deadlock", "panic", "segfault", "infinite loop"],
+            "compliance": ["gdpr", "legal", "compliance violation", "regulatory"],
+        },
+    },
+    "P1": {
+        "bucket": "high-impact",
+        "description": "Major feature, significant bug affecting users, performance degradation",
+        "keywords": {
+            "user_impact": ["user-facing", "customer reported", "regression", "broken", "not working"],
+            "features": ["release blocker", "milestone", "launch", "blocking release"],
+            "performance": ["slow", "timeout", "memory leak", "high cpu", "performance degradation"],
+            "correctness": ["wrong results", "calculation error", "data inconsistency"],
+        },
+    },
+    "P2": {
+        "bucket": "product-feature",
+        "description": "Standard product features, routine enhancements",
+        "keywords": {
+            "standard_work": ["feature", "implement", "add support", "enhancement", "new capability"],
+            "integration": ["api", "webhook", "export", "import", "integration"],
+        },
+    },
+    "P3": {
+        "bucket": "engineering-quality",
+        "description": "Engineering quality, dev workflow improvements, tech debt",
+        "keywords": {
+            "quality": ["refactor", "cleanup", "tech debt", "architecture", "redesign"],
+            "dx": ["dx", "dev workflow", "build time", "ci/cd", "developer experience"],
+            "observability": ["metrics", "logging", "tracing", "monitoring", "alerting"],
+            "testing": ["test coverage", "integration tests", "load tests", "test infra"],
+        },
+    },
+    "P4": {
+        "bucket": "maintenance-polish",
+        "description": "Code cosmetics, refactors, docs polish, test typing",
+        "keywords": {
+            "polish": ["typo", "formatting", "lint", "style", "naming", "cosmetic", "whitespace"],
+            "docs": ["docs", "readme", "comments", "docstrings", "documentation"],
+            "types": ["type hints", "mypy", "type safety", "typing"],
+            "minor": ["imports cleanup", "unused code", "minor refactor", "refactor"],
+        },
+    },
+}
+
+# Tag-based classifications (tags take precedence over description)
+TAG_MAP = {
+    "P0": ["security", "cve", "critical", "data-loss", "outage"],
+    "P1": ["bug", "regression", "performance", "blocker"],
+    "P2": ["feature", "enhancement"],
+    "P3": ["refactor", "tech-debt", "dx", "ci/cd", "testing"],
+    "P4": ["docs", "documentation", "typo", "style", "typing"],
+}
+
+# Type-based defaults when no clear indicators found
+TYPE_DEFAULTS = {
+    "bug": "P1",
+    "feature": "P2",
+    "enhancement": "P2",
+    "task": "P3",
+    "chore": "P3",
+    "docs": "P4",
+}
 
 
 def find_project_root() -> Optional[Path]:
@@ -39,7 +121,6 @@ def get_ticket_ids_from_ready() -> List[str]:
     for line in stdout.strip().split("\n"):
         line = line.strip()
         if line:
-            # Extract ID from first column (handles various output formats)
             parts = line.split()
             if parts:
                 ids.append(parts[0])
@@ -97,7 +178,6 @@ def parse_ticket_show(output: str) -> dict:
     for line in lines:
         line = line.rstrip()
         
-        # Parse frontmatter lines
         if in_header:
             if line.startswith("id:"):
                 ticket["id"] = line.split(":", 1)[1].strip()
@@ -109,12 +189,10 @@ def parse_ticket_show(output: str) -> dict:
                 ticket["type"] = line.split(":", 1)[1].strip()
             elif line.startswith("tags:"):
                 tags_str = line.split(":", 1)[1].strip()
-                # Parse [tag1, tag2, ...] format
                 tags_match = re.findall(r'\[([^\]]*)\]', tags_str)
                 if tags_match:
                     ticket["tags"] = [t.strip() for t in tags_match[0].split(",") if t.strip()]
             elif line.startswith("# ") and ticket["id"]:
-                # Title line
                 ticket["title"] = line[2:].strip()
                 in_header = False
             elif line == "---":
@@ -126,80 +204,132 @@ def parse_ticket_show(output: str) -> dict:
     return ticket
 
 
+def find_matching_keywords(text: str, keyword_dict: dict) -> List[Tuple[str, str]]:
+    """Find which keywords match in text. Returns list of (category, keyword)."""
+    text_lower = text.lower()
+    matches = []
+    for category, keywords in keyword_dict.items():
+        for kw in keywords:
+            if kw in text_lower:
+                matches.append((category, kw))
+    return matches
+
+
 def classify_priority(ticket: dict) -> Tuple[str, str]:
     """
-    Classify ticket priority based on rubric.
-    Returns (proposed_priority, reason).
+    Classify ticket priority using comprehensive rubric.
+    
+    Returns (priority, reason) tuple where priority is P0-P4 or "unknown".
+    Ambiguous tickets return "unknown" priority.
+    
+    Backward compatible: returns tuple for existing test expectations.
+    Use classify_priority_full() for complete ClassificationResult.
+    """
+    result = classify_priority_full(ticket)
+    return result.priority, result.reason
+
+
+def classify_priority_full(ticket: dict) -> ClassificationResult:
+    """
+    Classify ticket priority using comprehensive rubric.
+    
+    Returns ClassificationResult with priority, bucket, reason, and confidence.
+    Ambiguous tickets return "unknown" priority.
     """
     title = ticket.get("title", "").lower()
     description = ticket.get("description", "").lower()
     tags = [t.lower() for t in ticket.get("tags", [])]
     ticket_type = ticket.get("type", "").lower()
+    full_text = f"{title} {description}"
     
-    # P0: Critical bug/risk (security, data correctness, OOM, crashes)
-    p0_keywords = ["security", "crash", "oom", "memory leak", "data loss", "corruption", 
-                   "panic", "segfault", "vulnerability", "cve", "exploit"]
-    if any(kw in title or kw in description for kw in p0_keywords):
-        return "P0", f"Critical issue detected: matches security/risk keywords"
+    # Check tags first (explicit intent takes precedence)
+    for priority, tag_list in TAG_MAP.items():
+        matching_tags = [t for t in tags if t in tag_list]
+        if matching_tags:
+            bucket = RUBRIC[priority]["bucket"]
+            return ClassificationResult(
+                priority=priority,
+                bucket=bucket,
+                reason=f"Tag match: {matching_tags[0]} -> {bucket}",
+                confidence="high"
+            )
     
-    if ticket_type == "bug" and any(kw in title or kw in description 
-                                     for kw in ["critical", "blocker", "breaking"]):
-        return "P0", "Critical bug classification"
+    # Collect keyword matches for each priority level
+    priority_scores = {}
+    for priority, config in RUBRIC.items():
+        matches = []
+        for category, keywords in config["keywords"].items():
+            for kw in keywords:
+                if kw in full_text:
+                    matches.append((category, kw))
+        if matches:
+            priority_scores[priority] = matches
     
-    # P1: Urgent fixes blocking release or major feature work
-    p1_keywords = ["blocker", "blocking", "urgent", "hotfix", "regression"]
-    if any(kw in title or kw in description for kw in p1_keywords):
-        return "P1", f"Urgent/blocking issue detected"
+    # If we have matches, use the highest priority for P0-P2 (conservative)
+    # For P3/P4, prefer lower priority (P4 over P3) as these are maintenance
+    if priority_scores:
+        # Priority order: P0 > P1 > P2 (conservative for critical/important)
+        for priority in ["P0", "P1", "P2"]:
+            if priority in priority_scores:
+                matches = priority_scores[priority]
+                bucket = RUBRIC[priority]["bucket"]
+                categories = list(set(m[0] for m in matches))
+                keywords = [m[1] for m in matches[:2]]  # Show first 2 keywords
+                return ClassificationResult(
+                    priority=priority,
+                    bucket=bucket,
+                    reason=f"{categories[0]}: matches '{keywords[0]}'" +
+                           (f", '{keywords[1]}'" if len(keywords) > 1 else ""),
+                    confidence="medium" if len(matches) == 1 else "high"
+                )
+        # For P3/P4, prefer P4 (maintenance) over P3 (engineering quality)
+        for priority in ["P4", "P3"]:
+            if priority in priority_scores:
+                matches = priority_scores[priority]
+                bucket = RUBRIC[priority]["bucket"]
+                categories = list(set(m[0] for m in matches))
+                keywords = [m[1] for m in matches[:2]]  # Show first 2 keywords
+                return ClassificationResult(
+                    priority=priority,
+                    bucket=bucket,
+                    reason=f"{categories[0]}: matches '{keywords[0]}'" +
+                           (f", '{keywords[1]}'" if len(keywords) > 1 else ""),
+                    confidence="medium" if len(matches) == 1 else "high"
+                )
     
-    if ticket_type == "bug" and any(t in tags for t in ["bug", "fix"]):
-        return "P1", "Bug fix classification"
+    # Check for type-based defaults (low confidence)
+    if ticket_type in TYPE_DEFAULTS:
+        default_priority = TYPE_DEFAULTS[ticket_type]
+        bucket = RUBRIC[default_priority]["bucket"]
+        return ClassificationResult(
+            priority=default_priority,
+            bucket=bucket,
+            reason=f"Default for type '{ticket_type}': {bucket}",
+            confidence="low"
+        )
     
-    # P2: Real product features (user-facing capabilities)
-    if ticket_type in ["feature", "enhancement"] or "feature" in tags:
-        return "P2", "Product feature classification"
-    
-    if any(kw in title for kw in ["add ", "implement ", "support ", "enable "]):
-        return "P2", "New capability/feature indicated by title"
-    
-    # P4: Code cosmetics / refactors / docs / test typing polish (check before P3)
-    p4_keywords = ["refactor", "cleanup", "typo", "formatting", "cosmetic", "polish"]
-    p4_tags = ["docs", "documentation", "refactor", "cleanup", "style", "test", "typing"]
-    
-    if any(kw in title or kw in description for kw in p4_keywords):
-        return "P4", f"Code cleanup/cosmetic classification"
-    
-    if any(t in tags for t in p4_tags):
-        return "P4", f"Maintenance tag match: {[t for t in tags if t in p4_tags][0]}"
-    
-    # P3: Important engineering quality / dev workflow improvements
-    p3_keywords = ["performance", "optimize", "cache", "improve", "upgrade", 
-                   "dependency", "workflow", "ci/cd", "build", "tooling"]
-    if any(kw in title or kw in description for kw in p3_keywords):
-        return "P3", f"Engineering quality improvement: matches workflow keywords"
-    
-    if ticket_type in ["task", "chore"]:
-        return "P3", "Engineering task classification"
-    
-    # Default: keep current or infer from type
-    current = ticket.get("priority", "")
-    if current:
-        return current, "No clear rubric match, keeping current priority"
-    
-    return "P3", "Default classification (no clear rubric match)"
+    # Ambiguous - return unknown
+    return ClassificationResult(
+        priority="unknown",
+        bucket="ambiguous",
+        reason="No clear rubric match; insufficient keywords or indicators",
+        confidence="unknown"
+    )
 
 
 def format_priority(p: str) -> str:
     """Normalize priority format."""
+    if not p:
+        return ""
     p = p.strip().upper()
     if p.startswith("P") and p[1:].isdigit():
         return p
-    # Try to convert numeric
     if p.isdigit() and 0 <= int(p) <= 4:
         return f"P{p}"
     return p
 
 
-def print_results(results: List[dict], apply: bool) -> None:
+def print_results(results: List[dict], apply: bool, include_unknown: bool = False) -> None:
     """Print classification results in a table format."""
     print()
     if apply:
@@ -209,21 +339,31 @@ def print_results(results: List[dict], apply: bool) -> None:
     print()
     
     # Header
-    print(f"{'Ticket':<12} {'Current':<10} {'Proposed':<10} {'Reason':<40}")
-    print("-" * 72)
+    print(f"{'Ticket':<12} {'Current':<10} {'Proposed':<10} {'Bucket':<20} {'Reason':<35}")
+    print("-" * 95)
     
     for r in results:
         ticket_id = r["id"]
         current = r["current"]
         proposed = r["proposed"]
-        reason = r["reason"][:37] + "..." if len(r["reason"]) > 40 else r["reason"]
+        bucket = r.get("bucket", "-")
+        reason = r["reason"]
+        
+        # Truncate long fields
+        bucket_display = bucket[:17] + "..." if len(bucket) > 20 else bucket
+        reason_display = reason[:32] + "..." if len(reason) > 35 else reason
         
         change_marker = "*" if current != proposed else " "
-        print(f"{change_marker}{ticket_id:<11} {current:<10} {proposed:<10} {reason}")
+        print(f"{change_marker}{ticket_id:<11} {current:<10} {proposed:<10} {bucket_display:<20} {reason_display}")
     
     print()
-    changed = sum(1 for r in results if r["current"] != r["proposed"])
-    print(f"Total: {len(results)} tickets, {changed} would change")
+    changed = sum(1 for r in results if r["current"] != r["proposed"] and r["proposed"] != "unknown")
+    unknown_count = sum(1 for r in results if r["proposed"] == "unknown")
+    skipped = unknown_count if not include_unknown else 0
+    
+    print(f"Total: {len(results)} tickets, {changed} would change, {unknown_count} unknown")
+    if skipped > 0:
+        print(f"({skipped} unknown tickets skipped - use --include-unknown to show)")
     
     if not apply and changed > 0:
         print()
@@ -247,13 +387,15 @@ def write_audit_trail(project_root: Path, results: List[dict], apply: bool) -> N
         "",
         "## Results",
         "",
-        "| Ticket | Current | Proposed | Applied | Reason |",
-        "|--------|---------|----------|---------|--------|",
+        "| Ticket | Current | Proposed | Bucket | Confidence | Applied | Reason |",
+        "|--------|---------|----------|--------|------------|---------|--------|",
     ]
     
     for r in results:
-        applied = "Yes" if (apply and r["current"] != r["proposed"]) else "No"
-        lines.append(f"| {r['id']} | {r['current']} | {r['proposed']} | {applied} | {r['reason']} |")
+        applied = "Yes" if (apply and r["current"] != r["proposed"] and r["proposed"] != "unknown") else "No"
+        bucket = r.get("bucket", "-")
+        confidence = r.get("confidence", "-")
+        lines.append(f"| {r['id']} | {r['current']} | {r['proposed']} | {bucket} | {confidence} | {applied} | {r['reason']} |")
     
     lines.extend([
         "",
@@ -261,10 +403,12 @@ def write_audit_trail(project_root: Path, results: List[dict], apply: bool) -> N
         "",
     ])
     
-    changed = sum(1 for r in results if r["current"] != r["proposed"])
+    changed = sum(1 for r in results if r["current"] != r["proposed"] and r["proposed"] != "unknown")
+    unknown_count = sum(1 for r in results if r["proposed"] == "unknown")
     lines.append(f"- Total tickets processed: {len(results)}")
     lines.append(f"- Priorities changed: {changed}")
-    lines.append(f"- Unchanged: {len(results) - changed}")
+    lines.append(f"- Unknown/ambiguous: {unknown_count}")
+    lines.append(f"- Unchanged: {len(results) - changed - unknown_count}")
     
     filepath.write_text("\n".join(lines), encoding="utf-8")
     print(f"\nAudit trail written to: {filepath}")
@@ -272,8 +416,8 @@ def write_audit_trail(project_root: Path, results: List[dict], apply: bool) -> N
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="tf new priority-reclassify",
-        description="Reclassify ticket priorities using P0-P4 rubric",
+        prog="tf priority-reclassify",
+        description="Reclassify ticket priorities using P0-P4 rubric with rationale generation",
     )
     parser.add_argument(
         "--apply",
@@ -305,6 +449,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--include-closed",
         action="store_true",
         help="Include closed tickets in processing (default: excluded)",
+    )
+    parser.add_argument(
+        "--include-unknown",
+        action="store_true",
+        help="Include tickets with unknown/ambiguous priority in output (default: skipped)",
     )
     
     args = parser.parse_args(argv)
@@ -366,15 +515,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         if ticket.get("status") == "closed" and not args.include_closed:
             continue
         
-        proposed, reason = classify_priority(ticket)
+        # Classify using rubric
+        classification = classify_priority_full(ticket)
         current = format_priority(ticket.get("priority", ""))
-        proposed = format_priority(proposed)
         
         results.append({
             "id": ticket_id,
             "current": current or "(none)",
-            "proposed": proposed,
-            "reason": reason,
+            "proposed": classification.priority,
+            "bucket": classification.bucket,
+            "reason": classification.reason,
+            "confidence": classification.confidence,
             "ticket": ticket,
         })
     
@@ -382,19 +533,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("No tickets to process.")
         return 0
     
-    # Apply changes if requested
+    # Filter out unknown priorities unless --include-unknown is set
+    display_results = results
+    if not args.include_unknown:
+        display_results = [r for r in results if r["proposed"] != "unknown"]
+        skipped = len(results) - len(display_results)
+        if skipped > 0:
+            print(f"\nNote: {skipped} ticket(s) with ambiguous priority skipped (use --include-unknown to show)")
+    
+    # Apply changes if requested (only for non-unknown priorities)
     if args.apply:
         for r in results:
-            if r["current"] != r["proposed"]:
-                # Note: This assumes tk supports a 'priority' command or similar
-                # For now, we just print what would happen
-                # TODO: Implement actual priority update when tk supports it
+            if r["current"] != r["proposed"] and r["proposed"] != "unknown":
+                # Note: Actual priority update would require tk support
+                # For now, we just track what would be changed
                 pass
     
     # Output results
-    print_results(results, args.apply)
+    if display_results:
+        print_results(display_results, args.apply, args.include_unknown)
     
-    # Write audit trail
+    # Write audit trail (includes all results, even unknown)
     write_audit_trail(project_root, results, args.apply)
     
     return 0
