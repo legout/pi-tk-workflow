@@ -5,12 +5,14 @@ Implements the tf kb command for managing the knowledge base:
 - show: Show a specific topic with metadata and doc paths
 - archive: Move a topic to the archive
 - restore: Restore a topic from the archive
+- delete: Permanently delete a topic (active or archived)
 """
 
 from __future__ import annotations
 
 import datetime
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -380,6 +382,73 @@ def cmd_restore(
     return 0
 
 
+def cmd_delete(
+    knowledge_dir: Path,
+    topic_id: str,
+) -> int:
+    """Permanently delete a knowledge base topic.
+    
+    Removes the topic directory (from active or archive) and
+    removes the entry from index.json. Permanent deletion.
+    
+    Args:
+        knowledge_dir: Path to the knowledge directory
+        topic_id: The topic ID to delete
+        
+    Returns:
+        0 on success, 1 on error (topic not found)
+    """
+    # Determine if topic is active, archived, or doesn't exist
+    topic_dir = knowledge_dir / "topics" / topic_id
+    archive_dir = knowledge_dir / "archive" / "topics" / topic_id
+    
+    deleted_paths = []
+    was_in_index = False
+    
+    # Delete from active topics if exists
+    if topic_dir.exists():
+        try:
+            shutil.rmtree(topic_dir)
+            deleted_paths.append(str(topic_dir.relative_to(knowledge_dir)))
+        except OSError as e:
+            print(f"Error: Failed to delete active topic: {e}", file=sys.stderr)
+            return 1
+    
+    # Delete from archive if exists
+    if archive_dir.exists():
+        try:
+            shutil.rmtree(archive_dir)
+            deleted_paths.append(str(archive_dir.relative_to(knowledge_dir)))
+        except OSError as e:
+            print(f"Error: Failed to delete archived topic: {e}", file=sys.stderr)
+            return 1
+    
+    # If neither location had the topic, it's not found
+    if not deleted_paths:
+        print(f"Error: Topic '{topic_id}' not found in knowledge base.", file=sys.stderr)
+        return 1
+    
+    # Remove from index.json if present
+    data = atomic_read_index(knowledge_dir)
+    if data is not None:
+        topics = data.get("topics", [])
+        original_count = len(topics)
+        topics = [t for t in topics if isinstance(t, dict) and t.get("id") != topic_id]
+        
+        if len(topics) < original_count:
+            was_in_index = True
+            data["topics"] = topics
+            atomic_write_index(knowledge_dir, data)
+    
+    # Print deleted paths
+    for path in deleted_paths:
+        print(f"Deleted: {path}")
+    if was_in_index:
+        print(f"Removed index entry for '{topic_id}'")
+    
+    return 0
+
+
 def usage() -> None:
     """Print usage information."""
     print(
@@ -391,6 +460,7 @@ Usage:
   tf kb index [--json] [--knowledge-dir <path>]
   tf kb archive <topic-id> [--reason TEXT] [--knowledge-dir <path>]
   tf kb restore <topic-id> [--knowledge-dir <path>]
+  tf kb delete <topic-id> [--knowledge-dir <path>]
   tf kb --help
 
 Commands:
@@ -402,6 +472,7 @@ Commands:
   archive     Move a topic to the archive
               --reason TEXT  Optional reason for archiving
   restore     Restore a topic from the archive
+  delete      Permanently delete a topic (active or archived)
 
 Options:
   --json      Output in JSON format
@@ -498,6 +569,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             return 1
         topic_id = rest[0]
         return cmd_restore(knowledge_dir, topic_id)
+    
+    if command == "delete":
+        if not rest or rest[0].startswith("-"):
+            print("Error: Topic ID required for 'delete' command", file=sys.stderr)
+            print("Usage: tf kb delete <topic-id>", file=sys.stderr)
+            return 1
+        topic_id = rest[0]
+        return cmd_delete(knowledge_dir, topic_id)
     
     print(f"Unknown 'kb' subcommand: {command}", file=sys.stderr)
     usage()
