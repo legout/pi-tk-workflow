@@ -50,6 +50,7 @@ Usage:
   tf next [--project <path>]
   tf backlog-ls [topic-id-or-path] [--project <path>]
   tf track <path> [--file <files_changed_path>]
+  tf seed [--active|--sessions [seed-id]|--resume <id>]
   tf ralph <subcommand> [options]
 
 Commands:
@@ -63,8 +64,14 @@ Commands:
   next        Print the next open and ready ticket id
   backlog-ls  List backlog status and tickets for seed/baseline topics
   track       Append file paths to files_changed.txt (deduped)
+  seed        Planning session management (active, sessions, resume)
   ralph       Ralph loop management (see below)
   agentsmd    AGENTS.md management (init, validate, fix, status)
+
+Seed Subcommands:
+  seed --active              Print current active session or "none"
+  seed --sessions [seed-id]  List archived sessions, optionally filtered
+  seed --resume <id>         Resume session by seed-id or session-id
 
 Ralph Subcommands:
   ralph init     Create .tf/ralph/ directory structure
@@ -156,8 +163,8 @@ while [ "$#" -gt 0 ]; do
       done
       ;;
     -* )
-      # For ralph and doctor commands, pass options through to subcommand
-      if [ "$COMMAND" = "ralph" ] || [ "$COMMAND" = "doctor" ]; then
+      # For commands with sub-options, pass through to subcommand
+      if [ "$COMMAND" = "ralph" ] || [ "$COMMAND" = "doctor" ] || [ "$COMMAND" = "seed" ]; then
         ARGS+=("$1")
         shift
       else
@@ -2943,6 +2950,28 @@ ralph_start() {
   fi
 }
 
+seed_cmd() {
+  require_project_tf
+
+  local python_cmd=""
+  if command -v python3 >/dev/null 2>&1; then
+    python_cmd="python3"
+  elif command -v python >/dev/null 2>&1; then
+    python_cmd="python"
+  fi
+
+  if [ -z "$python_cmd" ]; then
+    echo "ERROR: Python not found" >&2
+    exit 1
+  fi
+
+  if [ -n "$TF_BASE" ]; then
+    TF_REPO_ROOT="$(dirname "$TF_BASE")" "$python_cmd" -m tf_cli.cli seed "$@"
+  else
+    "$python_cmd" -m tf_cli.cli seed "$@"
+  fi
+}
+
 ralph_cmd() {
   require_project_tf
 
@@ -4032,6 +4061,9 @@ case "$COMMAND" in
       echo "Too many arguments for track" >&2
       exit 1
     fi
+    ;;
+  seed)
+    seed_cmd "${ARGS[@]}"
     ;;
   ralph)
     ralph_cmd "${ARGS[@]}"

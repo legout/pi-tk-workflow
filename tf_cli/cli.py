@@ -423,6 +423,11 @@ def main(argv: Optional[list[str]] = None) -> int:
 
         return new_cli.main(argv[1:])
 
+    if argv and argv[0] == "seed":
+        from . import seed_cli
+
+        return seed_cli.main(argv[1:])
+
     return run_legacy(argv)
 
 
