@@ -17,7 +17,7 @@ Provides fallback tag suggestions when automatic tagging misses or when
 explicitly requested via the CLI command.
 
 **Consumers:**
-- `tf_cli.tags_suggest_new` - CLI commands: `tf new tags-suggest`, `tf new tags-classify`
+- `tf_cli.tags_suggest` - CLI commands: `tf new tags-suggest`, `tf new tags-classify`
 - `prompts/tf-backlog.md` - Backlog generation with `--tags` assignment
 
 Example:

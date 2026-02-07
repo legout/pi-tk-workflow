@@ -4,6 +4,9 @@ Provides:
 - resolve_knowledge_dir: Resolve knowledgeDir from config with CLI override support
 - atomic_read_index: Atomically read and parse index.json
 - atomic_write_index: Atomically write index.json using tmp + rename
+- get_topic_type: Derive topic type from topic ID prefix
+- is_topic_archived: Check if a topic is archived
+- get_topic_docs: Get documentation paths for a topic
 
 All operations use stdlib only (no external dependencies).
 """
@@ -104,8 +107,8 @@ def atomic_read_index(knowledge_dir: Path) -> Optional[dict[str, Any]]:
         knowledge_dir: Path to the knowledge directory
 
     Returns:
-        Parsed JSON dict with 'entries' key, or None if file doesn't exist
-        Returns empty entries list if file is corrupted
+        Parsed JSON dict with 'topics' key, or None if file doesn't exist
+        Returns empty topics list if file is corrupted
 
     Raises:
         PermissionError: If file exists but cannot be read
@@ -120,20 +123,21 @@ def atomic_read_index(knowledge_dir: Path) -> Optional[dict[str, Any]]:
         with open(index_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Normalize to dict with entries
+        # Normalize to dict with topics
         if isinstance(data, dict):
-            if "entries" not in data:
-                data["entries"] = []
+            if "topics" not in data:
+                data["topics"] = []
             return data
         elif isinstance(data, list):
-            return {"entries": data}
+            # Handle legacy array format - assume it's topics
+            return {"topics": data}
         else:
             # Invalid format, return empty
-            return {"entries": []}
+            return {"topics": []}
 
     except json.JSONDecodeError:
         # Corrupted JSON - return empty structure
-        return {"entries": []}
+        return {"topics": []}
     except IOError:
         # File not readable - re-raise as PermissionError for clarity
         raise PermissionError(f"Cannot read index file: {index_path}")
@@ -150,7 +154,7 @@ def atomic_write_index(knowledge_dir: Path, data: dict[str, Any]) -> Path:
 
     Args:
         knowledge_dir: Path to the knowledge directory
-        data: Dictionary to serialize to JSON (should have 'entries' key)
+        data: Dictionary to serialize to JSON (should have 'topics' key)
 
     Returns:
         Path to the written index.json file
@@ -223,6 +227,81 @@ def ensure_index_exists(knowledge_dir: Path) -> dict[str, Any]:
     """
     data = atomic_read_index(knowledge_dir)
     if data is None:
-        data = {"entries": []}
+        data = {"topics": []}
         atomic_write_index(knowledge_dir, data)
     return data
+
+
+def get_topic_type(topic_id: str) -> str:
+    """Derive topic type from topic ID prefix.
+    
+    Args:
+        topic_id: The topic ID (e.g., "seed-add-versioning", "plan-kb-management-cli")
+        
+    Returns:
+        The topic type: "seed", "plan", "spike", "baseline", or "unknown"
+    """
+    if topic_id.startswith("seed-"):
+        return "seed"
+    elif topic_id.startswith("plan-"):
+        return "plan"
+    elif topic_id.startswith("spike-"):
+        return "spike"
+    elif topic_id.startswith("baseline-"):
+        return "baseline"
+    else:
+        return "unknown"
+
+
+def is_topic_archived(knowledge_dir: Path, topic_id: str) -> bool:
+    """Check if a topic is archived.
+    
+    A topic is considered archived if it exists in the archive directory.
+    
+    Args:
+        knowledge_dir: Path to the knowledge directory
+        topic_id: The topic ID to check
+        
+    Returns:
+        True if the topic is archived, False otherwise
+    """
+    archive_dir = knowledge_dir / "archive" / "topics" / topic_id
+    return archive_dir.exists() and archive_dir.is_dir()
+
+
+def get_topic_docs(
+    knowledge_dir: Path,
+    topic_id: str,
+    archived: bool = False,
+) -> dict[str, dict[str, Any]]:
+    """Get documentation paths for a topic.
+    
+    Args:
+        knowledge_dir: Path to the knowledge directory
+        topic_id: The topic ID
+        archived: Whether the topic is archived
+        
+    Returns:
+        Dictionary mapping doc type to {"path": str, "exists": bool}
+    """
+    docs = {}
+    
+    if archived:
+        topic_dir = knowledge_dir / "archive" / "topics" / topic_id
+    else:
+        topic_dir = knowledge_dir / "topics" / topic_id
+    
+    # Standard doc types to check
+    doc_types = ["overview", "sources", "plan", "backlog"]
+    
+    for doc_type in doc_types:
+        # Check for .md file
+        doc_path = topic_dir / f"{doc_type}.md"
+        rel_path = doc_path.relative_to(knowledge_dir) if doc_path.exists() else None
+        
+        docs[doc_type] = {
+            "path": str(rel_path) if rel_path else f"topics/{topic_id}/{doc_type}.md",
+            "exists": doc_path.exists(),
+        }
+    
+    return docs

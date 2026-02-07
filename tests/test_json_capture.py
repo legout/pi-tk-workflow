@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tf_cli.logger import LogLevel
-from tf_cli.ralph_new import (
+from tf_cli.ralph import (
     DEFAULTS,
     parse_run_args,
     parse_start_args,
@@ -118,9 +118,9 @@ class TestCaptureJsonLogsDirectory:
 class TestRunTicketJsonCapture:
     """Test run_ticket function with JSON capture enabled."""
 
-    @patch("tf_cli.ralph_new.ensure_pi")
-    @patch("tf_cli.ralph_new.find_project_root")
-    @patch("tf_cli.ralph_new.prompt_exists")
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_dry_run_shows_json_flag(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path, capsys
@@ -153,9 +153,9 @@ class TestRunTicketJsonCapture:
         call_args = mock_logger.info.call_args
         assert "--mode json" in str(call_args)
 
-    @patch("tf_cli.ralph_new.ensure_pi")
-    @patch("tf_cli.ralph_new.find_project_root")
-    @patch("tf_cli.ralph_new.prompt_exists")
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_dry_run_without_json_flag(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path

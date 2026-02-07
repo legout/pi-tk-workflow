@@ -15,7 +15,7 @@ import pytest
 
 pytestmark = pytest.mark.integration
 
-from tf_cli.doctor_new import (
+from tf_cli.doctor import (
     build_parser,
     check_extension,
     load_workflow_config,
@@ -40,11 +40,11 @@ class TestRunDoctorVersionIntegration:
         """Mock all external dependencies to isolate version check testing."""
         with (
             mock.patch("shutil.which", return_value="/usr/bin/tk"),
-            mock.patch("tf_cli.doctor_new.check_cmd") as mock_check_cmd,
-            mock.patch("tf_cli.doctor_new.get_pi_list_cache", return_value=""),
-            mock.patch("tf_cli.doctor_new.check_extension") as mock_check_ext,
-            mock.patch("tf_cli.doctor_new.load_workflow_config", return_value={}),
-            mock.patch("tf_cli.doctor_new.check_mcp_config") as mock_check_mcp,
+            mock.patch("tf_cli.doctor.check_cmd") as mock_check_cmd,
+            mock.patch("tf_cli.doctor.get_pi_list_cache", return_value=""),
+            mock.patch("tf_cli.doctor.check_extension") as mock_check_ext,
+            mock.patch("tf_cli.doctor.load_workflow_config", return_value={}),
+            mock.patch("tf_cli.doctor.check_mcp_config") as mock_check_mcp,
         ):
             yield {
                 "check_cmd": mock_check_cmd,

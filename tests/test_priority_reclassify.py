@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from tf_cli import priority_reclassify_new as pr
+from tf_cli import priority_reclassify as pr
 
 
 class TestParseTicketShow:
@@ -145,7 +145,7 @@ class TestFormatPriority:
 class TestGetTicketIds:
     """Test ticket ID collection functions."""
 
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_get_ticket_ids_from_ready(self, mock_run):
         """Test getting ready ticket IDs."""
         mock_run.return_value = (0, "abc-1234  Feature description\nxyz-5678  Another feature", "")
@@ -155,7 +155,7 @@ class TestGetTicketIds:
         assert "xyz-5678" in ids
         mock_run.assert_called_once_with(["ready"])
 
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_get_ticket_ids_from_ready_empty(self, mock_run):
         """Test getting ready tickets when none exist."""
         mock_run.return_value = (0, "", "")
@@ -163,7 +163,7 @@ class TestGetTicketIds:
         ids = pr.get_ticket_ids_from_ready()
         assert ids == []
 
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_get_ticket_ids_by_status(self, mock_run):
         """Test getting tickets by status."""
         mock_run.return_value = (0, "abc-1234  open  Feature\nxyz-5678  open  Bug", "")
@@ -172,7 +172,7 @@ class TestGetTicketIds:
         assert "abc-1234" in ids
         mock_run.assert_called_once_with(["ls", "--status", "open"])
 
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_get_ticket_ids_by_tag(self, mock_run):
         """Test getting tickets by tag."""
         mock_run.return_value = (0, "abc-1234  open  Feature\nxyz-5678  open  Bug", "")
@@ -198,7 +198,7 @@ class TestMainArgumentParsing:
         """Test error when no project found."""
         mock_which.return_value = "/usr/bin/tk"
         
-        with patch("tf_cli.priority_reclassify_new.find_project_root") as mock_find:
+        with patch("tf_cli.priority_reclassify.find_project_root") as mock_find:
             mock_find.return_value = None
             result = pr.main(["--ids", "abc-1234"])
             assert result == 1
@@ -208,7 +208,7 @@ class TestMainArgumentParsing:
         """Test error when no ticket selection args provided."""
         mock_which.return_value = "/usr/bin/tk"
         
-        with patch("tf_cli.priority_reclassify_new.find_project_root") as mock_find:
+        with patch("tf_cli.priority_reclassify.find_project_root") as mock_find:
             mock_find.return_value = Path("/tmp/project")
             result = pr.main([])
             assert result == 1
@@ -218,8 +218,8 @@ class TestClosedTicketHandling:
     """Test closed ticket exclusion/inclusion."""
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_closed_tickets_excluded_by_default(
         self, mock_run, mock_find, mock_which, capsys
     ):
@@ -248,10 +248,10 @@ Description."""
         assert "No tickets to process" in captured.out
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
-    @patch("tf_cli.priority_reclassify_new.print_results")
-    @patch("tf_cli.priority_reclassify_new.write_audit_trail")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
+    @patch("tf_cli.priority_reclassify.print_results")
+    @patch("tf_cli.priority_reclassify.write_audit_trail")
     def test_closed_tickets_included_with_flag(
         self, mock_audit, mock_print, mock_run, mock_find, mock_which
     ):
@@ -284,8 +284,8 @@ class TestTicketSelection:
     """Test ticket selection methods."""
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_explicit_ids(self, mock_run, mock_find, mock_which):
         """Test selecting tickets by explicit IDs."""
         mock_which.return_value = "/usr/bin/tk"
@@ -301,8 +301,8 @@ tags: []
 # Test ticket"""
         mock_run.return_value = (0, ticket_output, "")
         
-        with patch("tf_cli.priority_reclassify_new.print_results") as mock_print:
-            with patch("tf_cli.priority_reclassify_new.write_audit_trail"):
+        with patch("tf_cli.priority_reclassify.print_results") as mock_print:
+            with patch("tf_cli.priority_reclassify.write_audit_trail"):
                 pr.main(["--ids", "abc-1234,def-5678"])
                 
                 # Should call tk show for each ID
@@ -311,9 +311,9 @@ tags: []
                 mock_run.assert_any_call(["show", "def-5678"])
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.get_ticket_ids_from_ready")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.get_ticket_ids_from_ready")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_ready_flag(self, mock_run, mock_ready, mock_find, mock_which):
         """Test selecting tickets with --ready."""
         mock_which.return_value = "/usr/bin/tk"
@@ -330,17 +330,17 @@ tags: []
 # Ready ticket"""
         mock_run.return_value = (0, ticket_output, "")
         
-        with patch("tf_cli.priority_reclassify_new.print_results") as mock_print:
-            with patch("tf_cli.priority_reclassify_new.write_audit_trail"):
+        with patch("tf_cli.priority_reclassify.print_results") as mock_print:
+            with patch("tf_cli.priority_reclassify.write_audit_trail"):
                 pr.main(["--ready"])
                 
                 mock_ready.assert_called_once()
                 assert mock_run.call_count == 2
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.get_ticket_ids_by_status")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.get_ticket_ids_by_status")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_status_filter(self, mock_run, mock_status, mock_find, mock_which):
         """Test selecting tickets by status."""
         mock_which.return_value = "/usr/bin/tk"
@@ -357,16 +357,16 @@ tags: []
 # Open ticket"""
         mock_run.return_value = (0, ticket_output, "")
         
-        with patch("tf_cli.priority_reclassify_new.print_results") as mock_print:
-            with patch("tf_cli.priority_reclassify_new.write_audit_trail"):
+        with patch("tf_cli.priority_reclassify.print_results") as mock_print:
+            with patch("tf_cli.priority_reclassify.write_audit_trail"):
                 pr.main(["--status", "open"])
                 
                 mock_status.assert_called_once_with("open")
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.get_ticket_ids_by_tag")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.get_ticket_ids_by_tag")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_tag_filter(self, mock_run, mock_tag, mock_find, mock_which):
         """Test selecting tickets by tag."""
         mock_which.return_value = "/usr/bin/tk"
@@ -383,8 +383,8 @@ tags: [bug]
 # Bug ticket"""
         mock_run.return_value = (0, ticket_output, "")
         
-        with patch("tf_cli.priority_reclassify_new.print_results") as mock_print:
-            with patch("tf_cli.priority_reclassify_new.write_audit_trail"):
+        with patch("tf_cli.priority_reclassify.print_results") as mock_print:
+            with patch("tf_cli.priority_reclassify.write_audit_trail"):
                 pr.main(["--tag", "bug"])
                 
                 mock_tag.assert_called_once_with("bug")
@@ -427,8 +427,8 @@ class TestJsonOutput:
     """Test JSON output functionality."""
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_json_output_format(self, mock_run, mock_find, mock_which, capsys):
         """Test JSON output contains expected fields."""
         mock_which.return_value = "/usr/bin/tk"
@@ -470,8 +470,8 @@ This is a security vulnerability."""
         assert "would_change" in ticket
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_json_output_with_apply(self, mock_run, mock_find, mock_which, capsys):
         """Test JSON output shows correct mode with --apply."""
         mock_which.return_value = "/usr/bin/tk"
@@ -501,8 +501,8 @@ class TestReportFlag:
     """Test --report flag for optional report generation."""
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_no_report_by_default(self, mock_run, mock_find, mock_which, capsys, tmp_path):
         """Test that report is not written without --report flag."""
         mock_which.return_value = "/usr/bin/tk"
@@ -530,8 +530,8 @@ tags: []
         assert len(report_files) == 0
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_report_written_with_flag(self, mock_run, mock_find, mock_which, capsys, tmp_path):
         """Test that report is written when --report flag is used."""
         mock_which.return_value = "/usr/bin/tk"
@@ -568,8 +568,8 @@ class TestSafetyUX:
     """Test safety UX features: --yes, --max-changes, --force."""
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_apply_requires_yes_in_non_interactive_mode(self, mock_run, mock_find, mock_which, capsys):
         """Test that --apply requires --yes when not in a TTY."""
         mock_which.return_value = "/usr/bin/tk"
@@ -595,8 +595,8 @@ This is a security vulnerability."""
         assert "requires --yes flag" in captured.err
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_apply_with_yes_succeeds(self, mock_run, mock_find, mock_which, capsys):
         """Test that --apply with --yes works in non-interactive mode."""
         mock_which.return_value = "/usr/bin/tk"
@@ -617,8 +617,8 @@ tags: []
         assert result == 0
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_max_changes_limits_updates(self, mock_run, mock_find, mock_which, capsys, tmp_path):
         """Test that --max-changes caps the number of updates."""
         mock_which.return_value = "/usr/bin/tk"
@@ -661,8 +661,8 @@ tags: [security]
         assert "Limiting to 2 changes" in captured.out or "Applied priority changes to 2" in captured.out
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_force_applies_unknown_priorities(self, mock_run, mock_find, mock_which, capsys):
         """Test that --force applies even unknown priority classifications."""
         mock_which.return_value = "/usr/bin/tk"
@@ -689,8 +689,8 @@ Description with no keywords."""
         assert "Applied" in captured.out or "unknown" in captured.out
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
     def test_unknown_skipped_without_force(self, mock_run, mock_find, mock_which, capsys):
         """Test that unknown priorities are skipped without --force."""
         mock_which.return_value = "/usr/bin/tk"
@@ -717,10 +717,10 @@ Description with no keywords."""
         assert "skipped" in captured.out.lower() or "unknown" in captured.out.lower()
 
     @patch("shutil.which")
-    @patch("tf_cli.priority_reclassify_new.find_project_root")
-    @patch("tf_cli.priority_reclassify_new.run_tk_command")
-    @patch("tf_cli.priority_reclassify_new.is_interactive")
-    @patch("tf_cli.priority_reclassify_new.confirm_changes")
+    @patch("tf_cli.priority_reclassify.find_project_root")
+    @patch("tf_cli.priority_reclassify.run_tk_command")
+    @patch("tf_cli.priority_reclassify.is_interactive")
+    @patch("tf_cli.priority_reclassify.confirm_changes")
     def test_interactive_confirmation(self, mock_confirm, mock_is_tty, mock_run, mock_find, mock_which):
         """Test that interactive mode prompts for confirmation."""
         mock_which.return_value = "/usr/bin/tk"
@@ -1453,7 +1453,7 @@ class TestIntegration:
     def test_help_output(self):
         """Test that help includes all selection options."""
         result = subprocess.run(
-            ["python", "-m", "tf_cli.priority_reclassify_new", "--help"],
+            ["python", "-m", "tf_cli.priority_reclassify", "--help"],
             capture_output=True,
             text=True,
         )

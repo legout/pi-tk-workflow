@@ -330,79 +330,79 @@ def main(argv: Optional[list[str]] = None) -> int:
         return new_cli.main(rest)
 
     if command == "setup":
-        from . import setup_new
+        from . import setup
 
-        return setup_new.main(rest)
+        return setup.main(rest)
 
     if command == "login":
-        from . import login_new
+        from . import login
 
-        return login_new.main(rest)
+        return login.main(rest)
 
     if command == "init":
-        from . import init_new
+        from . import init
 
-        return init_new.main(rest)
+        return init.main(rest)
 
     if command == "sync":
-        from . import sync_new
+        from . import sync
 
-        return sync_new.main(rest)
+        return sync.main(rest)
 
     if command == "update":
-        from . import update_new
+        from . import update
 
-        return update_new.main(rest)
+        return update.main(rest)
 
     if command == "doctor":
-        from . import doctor_new
+        from . import doctor
 
-        return doctor_new.main(rest)
+        return doctor.main(rest)
 
     if command == "next":
-        from . import next_new
+        from . import next
 
-        return next_new.main(rest)
+        return next.main(rest)
 
     if command == "backlog-ls":
-        from . import backlog_ls_new
+        from . import backlog_ls
 
-        return backlog_ls_new.main(rest)
+        return backlog_ls.main(rest)
 
     if command == "track":
-        from . import track_new
+        from . import track
 
-        return track_new.main(rest)
+        return track.main(rest)
 
     if command == "priority-reclassify":
-        from . import priority_reclassify_new
+        from . import priority_reclassify
 
-        return priority_reclassify_new.main(rest)
+        return priority_reclassify.main(rest)
 
     if command == "ralph":
-        from . import ralph_new
+        from . import ralph
 
-        return ralph_new.main(rest)
+        return ralph.main(rest)
 
     if command == "agentsmd":
-        from . import agentsmd_new
+        from . import agentsmd
 
-        return agentsmd_new.main(rest)
+        return agentsmd.main(rest)
 
     if command == "tags-suggest":
-        from . import tags_suggest_new
+        from . import tags_suggest
 
-        return tags_suggest_new.suggest_main(rest)
+        return tags_suggest.suggest_main(rest)
 
     if command == "tags-classify":
-        from . import tags_suggest_new
+        from . import tags_suggest
 
-        return tags_suggest_new.classify_main(rest)
+        return tags_suggest.classify_main(rest)
 
     if command == "tags-keywords":
-        from . import tags_suggest_new
+        from . import tags_suggest
 
-        return tags_suggest_new.keywords_main(rest)
+        return tags_suggest.keywords_main(rest)
 
     if command == "seed":
         from . import seed_cli

@@ -4,6 +4,9 @@ Tests:
 - resolve_knowledge_dir with various resolution paths
 - atomic_read_index for reading index.json
 - atomic_write_index for atomic writes using tmp+rename
+- get_topic_type for deriving topic type from ID
+- is_topic_archived for checking archive status
+- get_topic_docs for getting documentation paths
 """
 
 from __future__ import annotations
@@ -21,6 +24,9 @@ from tf_cli.kb_helpers import (
     atomic_write_index,
     ensure_index_exists,
     resolve_knowledge_dir,
+    get_topic_type,
+    is_topic_archived,
+    get_topic_docs,
 )
 
 
@@ -154,46 +160,46 @@ class TestAtomicReadIndex:
     def test_reads_valid_index(self, temp_dir: Path) -> None:
         """Successfully reads a valid index.json file."""
         index_file = temp_dir / "index.json"
-        data = {"entries": [{"id": "test", "title": "Test Entry"}]}
+        data = {"topics": [{"id": "test", "title": "Test Topic"}]}
         index_file.write_text(json.dumps(data))
 
         result = atomic_read_index(temp_dir)
         assert result is not None
-        assert result["entries"][0]["id"] == "test"
+        assert result["topics"][0]["id"] == "test"
 
     def test_reads_array_format(self, temp_dir: Path) -> None:
-        """Handles array format (list instead of dict with entries)."""
+        """Handles array format (list instead of dict with topics)."""
         index_file = temp_dir / "index.json"
-        data = [{"id": "test", "title": "Test Entry"}]
+        data = [{"id": "test", "title": "Test Topic"}]
         index_file.write_text(json.dumps(data))
 
         result = atomic_read_index(temp_dir)
         assert result is not None
-        assert result["entries"][0]["id"] == "test"
+        assert result["topics"][0]["id"] == "test"
 
     def test_handles_corrupted_json(self, temp_dir: Path) -> None:
-        """Returns empty entries list for corrupted JSON."""
+        """Returns empty topics list for corrupted JSON."""
         index_file = temp_dir / "index.json"
         index_file.write_text("{invalid json")
 
         result = atomic_read_index(temp_dir)
         assert result is not None
-        assert result["entries"] == []
+        assert result["topics"] == []
 
-    def test_handles_missing_entries_key(self, temp_dir: Path) -> None:
-        """Adds empty entries key if missing."""
+    def test_handles_missing_topics_key(self, temp_dir: Path) -> None:
+        """Adds empty topics key if missing."""
         index_file = temp_dir / "index.json"
         index_file.write_text(json.dumps({"version": "1.0"}))
 
         result = atomic_read_index(temp_dir)
         assert result is not None
-        assert "entries" in result
-        assert result["entries"] == []
+        assert "topics" in result
+        assert result["topics"] == []
 
     def test_raises_permission_error_on_unreadable(self, temp_dir: Path) -> None:
         """Raises PermissionError when file exists but cannot be read."""
         index_file = temp_dir / "index.json"
-        index_file.write_text(json.dumps({"entries": []}))
+        index_file.write_text(json.dumps({"topics": []}))
         # Make file unreadable
         os.chmod(index_file, 0o000)
 
@@ -210,7 +216,7 @@ class TestAtomicWriteIndex:
     def test_creates_directory_if_needed(self, temp_dir: Path) -> None:
         """Creates knowledge directory if it doesn't exist."""
         kb_dir = temp_dir / "new" / "kb"
-        data = {"entries": []}
+        data = {"topics": []}
 
         result = atomic_write_index(kb_dir, data)
 
@@ -219,17 +225,17 @@ class TestAtomicWriteIndex:
 
     def test_writes_valid_json(self, temp_dir: Path) -> None:
         """Writes valid JSON that can be read back."""
-        data = {"entries": [{"id": "test", "title": "Test"}]}
+        data = {"topics": [{"id": "test", "title": "Test"}]}
 
         atomic_write_index(temp_dir, data)
 
         content = (temp_dir / "index.json").read_text()
         parsed = json.loads(content)
-        assert parsed["entries"][0]["id"] == "test"
+        assert parsed["topics"][0]["id"] == "test"
 
     def test_atomic_write_no_partial_files(self, temp_dir: Path) -> None:
         """Atomic write leaves no temp files behind."""
-        data = {"entries": [{"id": "test"}]}
+        data = {"topics": [{"id": "test"}]}
 
         atomic_write_index(temp_dir, data)
 
@@ -241,22 +247,22 @@ class TestAtomicWriteIndex:
     def test_overwrites_existing(self, temp_dir: Path) -> None:
         """Can overwrite existing index.json."""
         index_file = temp_dir / "index.json"
-        index_file.write_text(json.dumps({"entries": [{"id": "old"}]}))
+        index_file.write_text(json.dumps({"topics": [{"id": "old"}]}))
 
-        new_data = {"entries": [{"id": "new"}]}
+        new_data = {"topics": [{"id": "new"}]}
         atomic_write_index(temp_dir, new_data)
 
         content = json.loads(index_file.read_text())
-        assert content["entries"][0]["id"] == "new"
+        assert content["topics"][0]["id"] == "new"
 
     def test_pretty_printed_json(self, temp_dir: Path) -> None:
         """Output is pretty-printed with indentation."""
-        data = {"entries": [{"id": "test", "title": "Test Entry"}]}
+        data = {"topics": [{"id": "test", "title": "Test Topic"}]}
 
         atomic_write_index(temp_dir, data)
 
         content = (temp_dir / "index.json").read_text()
-        assert "  \"entries\"" in content or '"entries"' in content
+        assert "  \"topics\"" in content or '"topics"' in content
         assert "\n" in content  # Has newlines for pretty printing
 
 
@@ -264,17 +270,96 @@ class TestEnsureIndexExists:
     """Tests for ensure_index_exists function."""
 
     def test_creates_new_index_when_missing(self, temp_dir: Path) -> None:
-        """Creates new index.json with empty entries when missing."""
+        """Creates new index.json with empty topics when missing."""
         result = ensure_index_exists(temp_dir)
 
         assert (temp_dir / "index.json").exists()
-        assert result["entries"] == []
+        assert result["topics"] == []
 
     def test_returns_existing_data(self, temp_dir: Path) -> None:
         """Returns existing data when index.json exists."""
-        existing = {"entries": [{"id": "existing"}]}
+        existing = {"topics": [{"id": "existing"}]}
         (temp_dir / "index.json").write_text(json.dumps(existing))
 
         result = ensure_index_exists(temp_dir)
 
-        assert result["entries"][0]["id"] == "existing"
+        assert result["topics"][0]["id"] == "existing"
+
+
+class TestGetTopicType:
+    """Tests for get_topic_type function."""
+
+    def test_seed_prefix(self) -> None:
+        """Returns 'seed' for seed- prefixed IDs."""
+        assert get_topic_type("seed-add-versioning") == "seed"
+        assert get_topic_type("seed-kb-management") == "seed"
+
+    def test_plan_prefix(self) -> None:
+        """Returns 'plan' for plan- prefixed IDs."""
+        assert get_topic_type("plan-kb-management-cli") == "plan"
+        assert get_topic_type("plan-auto-linking") == "plan"
+
+    def test_spike_prefix(self) -> None:
+        """Returns 'spike' for spike- prefixed IDs."""
+        assert get_topic_type("spike-web-search") == "spike"
+
+    def test_baseline_prefix(self) -> None:
+        """Returns 'baseline' for baseline- prefixed IDs."""
+        assert get_topic_type("baseline-codebase") == "baseline"
+
+    def test_unknown_prefix(self) -> None:
+        """Returns 'unknown' for unrecognized prefixes."""
+        assert get_topic_type("custom-topic") == "unknown"
+        assert get_topic_type("") == "unknown"
+
+
+class TestIsTopicArchived:
+    """Tests for is_topic_archived function."""
+
+    def test_not_archived_when_directory_missing(self, temp_dir: Path) -> None:
+        """Returns False when archive directory doesn't exist."""
+        assert is_topic_archived(temp_dir, "seed-test") is False
+
+    def test_not_archived_when_topic_not_in_archive(self, temp_dir: Path) -> None:
+        """Returns False when topic is not in archive."""
+        archive_dir = temp_dir / "archive" / "topics"
+        archive_dir.mkdir(parents=True)
+        (archive_dir / "other-topic").mkdir()
+        assert is_topic_archived(temp_dir, "seed-test") is False
+
+    def test_archived_when_topic_in_archive(self, temp_dir: Path) -> None:
+        """Returns True when topic exists in archive."""
+        topic_dir = temp_dir / "archive" / "topics" / "seed-test"
+        topic_dir.mkdir(parents=True)
+        assert is_topic_archived(temp_dir, "seed-test") is True
+
+
+class TestGetTopicDocs:
+    """Tests for get_topic_docs function."""
+
+    def test_returns_doc_paths_for_active_topic(self, temp_dir: Path) -> None:
+        """Returns doc paths for an active topic."""
+        topic_dir = temp_dir / "topics" / "seed-test"
+        topic_dir.mkdir(parents=True)
+        (topic_dir / "overview.md").write_text("# Overview")
+        (topic_dir / "plan.md").write_text("# Plan")
+
+        docs = get_topic_docs(temp_dir, "seed-test", archived=False)
+
+        assert docs["overview"]["exists"] is True
+        assert docs["sources"]["exists"] is False
+        assert docs["plan"]["exists"] is True
+        assert docs["backlog"]["exists"] is False
+
+    def test_returns_doc_paths_for_archived_topic(self, temp_dir: Path) -> None:
+        """Returns doc paths for an archived topic."""
+        topic_dir = temp_dir / "archive" / "topics" / "seed-test"
+        topic_dir.mkdir(parents=True)
+        (topic_dir / "sources.md").write_text("# Sources")
+
+        docs = get_topic_docs(temp_dir, "seed-test", archived=True)
+
+        assert docs["overview"]["exists"] is False
+        assert docs["sources"]["exists"] is True
+        assert docs["plan"]["exists"] is False
+        assert docs["backlog"]["exists"] is False

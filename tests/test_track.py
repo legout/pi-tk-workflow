@@ -1,4 +1,4 @@
-"""Tests for tf_cli.track_new module."""
+"""Tests for tf_cli.track module."""
 from __future__ import annotations
 
 import os
@@ -9,7 +9,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli import track_new
+from tf_cli import track
 
 
 class TestResolveFilesChanged:
@@ -17,45 +17,45 @@ class TestResolveFilesChanged:
 
     def test_with_path_arg(self, tmp_path: Path) -> None:
         """Should use path argument when provided."""
-        result = track_new.resolve_files_changed(str(tmp_path / "custom.txt"))
+        result = track.resolve_files_changed(str(tmp_path / "custom.txt"))
         assert result == tmp_path / "custom.txt"
 
     def test_with_env_tf_files_changed(self, tmp_path: Path) -> None:
         """Should use TF_FILES_CHANGED environment variable."""
         env_path = str(tmp_path / "env_file.txt")
         with mock.patch.dict(os.environ, {"TF_FILES_CHANGED": env_path}):
-            result = track_new.resolve_files_changed(None)
+            result = track.resolve_files_changed(None)
             assert result == Path(env_path)
 
     def test_with_env_tf_chain_dir(self, tmp_path: Path) -> None:
         """Should use TF_CHAIN_DIR environment variable."""
         with mock.patch.dict(os.environ, {"TF_CHAIN_DIR": str(tmp_path)}):
-            result = track_new.resolve_files_changed(None)
+            result = track.resolve_files_changed(None)
             assert result == tmp_path / "files_changed.txt"
 
     def test_default_path(self, tmp_path: Path) -> None:
         """Should default to cwd/files_changed.txt."""
-        with mock.patch("tf_cli.track_new.Path.cwd", return_value=tmp_path):
-            result = track_new.resolve_files_changed(None)
+        with mock.patch("tf_cli.track.Path.cwd", return_value=tmp_path):
+            result = track.resolve_files_changed(None)
             assert result == tmp_path / "files_changed.txt"
 
     def test_relative_path_becomes_absolute(self, tmp_path: Path) -> None:
         """Should convert relative path to absolute."""
-        with mock.patch("tf_cli.track_new.Path.cwd", return_value=tmp_path):
-            result = track_new.resolve_files_changed("relative/path.txt")
+        with mock.patch("tf_cli.track.Path.cwd", return_value=tmp_path):
+            result = track.resolve_files_changed("relative/path.txt")
             assert result == tmp_path / "relative" / "path.txt"
 
 
 class TestMain:
     """Tests for main function."""
 
-    def test_track_new_file(self, tmp_path: Path) -> None:
+    def test_track_file(self, tmp_path: Path) -> None:
         """Should track a new file path."""
         files_changed = tmp_path / "files_changed.txt"
         file_to_track = tmp_path / "src" / "test.py"
 
-        with mock.patch("tf_cli.track_new.resolve_files_changed", return_value=files_changed):
-            result = track_new.main([str(file_to_track)])
+        with mock.patch("tf_cli.track.resolve_files_changed", return_value=files_changed):
+            result = track.main([str(file_to_track)])
 
         assert result == 0
         assert files_changed.exists()
@@ -68,8 +68,8 @@ class TestMain:
         file_to_track = tmp_path / "test.py"
         files_changed.write_text(f"{file_to_track}\n")
 
-        with mock.patch("tf_cli.track_new.resolve_files_changed", return_value=files_changed):
-            result = track_new.main([str(file_to_track)])
+        with mock.patch("tf_cli.track.resolve_files_changed", return_value=files_changed):
+            result = track.main([str(file_to_track)])
 
         assert result == 0
         content = files_changed.read_text()
@@ -81,9 +81,9 @@ class TestMain:
         file1 = tmp_path / "file1.py"
         file2 = tmp_path / "file2.py"
 
-        with mock.patch("tf_cli.track_new.resolve_files_changed", return_value=files_changed):
-            track_new.main([str(file1)])
-            track_new.main([str(file2)])
+        with mock.patch("tf_cli.track.resolve_files_changed", return_value=files_changed):
+            track.main([str(file1)])
+            track.main([str(file2)])
 
         content = files_changed.read_text()
         assert str(file1) in content
@@ -93,9 +93,9 @@ class TestMain:
         """Should convert relative path to absolute."""
         files_changed = tmp_path / "files_changed.txt"
 
-        with mock.patch("tf_cli.track_new.Path.cwd", return_value=tmp_path):
-            with mock.patch("tf_cli.track_new.resolve_files_changed", return_value=files_changed):
-                result = track_new.main(["src/test.py"])
+        with mock.patch("tf_cli.track.Path.cwd", return_value=tmp_path):
+            with mock.patch("tf_cli.track.resolve_files_changed", return_value=files_changed):
+                result = track.main(["src/test.py"])
 
         assert result == 0
         content = files_changed.read_text()
@@ -106,8 +106,8 @@ class TestMain:
         files_changed = tmp_path / "nested" / "deep" / "files_changed.txt"
         file_to_track = tmp_path / "test.py"
 
-        with mock.patch("tf_cli.track_new.resolve_files_changed", return_value=files_changed):
-            result = track_new.main([str(file_to_track)])
+        with mock.patch("tf_cli.track.resolve_files_changed", return_value=files_changed):
+            result = track.main([str(file_to_track)])
 
         assert result == 0
         assert files_changed.exists()
@@ -125,12 +125,12 @@ class TestIntegration:
 
         # Track first file
         with mock.patch.dict(os.environ, {"TF_FILES_CHANGED": str(files_changed)}):
-            result1 = track_new.main([str(file1)])
+            result1 = track.main([str(file1)])
         assert result1 == 0
 
         # Track second file
         with mock.patch.dict(os.environ, {"TF_FILES_CHANGED": str(files_changed)}):
-            result2 = track_new.main([str(file2)])
+            result2 = track.main([str(file2)])
         assert result2 == 0
 
         content = files_changed.read_text()

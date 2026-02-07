@@ -1,7 +1,7 @@
 """Tests for tf doctor version check functionality.
 
 This module contains comprehensive tests for the version check functionality
-in tf_cli/doctor_new.py, covering all version-related functions with
+in tf_cli/doctor.py, covering all version-related functions with
 normal paths, edge cases, and error conditions.
 
 Uses pytest fixtures (tmp_path, capsys) for isolated test environments
@@ -20,7 +20,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli.doctor_new import (
+from tf_cli.doctor import (
     check_version_consistency,
     detect_manifest_versions,
     get_cargo_version,
