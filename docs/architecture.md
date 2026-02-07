@@ -382,6 +382,60 @@ pi install npm:pi-mcp-adapter    # MCP tools for research
 
 ---
 
+## Shared Modules (tf_cli)
+
+The `tf_cli` Python package provides reusable modules that skills can import to avoid repetitive inline scripts:
+
+### component_classifier
+
+Maps keywords in ticket titles/descriptions to component tags (`component:cli`, `component:api`, etc.).
+
+**Used by:**
+- `/tf-backlog` - Auto-assign component tags during ticket creation
+- `/tf-tags-suggest` - Suggest missing component tags
+
+**Example:**
+```python
+from tf_cli.component_classifier import classify_components
+
+result = classify_components("Add --version flag to CLI")
+print(result.tags)  # ['component:cli']
+```
+
+### ticket_factory
+
+Reusable functions for creating tickets during backlog generation. Eliminates repetitive inline Python scripts.
+
+**Key Functions:**
+- `TicketDef` - Define tickets with title, description, optional tags
+- `score_tickets()` - Score by keyword (setup=10, implement=3, test=1)
+- `create_tickets()` - Create via `tk create` with auto-component-tags
+- `apply_dependencies()` - Apply `tk dep` (chain/phases modes)
+- `apply_links()` - Link related tickets via `tk link`
+- `write_backlog_md()` - Write `backlog.md` file
+
+**Used by:**
+- `/tf-backlog` - Create tickets from seed/baseline/plan
+- `/tf-backlog-from-openspec` - Create tickets from OpenSpec changes
+
+**Example:**
+```python
+from tf_cli.ticket_factory import (
+    TicketDef, create_tickets, score_tickets,
+    apply_dependencies, write_backlog_md
+)
+
+tickets = [TicketDef(title="...", description="..."), ...]
+scored = score_tickets(tickets)
+created = create_tickets(scored, topic_id="seed-foo", mode="seed")
+created = apply_dependencies(created, mode="chain")
+write_backlog_md(created, topic_id="seed-foo")
+```
+
+See `tf_cli/TICKET_FACTORY.md` for complete API documentation.
+
+---
+
 ## Benefits of This Architecture
 
 1. **DRY**: Workflow knowledge lives in one place per domain
@@ -390,3 +444,4 @@ pi install npm:pi-mcp-adapter    # MCP tools for research
 4. **Composability**: Skills can be combined and reused
 5. **Maintainability**: Change logic in one place, all commands benefit
 6. **Clarity**: Commands show their dependencies in autocomplete
+7. **Shared Modules**: Common functionality in `tf_cli` avoids repetitive inline scripts

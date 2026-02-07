@@ -662,6 +662,8 @@ The smoke test validates:
 
 - **[docs/commands.md](docs/commands.md)** - Complete command reference
 - **[docs/architecture.md](docs/architecture.md)** - How it works
-- **[docs/ralph.md](docs/ralph.md)** - Autonomous processing
-- **[docs/configuration.md](docs/configuration.md)** - Setup and models
 - **[docs/workflows.md](docs/workflows.md)** - Detailed workflow guides
+- **[docs/configuration.md](docs/configuration.md)** - Setup and models
+- **[docs/ralph.md](docs/ralph.md)** - Autonomous processing
+- **[tf_cli/TICKET_FACTORY.md](tf_cli/TICKET_FACTORY.md)** - Ticket creation API for backlog generation
+- **[docs/ticket_factory_refactoring.md](docs/ticket_factory_refactoring.md)** - Migration guide from inline scripts
