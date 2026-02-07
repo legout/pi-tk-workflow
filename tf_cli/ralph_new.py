@@ -15,6 +15,9 @@ from typing import Any, Dict, List, Optional, Tuple
 # Import new logger
 from tf_cli.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
 
+# Import shared utilities
+from tf_cli.utils import find_project_root
+
 
 DEFAULTS: Dict[str, Any] = {
     "maxIterations": 50,
@@ -78,14 +81,6 @@ Notes:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def find_project_root() -> Optional[Path]:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".tf").is_dir():
-            return parent
-    return None
 
 
 def ensure_ralph_dir(project_root: Path, logger: Optional[RalphLogger] = None) -> Optional[Path]:

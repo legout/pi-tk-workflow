@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from tf_cli.component_classifier import classify_components, format_tags_for_tk
+from tf_cli.utils import find_project_root
 
 
 #: Default keyword weights for ticket scoring.
@@ -339,7 +340,7 @@ def write_backlog_md(
         PosixPath('.tf/knowledge/topics/seed-foo/backlog.md')
     """
     if knowledge_dir is None:
-        project_root = _find_project_root()
+        project_root = find_project_root()
         if project_root:
             knowledge_dir = project_root / ".tf" / "knowledge"
         else:
@@ -378,15 +379,6 @@ def write_backlog_md(
     output_path.write_text(content, encoding="utf-8")
 
     return output_path
-
-
-def _find_project_root() -> Optional[Path]:
-    """Find project root by looking for .tf directory."""
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".tf").is_dir():
-            return parent
-    return None
 
 
 def apply_dependencies(
