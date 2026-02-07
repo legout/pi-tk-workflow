@@ -18,6 +18,9 @@ from tf_cli.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
 # Import shared utilities
 from tf_cli.utils import find_project_root
 
+# Module-level cache for ticket titles to avoid repeated tk show calls
+_ticket_title_cache: dict[str, Optional[str]] = {}
+
 
 DEFAULTS: Dict[str, Any] = {
     "maxIterations": 50,
@@ -457,19 +460,34 @@ def set_state(ralph_dir: Path, state: str) -> None:
     progress_path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
-def extract_ticket_title(ticket: str) -> Optional[str]:
+def clear_ticket_title_cache() -> None:
+    """Clear the ticket title cache.
+
+    Should be called at the start of each Ralph run to ensure fresh data.
+    """
+    _ticket_title_cache.clear()
+
+
+def extract_ticket_title(ticket: str, use_cache: bool = True) -> Optional[str]:
     """Extract the ticket title from the ticket file.
 
     Args:
         ticket: The ticket ID to look up
+        use_cache: Whether to use the cache (default: True)
 
     Returns:
         The ticket title if found, None otherwise (enables graceful omission in logs)
     """
+    # Check cache first
+    if use_cache and ticket in _ticket_title_cache:
+        return _ticket_title_cache[ticket]
+
     if shutil.which("tk") is None:
+        _ticket_title_cache[ticket] = None
         return None
     proc = subprocess.run(["tk", "show", ticket], capture_output=True, text=True)
     if proc.returncode != 0:
+        _ticket_title_cache[ticket] = None
         return None
     in_front = False
     title: Optional[str] = None
@@ -477,25 +495,30 @@ def extract_ticket_title(ticket: str) -> Optional[str]:
         line_stripped = line.strip()
         # Toggle frontmatter state when we see ---
         if line_stripped == "---":
+            # If we've found a title and now entering frontmatter, we can return
+            if title is not None:
+                result = title if title else None
+                _ticket_title_cache[ticket] = result
+                return result
             in_front = not in_front
             continue
         # Title appears before frontmatter (H1 heading)
         if not in_front and line.startswith("# "):
             title = line[2:].strip()
-        # If we've exited frontmatter and found a title, return it
-        if in_front and title is not None:
-            return title if title else None
     # Return title if found at end of file, else None
-    return title if title else None
+    result = title if title else None
+    _ticket_title_cache[ticket] = result
+    return result
 
 
 def extract_ticket_titles(tickets: List[str]) -> Dict[str, Optional[str]]:
     """Fetch titles for multiple tickets efficiently.
 
+    Uses the ticket title cache to avoid repeated tk show calls.
+
     Returns a dict mapping ticket_id -> title (or None if not found).
     """
     titles: Dict[str, Optional[str]] = {}
-    titles: Dict[str, str] = {}
     for ticket in tickets:
         titles[ticket] = extract_ticket_title(ticket)
     return titles
@@ -778,6 +801,9 @@ def ralph_run(args: List[str]) -> int:
     if not ralph_dir:
         return 1
 
+    # Clear ticket title cache at the start of each run
+    clear_ticket_title_cache()
+
     config = load_config(ralph_dir)
 
     # Resolve capture_json from CLI flag, env var, or config (in that order)
@@ -875,6 +901,9 @@ def ralph_start(args: List[str]) -> int:
     ralph_dir = ensure_ralph_dir(project_root, logger)
     if not ralph_dir:
         return 1
+
+    # Clear ticket title cache at the start of each run
+    clear_ticket_title_cache()
 
     config = load_config(ralph_dir)
 
