@@ -70,7 +70,7 @@ class TestGetVersion:
         with mock.patch("tf_cli.version._resolve_repo_root", return_value=None):
             with mock.patch("pathlib.Path.parent", property(lambda self: parent)):
                 result = version.get_version()
-                # This tests the fallback logic
+                assert result == "2.0.0"
 
     def test_returns_unknown_when_no_version_found(self) -> None:
         """Should return 'unknown' when no version found."""

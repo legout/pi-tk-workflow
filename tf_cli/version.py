@@ -10,9 +10,8 @@ Supported install modes:
 
 Fallback order:
 1. VERSION file in git repo root (for development/git checkouts)
-2. VERSION file relative to this module (for pip/uvx installs)
-3. VERSION file in current working directory (edge case)
-4. "unknown" (if VERSION cannot be found)
+2. VERSION file at package root (for pip/uvx installs)
+3. "unknown" (if VERSION cannot be found)
 """
 
 from __future__ import annotations
@@ -76,20 +75,17 @@ def get_version() -> str:
             return version
 
     # Try relative to this module (for pip/uvx installs)
-    # This file is in tf_cli/, so VERSION is at parent directory
-    here = Path(__file__).resolve().parent.parent
-    version = _read_version_file(here / "VERSION")
-    if version:
-        return version
-
-    # Final fallback: check cwd for VERSION (edge case)
-    cwd = Path.cwd()
-    version = _read_version_file(cwd / "VERSION")
+    # This file is in tf_cli/, so VERSION is at package root (parent of tf_cli/)
+    package_root = Path(__file__).resolve().parent.parent
+    version = _read_version_file(package_root / "VERSION")
     if version:
         return version
 
     return "unknown"
 
 
-# Module-level constant for convenience
-__version__ = get_version()
+def __getattr__(name: str) -> str:
+    """Lazy loading for __version__ to avoid caching issues at import time."""
+    if name == "__version__":
+        return get_version()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
