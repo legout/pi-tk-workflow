@@ -21,7 +21,7 @@ Ralph is an orchestration layer that runs the TF workflow in a loop, processing 
 ### 1. Initialize
 
 ```bash
-./.tf/bin/tf ralph init
+tf ralph init
 ```
 
 Creates `.tf/ralph/` directory structure.
@@ -178,20 +178,20 @@ State is stored in `.tf/ralph/progress.md`:
 
 ```bash
 # Initialize
-./.tf/bin/tf ralph init
+tf ralph init
 
 # Check status
-./.tf/bin/tf ralph status
+tf ralph status
 
 # View lessons
-./.tf/bin/tf ralph lessons
+tf ralph lessons
 
 # Prune old lessons (keep last N)
-./.tf/bin/tf ralph lessons prune 20
+tf ralph lessons prune 20
 
 # Reset progress
-./.tf/bin/tf ralph reset --keep-lessons  # Keep lessons
-./.tf/bin/tf ralph reset                 # Clear everything
+tf ralph reset --keep-lessons  # Keep lessons
+tf ralph reset                 # Clear everything
 ```
 
 ---
@@ -221,7 +221,7 @@ Before starting, add known patterns to `.tf/ralph/AGENTS.md`:
 Check first few tickets manually:
 
 ```bash
-./.tf/bin/tf ralph status
+tf ralph status
 # Review completed tickets in tk
 ```
 
@@ -230,7 +230,7 @@ Check first few tickets manually:
 Keep lessons file manageable:
 
 ```bash
-./.tf/bin/tf ralph lessons prune 30
+tf ralph lessons prune 30
 ```
 
 Old lessons may become outdated as the codebase evolves.

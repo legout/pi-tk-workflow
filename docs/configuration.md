@@ -10,10 +10,7 @@ Setting up pi-ticketflow, models, extensions, and MCP servers.
 
 ```bash
 # Global install (installs shim to ~/.local/bin/tf)
-uvx --from https://github.com/legout/pi-ticketflow tf install --global
-
-# Project install
-uvx --from https://github.com/legout/pi-ticketflow tf install --project /path/to/project
+uvx --from git+https://github.com/legout/pi-ticketflow tf install --global
 
 # Local clone (development)
 uvx --from . tf install
@@ -33,7 +30,7 @@ tf init
 tf sync
 ```
 
-If you installed per-project, use `./.tf/bin/tf` instead of `tf`.
+(Project installs are deprecated; use the global `tf` CLI.)
 
 Guides you through:
 - Installing required/optional Pi extensions
@@ -99,7 +96,7 @@ Models are configured in `config/settings.json`:
       "description": "Fast model for research and information gathering"
     },
     "fast": {
-      "model": "zai/glm-4.7-flash",
+      "model": "zai-org/GLM-4.7-Flash",
       "thinking": "medium",
       "description": "Cheapest model for quick tasks, fixes, and summaries"
     },
@@ -114,12 +111,12 @@ Models are configured in `config/settings.json`:
       "description": "Capable model for general code review"
     },
     "review-spec": {
-      "model": "openai-codex/gpt-5.2-codex",
+      "model": "openai-codex/gpt-5.3-codex",
       "thinking": "high",
       "description": "Strong model for specification compliance audit"
     },
     "review-secop": {
-      "model": "github-copilot/grok-code-fast-1",
+      "model": "google-antigravity/gemini-3-flash",
       "thinking": "high",
       "description": "Fast model for second-opinion review"
     }
@@ -163,22 +160,20 @@ Models are configured in `config/settings.json`:
 |------|---------------|---------|
 | worker | kimi-coding/k2p5 | Deep reasoning for implementation |
 | researcher | minimax/MiniMax-M2.1 | Fast research and information gathering |
-| fast | zai/glm-4.7-flash | Cheapest model for quick tasks |
+| fast | zai-org/GLM-4.7-Flash | Cheapest model for quick tasks |
 | general | zai/glm-4.7 | General-purpose admin tasks |
 | review-general | openai-codex/gpt-5.1-codex-mini | General code review |
-| review-spec | openai-codex/gpt-5.2-codex | Specification compliance audit |
-| review-secop | github-copilot/grok-code-fast-1 | Second-opinion review |
+| review-spec | openai-codex/gpt-5.3-codex | Specification compliance audit |
+| review-secop | google-antigravity/gemini-3-flash | Second-opinion review |
 | planning | openai-codex/gpt-5.2 | Planning and specification |
 
 ### Applying Changes
 
-After editing `config/settings.json`:
+After editing `.tf/config/settings.json`:
 
 ```bash
 tf sync
-# or
-./.tf/bin/tf sync
-# or
+# or (Pi prompt)
 /tf-sync
 ```
 
@@ -192,15 +187,17 @@ Additional workflow settings in `config/settings.json`:
 
 ```json
 {
-  "models": { ... },
+  "metaModels": { ... },
+  "agents": { ... },
+  "prompts": { ... },
   "workflow": {
     "enableResearcher": true,
-    "researchParallelAgents": 1,
+    "researchParallelAgents": 3,
     "enableReviewers": ["reviewer-general", "reviewer-spec-audit", "reviewer-second-opinion"],
     "enableFixer": true,
     "enableCloser": true,
     "enableQualityGate": false,
-    "failOn": ["Critical"],
+    "failOn": [],
     "knowledgeDir": ".tf/knowledge"
   }
 }
@@ -209,12 +206,12 @@ Additional workflow settings in `config/settings.json`:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `enableResearcher` | `true` | Run research step before implementation |
-| `researchParallelAgents` | `1` | Number of parallel research fetches (1 = sequential) |
+| `researchParallelAgents` | `3` | Number of parallel research fetches (1 = sequential) |
 | `enableReviewers` | `["reviewer-general", ...]` | Which reviewers to run (empty = skip) |
 | `enableFixer` | `true` | Run fix step after review |
 | `enableCloser` | `true` | Close ticket after completion |
 | `enableQualityGate` | `false` | Block closing if issues found |
-| `failOn` | `["Critical"]` | Severities that block closing |
+| `failOn` | `[]` | Severities that block closing |
 | `knowledgeDir` | `.tf/knowledge` | Where to store knowledge artifacts |
 
 ---
@@ -261,7 +258,7 @@ pi install npm:pi-mcp-adapter
 
 ### MCP Config Location
 
-MCP config is written to `<target>/.pi/mcp.json` when you run `tf setup` (or `./.tf/bin/tf setup` for project installs).
+MCP config is written globally to `~/.pi/agent/mcp.json` when you run `tf setup` (or `tf login`).
 
 Example structure:
 
@@ -298,7 +295,9 @@ Ralph loop settings in `.tf/ralph/config.json`:
   "includeKnowledgeBase": true,
   "includePlanningDocs": true,
   "promiseOnComplete": true,
-  "lessonsMaxCount": 50
+  "lessonsMaxCount": 50,
+  "logLevel": "normal",
+  "captureJson": false
 }
 ```
 
@@ -314,6 +313,8 @@ Ralph loop settings in `.tf/ralph/config.json`:
 | `sleepBetweenRetries` | 10000 | Ms to wait before retrying when no ticket found |
 | `promiseOnComplete` | true | Emit `<promise>COMPLETE</promise>` on completion |
 | `lessonsMaxCount` | 50 | Max lessons before pruning |
+| `logLevel` | `normal` | Logging verbosity: `quiet`, `normal`, `verbose`, `debug` |
+| `captureJson` | false | Capture Pi JSON mode output to `.tf/ralph/logs/{ticket}.jsonl` |
 
 ---
 
@@ -330,7 +331,7 @@ pi install npm:pi-review-loop    # Post-chain review with /review-start
 Check your setup:
 
 ```bash
-./.tf/bin/tf doctor
+tf doctor
 ```
 
 Runs preflight checks for:

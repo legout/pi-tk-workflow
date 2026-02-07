@@ -472,7 +472,7 @@ Running batches of tickets without manual intervention.
 ### 1. Initialize Ralph
 
 ```bash
-./.tf/bin/tf ralph init
+tf ralph init
 ```
 
 Creates `.tf/ralph/` directory with:
@@ -502,7 +502,7 @@ Edit `.tf/ralph/AGENTS.md`:
 Or with CLI:
 
 ```bash
-./.tf/bin/tf ralph init
+tf ralph init
 # Then in pi:
 /ralph-start
 ```
@@ -510,15 +510,15 @@ Or with CLI:
 ### 4. Monitor Progress
 
 ```bash
-./.tf/bin/tf ralph status
-./.tf/bin/tf ralph lessons
+tf ralph status
+tf ralph lessons
 ```
 
 ### 5. Review and Prune
 
 ```bash
 # Remove outdated lessons
-./.tf/bin/tf ralph lessons prune 30
+tf ralph lessons prune 30
 ```
 
 ---

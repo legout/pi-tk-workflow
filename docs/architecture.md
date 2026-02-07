@@ -352,11 +352,11 @@ Models are configured in `config/settings.json`:
 |------|---------------|---------|
 | worker | kimi-coding/k2p5 | Deep reasoning for implementation |
 | researcher | minimax/MiniMax-M2.1 | Fast research and information gathering |
-| fast | zai/glm-4.7-flash | Cheapest model for quick tasks |
+| fast | zai-org/GLM-4.7-Flash | Cheapest model for quick tasks |
 | general | zai/glm-4.7 | General-purpose admin tasks |
 | review-general | openai-codex/gpt-5.1-codex-mini | General code review |
-| review-spec | openai-codex/gpt-5.2-codex | Specification compliance audit |
-| review-secop | github-copilot/grok-code-fast-1 | Second-opinion review |
+| review-spec | openai-codex/gpt-5.3-codex | Specification compliance audit |
+| review-secop | google-antigravity/gemini-3-flash | Second-opinion review |
 | planning | openai-codex/gpt-5.2 | Planning and specification |
 
 Run `/tf-sync` after editing config to apply changes.

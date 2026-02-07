@@ -506,12 +506,13 @@ The `validate` command detects:
 
 ## Priority Reclassification Commands
 
-### `/tf-priority-reclassify`
+### `/tf-priority-reclassify` (Prompt) / `tf new priority-reclassify` (CLI)
 
 Review and reclassify ticket priorities according to the P0–P4 rubric.
 
+**CLI Usage:**
 ```
-/tf-priority-reclassify [--apply] [--ids <id1,id2,...>] [--ready] [--status <status>] [--tag <tag>]
+tf new priority-reclassify [--apply] [--ids <id1,id2,...>] [--ready] [--status <status>] [--tag <tag>]
 ```
 
 **Arguments:**

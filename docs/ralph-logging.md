@@ -41,12 +41,12 @@ Minimal output: start, end, and errors only. Useful for CI.
 ## Log Format
 
 ```
-TIMESTAMP [LEVEL] [iteration:N] [ticket:TICKET_ID] [phase:PHASE] message
+TIMESTAMP | LEVEL | key=value ... | message
 ```
 
 **Example:**
 ```
-2026-02-06T17:45:12Z [INFO] [iteration:3] [ticket:pt-abc123] [phase:implement] Starting implementation
+2026-02-06T17:45:12Z | INFO | ticket=pt-abc123 iteration=3 mode=serial | Starting ticket processing: pt-abc123
 ```
 
 ---
@@ -69,26 +69,28 @@ TIMESTAMP [LEVEL] [iteration:N] [ticket:TICKET_ID] [phase:PHASE] message
 | Event | Description |
 |-------|-------------|
 | `loop_start` | Ralph initialized with config |
-| `loop_end` | Ralph terminated (complete/max_iter/error) |
-| `iteration_start` | Beginning work on a ticket |
-| `iteration_end` | Finished work on a ticket |
+| `loop_complete` | Ralph terminated (complete/max_iter/error) |
+| `no_ticket_selected` | No ready ticket found, sleeping |
 
 ### Ticket Lifecycle
 
 | Event | Description |
 |-------|-------------|
-| `ticket_selected` | Ticket chosen for processing |
-| `ticket_skipped` | Ticket bypassed (deps, not ready) |
-| `phase_transition` | Moving between workflow phases |
+| `batch_selected` | Tickets chosen for parallel processing |
+| `worktree_operation` | Git worktree add/remove (parallel mode) |
+| `command_executed` | Pi workflow command completed |
 
-### Workflow Phases
+### Logged via Logger Methods
 
-- `reanchor` - Loading context
-- `research` - Knowledge gathering
-- `implement` - Code changes
-- `review` - Parallel reviews
-- `fix` - Issue resolution
-- `close` - Ticket closure
+- `log_ticket_start()` - Ticket processing begins
+- `log_ticket_complete()` - Ticket processing ends
+- `log_command_executed()` - Command result with exit code
+- `log_error_summary()` - Error with artifact path
+- `log_loop_start()` - Loop initialization
+- `log_loop_complete()` - Loop termination
+- `log_no_ticket_selected()` - Retry/sleep event
+- `log_batch_selected()` - Parallel batch selection
+- `log_worktree_operation()` - Worktree management
 
 ---
 
@@ -96,19 +98,16 @@ TIMESTAMP [LEVEL] [iteration:N] [ticket:TICKET_ID] [phase:PHASE] message
 
 ```bash
 # Find all errors
-grep "\[ERROR\]" .tf/ralph/logs/*.log
+grep "| ERROR" .tf/ralph/logs/*.jsonl
 
 # Find specific ticket activity
-grep "\[ticket:pt-abc123\]" .tf/ralph/logs/*.log
-
-# Find phase transitions
-grep "phase:" .tf/ralph/logs/*.log
+grep "ticket=pt-abc123" .tf/ralph/logs/*.jsonl
 
 # Find completed tickets
-grep "Ticket completed: COMPLETE" .tf/ralph/logs/*.log
+grep "status=COMPLETE" .tf/ralph/logs/*.jsonl
 
 # Find failed tickets
-grep "Ticket completed: FAILED" .tf/ralph/logs/*.log
+grep "status=FAILED" .tf/ralph/logs/*.jsonl
 ```
 
 ---
@@ -134,11 +133,13 @@ Even in verbose mode:
 
 ## Log Files
 
-When file logging is enabled (`RALPH_LOG_FILE=1` or set `logFile: true` in `.tf/ralph/config.json`):
+When JSON capture is enabled (`RALPH_CAPTURE_JSON=1` or set `captureJson: true` in `.tf/ralph/config.json`):
 
-- **Path**: `.tf/ralph/logs/YYYY-MM-DD.log`
-- **Retention**: 7 days
-- **Levels**: All (including DEBUG)
+- **Path**: `.tf/ralph/logs/{ticket-id}.jsonl`
+- **Format**: One JSON object per line (structured events from Pi `--mode json`)
+- **Use case**: Post-mortem analysis of tool calls and responses
+
+**Note**: JSONL capture is opt-in. The format is subject to change (experimental feature).
 
 ---
 
@@ -201,15 +202,21 @@ cat .tf/knowledge/tickets/pt-abc123/close-summary.md
 cat .tf/knowledge/tickets/pt-abc123/files_changed.txt
 ```
 
-### Session traces (experimental)
+### Session traces
 
-For deep debugging, Ralph captures session traces as JSONL files:
+Pi session files (when `sessionDir` is configured):
 
 - **Location**: `.tf/ralph/sessions/<ticket-id>.jsonl`
-- **Format**: One JSON object per line (structured events)
-- **Use case**: Post-mortem analysis of tool calls and responses
+- **Format**: Pi session format (configurable via `sessionPerTicket`)
+- **Use case**: Reviewing Pi tool calls and responses
 
-**Note**: Session capture is automatic when running via `tf ralph`. The JSONL format is subject to change (experimental feature).
+Configure in `.tf/ralph/config.json`:
+```json
+{
+  "sessionDir": ".tf/ralph/sessions",
+  "sessionPerTicket": true
+}
+```
 
 ---
 
