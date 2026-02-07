@@ -272,11 +272,14 @@ class RalphLogger:
         ticket_id: str,
         mode: str = "serial",
         iteration: Optional[int] = None,
+        ticket_title: Optional[str] = None,
     ) -> None:
         """Log the start of ticket processing."""
         extra: Dict[str, Any] = {"ticket": ticket_id, "mode": mode}
         if iteration is not None:
             extra["iteration"] = iteration
+        if ticket_title:
+            extra["ticket_title"] = ticket_title
         self.info(f"Starting ticket processing: {ticket_id}", **extra)
 
     def log_ticket_complete(
@@ -285,11 +288,14 @@ class RalphLogger:
         status: str,
         mode: str = "serial",
         iteration: Optional[int] = None,
+        ticket_title: Optional[str] = None,
     ) -> None:
         """Log the completion of ticket processing."""
         extra: Dict[str, Any] = {"ticket": ticket_id, "status": status, "mode": mode}
         if iteration is not None:
             extra["iteration"] = iteration
+        if ticket_title:
+            extra["ticket_title"] = ticket_title
         level = LogLevel.INFO if status == "COMPLETE" else LogLevel.ERROR
         self._log(level, f"Ticket processing {status.lower()}: {ticket_id}", extra)
 
@@ -348,6 +354,7 @@ class RalphLogger:
         artifact_path: Optional[str] = None,
         mode: str = "serial",
         iteration: Optional[int] = None,
+        ticket_title: Optional[str] = None,
     ) -> None:
         """Log an error summary with pointers to more info."""
         extra: Dict[str, Any] = {"ticket": ticket_id, "error": error_msg, "mode": mode}
@@ -355,6 +362,8 @@ class RalphLogger:
             extra["artifact_path"] = artifact_path
         if iteration is not None:
             extra["iteration"] = iteration
+        if ticket_title:
+            extra["ticket_title"] = ticket_title
         self.error("Error summary", **extra)
 
     def log_loop_start(
@@ -412,6 +421,7 @@ class RalphLogger:
         exit_code: int,
         mode: str = "serial",
         iteration: Optional[int] = None,
+        ticket_title: Optional[str] = None,
     ) -> None:
         """Log command execution result with sanitized command and exit code."""
         # Sanitize command for logging (remove potential secrets)
@@ -426,6 +436,8 @@ class RalphLogger:
         }
         if iteration is not None:
             extra["iteration"] = iteration
+        if ticket_title:
+            extra["ticket_title"] = ticket_title
 
         if exit_code == 0:
             self.info(f"Command completed successfully (exit={exit_code}): {sanitized}", **extra)
@@ -505,6 +517,7 @@ class RalphLogger:
         error: Optional[str] = None,
         mode: str = "parallel",
         iteration: Optional[int] = None,
+        ticket_title: Optional[str] = None,
     ) -> None:
         """Log worktree add/remove operations with success/failure status.
 
@@ -516,6 +529,7 @@ class RalphLogger:
             error: Optional error message on failure
             mode: Execution mode
             iteration: Optional iteration number
+            ticket_title: Optional ticket title for verbose logging
         """
         extra: Dict[str, Any] = {
             "event": "worktree_operation",
@@ -529,6 +543,8 @@ class RalphLogger:
             extra["iteration"] = iteration
         if error:
             extra["error"] = error
+        if ticket_title:
+            extra["ticket_title"] = ticket_title
 
         status = "success" if success else "failed"
         msg = f"Worktree {operation} {status}: {worktree_path}"
@@ -543,6 +559,7 @@ def create_logger(
     level: Optional[LogLevel] = None,
     output: TextIO = sys.stderr,
     ticket_id: Optional[str] = None,
+    ticket_title: Optional[str] = None,
     iteration: Optional[int] = None,
     mode: str = "serial",
 ) -> RalphLogger:
@@ -552,6 +569,7 @@ def create_logger(
         level: Minimum log level (defaults to INFO)
         output: Output stream (defaults to stderr)
         ticket_id: Optional ticket ID for context
+        ticket_title: Optional ticket title for context (shown in verbose logs)
         iteration: Optional iteration number for context
         mode: Execution mode (serial/parallel)
 
@@ -561,6 +579,8 @@ def create_logger(
     context: Dict[str, Any] = {"mode": mode}
     if ticket_id:
         context["ticket"] = ticket_id
+    if ticket_title:
+        context["ticket_title"] = ticket_title
     if iteration is not None:
         context["iteration"] = iteration
 

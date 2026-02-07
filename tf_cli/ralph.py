@@ -457,22 +457,48 @@ def set_state(ralph_dir: Path, state: str) -> None:
     progress_path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
-def extract_ticket_title(ticket: str) -> str:
+def extract_ticket_title(ticket: str) -> Optional[str]:
+    """Extract the ticket title from the ticket file.
+
+    Args:
+        ticket: The ticket ID to look up
+
+    Returns:
+        The ticket title if found, None otherwise (enables graceful omission in logs)
+    """
     if shutil.which("tk") is None:
-        return ticket
+        return None
     proc = subprocess.run(["tk", "show", ticket], capture_output=True, text=True)
     if proc.returncode != 0:
-        return ticket
+        return None
     in_front = False
+    title: Optional[str] = None
     for line in proc.stdout.splitlines():
-        if line.strip() == "---":
+        line_stripped = line.strip()
+        # Toggle frontmatter state when we see ---
+        if line_stripped == "---":
             in_front = not in_front
             continue
-        if in_front:
-            continue
-        if line.startswith("# "):
-            return line[2:].strip()
-    return ticket
+        # Title appears before frontmatter (H1 heading)
+        if not in_front and line.startswith("# "):
+            title = line[2:].strip()
+        # If we've exited frontmatter and found a title, return it
+        if in_front and title is not None:
+            return title if title else None
+    # Return title if found at end of file, else None
+    return title if title else None
+
+
+def extract_ticket_titles(tickets: List[str]) -> Dict[str, Optional[str]]:
+    """Fetch titles for multiple tickets efficiently.
+
+    Returns a dict mapping ticket_id -> title (or None if not found).
+    """
+    titles: Dict[str, Optional[str]] = {}
+    titles: Dict[str, str] = {}
+    for ticket in tickets:
+        titles[ticket] = extract_ticket_title(ticket)
+    return titles
 
 
 def extract_summary_and_commit(close_summary: Path, fallback_summary: str) -> Tuple[str, str]:
@@ -791,9 +817,10 @@ def ralph_run(args: List[str]) -> int:
         logger.error("No ready tickets found")
         return 1
 
-    # Update logger with ticket context
-    logger = logger.with_context(ticket=ticket)
-    logger.log_ticket_start(ticket, mode="serial")
+    # Fetch ticket title and update logger with ticket context
+    ticket_title = extract_ticket_title(ticket)
+    logger = logger.with_context(ticket=ticket, ticket_title=ticket_title)
+    logger.log_ticket_start(ticket, mode="serial", ticket_title=ticket_title)
 
     session_path = None
     if session_dir:
@@ -814,16 +841,16 @@ def ralph_run(args: List[str]) -> int:
         logs_dir=logs_dir,
     )
     if dry_run:
-        logger.log_ticket_complete(ticket, "DRY_RUN", mode="serial")
+        logger.log_ticket_complete(ticket, "DRY_RUN", mode="serial", ticket_title=ticket_title)
         return rc
 
     if rc != 0:
         error_msg = f"pi -p failed (exit {rc})"
-        logger.log_error_summary(ticket, error_msg)
+        logger.log_error_summary(ticket, error_msg, ticket_title=ticket_title)
         update_state(ralph_dir, project_root, ticket, "FAILED", error_msg)
         return rc
 
-    logger.log_ticket_complete(ticket, "COMPLETE", mode="serial")
+    logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", ticket_title=ticket_title)
     update_state(ralph_dir, project_root, ticket, "COMPLETE", "")
     return 0
 
@@ -945,9 +972,10 @@ def ralph_start(args: List[str]) -> int:
                     time.sleep(sleep_sec)
                     continue
 
-                # Update logger with ticket context for this iteration
-                ticket_logger = logger.with_context(ticket=ticket, iteration=iteration)
-                ticket_logger.log_ticket_start(ticket, mode="serial", iteration=iteration)
+                # Fetch ticket title and update logger with ticket context for this iteration
+                ticket_title = extract_ticket_title(ticket)
+                ticket_logger = logger.with_context(ticket=ticket, ticket_title=ticket_title, iteration=iteration)
+                ticket_logger.log_ticket_start(ticket, mode="serial", iteration=iteration, ticket_title=ticket_title)
 
                 session_path = None
                 if session_dir:
@@ -968,16 +996,16 @@ def ralph_start(args: List[str]) -> int:
                     capture_json=capture_json,
                     logs_dir=logs_dir,
                 )
-                ticket_logger.log_command_executed(ticket, cmd, rc, mode="serial", iteration=iteration)
+                ticket_logger.log_command_executed(ticket, cmd, rc, mode="serial", iteration=iteration, ticket_title=ticket_title)
                 if not options["dry_run"]:
                     if rc != 0:
                         error_msg = f"pi -p failed (exit {rc})"
                         knowledge_dir = resolve_knowledge_dir(project_root)
                         artifact_path = str(knowledge_dir / "tickets" / ticket)
-                        ticket_logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration)
+                        ticket_logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration, ticket_title=ticket_title)
                         update_state(ralph_dir, project_root, ticket, "FAILED", error_msg)
                         return rc
-                    ticket_logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", iteration=iteration)
+                    ticket_logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", iteration=iteration, ticket_title=ticket_title)
                     update_state(ralph_dir, project_root, ticket, "COMPLETE", "")
 
                 iteration += 1
@@ -1045,6 +1073,9 @@ def ralph_start(args: List[str]) -> int:
                 else:
                     component_tags[ticket] = []
 
+            # Fetch ticket titles for verbose logging
+            ticket_titles = extract_ticket_titles(selected)
+
             reason = "fallback" if used_fallback else "component_diversity"
             logger.log_batch_selected(selected, component_tags, reason=reason, mode=mode, iteration=iteration)
 
@@ -1053,7 +1084,8 @@ def ralph_start(args: List[str]) -> int:
                     cmd = build_cmd(workflow, ticket, workflow_flags)
                     session_note = f" --session {session_dir / (ticket + '.jsonl')}" if session_dir else ""
                     json_note = " --mode json" if capture_json else ""
-                    logger.info(f"Dry run: pi -p{json_note}{session_note} \"{cmd}\" (worktree)", ticket=ticket)
+                    ticket_title = ticket_titles.get(ticket, ticket)
+                    logger.info(f"Dry run: pi -p{json_note}{session_note} \"{cmd}\" (worktree)", ticket=ticket, ticket_title=ticket_title)
                 iteration += len(selected)
                 time.sleep(sleep_between / 1000)
                 continue
@@ -1061,11 +1093,13 @@ def ralph_start(args: List[str]) -> int:
             processes: List[Tuple[subprocess.Popen, str, Path, Optional[Any]]] = []
             for ticket in selected:
                 worktree_path = worktrees_dir / ticket
+                # Get ticket title for verbose logging
+                ticket_title = ticket_titles.get(ticket, ticket)
                 # Remove any existing worktree first
                 remove = subprocess.run(["git", "-C", str(repo_root), "worktree", "remove", "-f", str(worktree_path)], capture_output=True)
                 if remove.returncode == 0:
                     logger.log_worktree_operation(
-                        ticket, "remove", str(worktree_path), success=True, mode=mode, iteration=iteration
+                        ticket, "remove", str(worktree_path), success=True, mode=mode, iteration=iteration, ticket_title=ticket_title
                     )
                 # Add new worktree
                 add = subprocess.run(
@@ -1075,13 +1109,13 @@ def ralph_start(args: List[str]) -> int:
                 if add.returncode != 0:
                     error_msg = add.stderr.decode("utf-8", errors="replace") if add.stderr else "worktree add failed"
                     logger.log_worktree_operation(
-                        ticket, "add", str(worktree_path), success=False, error=error_msg, mode=mode, iteration=iteration
+                        ticket, "add", str(worktree_path), success=False, error=error_msg, mode=mode, iteration=iteration, ticket_title=ticket_title
                     )
-                    logger.log_error_summary(ticket, f"worktree add failed: {error_msg}", iteration=iteration)
+                    logger.log_error_summary(ticket, f"worktree add failed: {error_msg}", iteration=iteration, ticket_title=ticket_title)
                     update_state(ralph_dir, project_root, ticket, "FAILED", f"worktree add failed: {error_msg}", repo_root / ".tf/knowledge")
                     continue
                 logger.log_worktree_operation(
-                    ticket, "add", str(worktree_path), success=True, mode=mode, iteration=iteration
+                    ticket, "add", str(worktree_path), success=True, mode=mode, iteration=iteration, ticket_title=ticket_title
                 )
 
                 session_path = None
@@ -1115,17 +1149,19 @@ def ralph_start(args: List[str]) -> int:
 
             for proc, ticket, worktree_path, jsonl_file in processes:
                 rc = proc.wait()
+                # Get ticket title for verbose logging
+                ticket_title = ticket_titles.get(ticket, ticket)
                 if jsonl_file is not None:
                     jsonl_file.close()
                     # Log where the JSONL was written (relative to worktree)
                     jsonl_path = worktree_path / ".tf/ralph/logs" / f"{ticket}.jsonl"
-                    logger.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path), mode="parallel")
+                    logger.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, ticket_title=ticket_title, jsonl_path=str(jsonl_path), mode="parallel")
                 cmd = build_cmd(workflow, ticket, workflow_flags)
-                logger.log_command_executed(ticket, cmd, rc, mode="parallel", iteration=iteration)
+                logger.log_command_executed(ticket, cmd, rc, mode="parallel", iteration=iteration, ticket_title=ticket_title)
                 if rc != 0:
                     error_msg = f"pi -p failed (exit {rc})"
                     artifact_path = str(worktree_path / ".tf/knowledge" / "tickets" / ticket)
-                    logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration)
+                    logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration, ticket_title=ticket_title)
                     update_state(
                         ralph_dir,
                         project_root,
@@ -1136,7 +1172,7 @@ def ralph_start(args: List[str]) -> int:
                     )
                     return rc
 
-                logger.log_ticket_complete(ticket, "COMPLETE", mode="parallel", iteration=iteration)
+                logger.log_ticket_complete(ticket, "COMPLETE", mode="parallel", iteration=iteration, ticket_title=ticket_title)
                 artifact_root = worktree_path / ".tf/knowledge"
                 update_state(ralph_dir, project_root, ticket, "COMPLETE", "", artifact_root)
 
@@ -1147,12 +1183,12 @@ def ralph_start(args: List[str]) -> int:
                     )
                     if remove.returncode == 0:
                         logger.log_worktree_operation(
-                            ticket, "remove", str(worktree_path), success=True, mode=mode, iteration=iteration
+                            ticket, "remove", str(worktree_path), success=True, mode=mode, iteration=iteration, ticket_title=ticket_title
                         )
                     else:
                         error_msg = remove.stderr.decode("utf-8", errors="replace") if remove.stderr else "unknown error"
                         logger.log_worktree_operation(
-                            ticket, "remove", str(worktree_path), success=False, error=error_msg, mode=mode, iteration=iteration
+                            ticket, "remove", str(worktree_path), success=False, error=error_msg, mode=mode, iteration=iteration, ticket_title=ticket_title
                         )
                         shutil.rmtree(worktree_path, ignore_errors=True)
 
