@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 from typing import Optional
 
+from .frontmatter import (
+    resolve_meta_model,
+    update_agent_frontmatter,
+    update_prompt_frontmatter,
+    sync_models_to_files,
+)
 from .utils import find_project_root, read_json
 
 
@@ -27,95 +32,16 @@ def load_project_config(project_root: Path) -> dict:
     return read_json(project_root / ".tf" / "config" / "settings.json")
 
 
-def resolve_meta_model(config: dict, name: str) -> dict:
-    meta_models = config.get("metaModels", {}) or {}
-    if name in meta_models:
-        return meta_models[name]
-
-    agents = config.get("agents", {}) or {}
-    if name in agents:
-        meta_key = agents[name]
-        return meta_models.get(meta_key, {"model": name, "thinking": "medium"})
-
-    prompts = config.get("prompts", {}) or {}
-    if name in prompts:
-        meta_key = prompts[name]
-        return meta_models.get(meta_key, {"model": name, "thinking": "medium"})
-
-    return {"model": name, "thinking": "medium"}
-
-
-def _update_frontmatter(content: str, model: str, thinking: str) -> str:
-    frontmatter_pattern = r"^(---\s*\n)(.*?)(\n---\s*\n)"
-
-    def replace(match):
-        prefix, fm, suffix = match.group(1), match.group(2), match.group(3)
-
-        if re.search(r"^model:\s*", fm, re.MULTILINE):
-            fm = re.sub(r"^model:\s*.*$", f"model: {model}", fm, flags=re.MULTILINE)
-        else:
-            fm += f"\nmodel: {model}"
-
-        if re.search(r"^thinking:\s*", fm, re.MULTILINE):
-            fm = re.sub(r"^thinking:\s*.*$", f"thinking: {thinking}", fm, flags=re.MULTILINE)
-        else:
-            fm += f"\nthinking: {thinking}"
-
-        return prefix + fm + suffix
-
-    return re.sub(frontmatter_pattern, replace, content, flags=re.DOTALL)
-
-
-def update_agent_frontmatter(agent_path: Path, config: dict, agent_name: str) -> bool:
-    content = agent_path.read_text(encoding="utf-8")
-    resolved = resolve_meta_model(config, agent_name)
-    model = resolved.get("model", "openai-codex/gpt-5.1-codex-mini")
-    thinking = resolved.get("thinking", "medium")
-
-    new_content = _update_frontmatter(content, model, thinking)
-    if new_content != content:
-        agent_path.write_text(new_content, encoding="utf-8")
-        return True
-    return False
-
-
-def update_prompt_frontmatter(prompt_path: Path, config: dict, prompt_name: str) -> bool:
-    content = prompt_path.read_text(encoding="utf-8")
-    resolved = resolve_meta_model(config, prompt_name)
-    model = resolved.get("model", "openai-codex/gpt-5.1-codex-mini")
-    thinking = resolved.get("thinking", "medium")
-
-    new_content = _update_frontmatter(content, model, thinking)
-    if new_content != content:
-        prompt_path.write_text(new_content, encoding="utf-8")
-        return True
-    return False
-
-
 def sync_models(project_root: Path, config: dict) -> dict:
-    results = {"agents": [], "prompts": [], "errors": []}
-
+    """Sync models from config to all agents and prompts in the project."""
     agents_dir = project_root / ".pi" / "agents"
-    if agents_dir.exists():
-        for agent_file in agents_dir.glob("*.md"):
-            agent_name = agent_file.stem
-            try:
-                if update_agent_frontmatter(agent_file, config, agent_name):
-                    results["agents"].append(agent_name)
-            except Exception as e:
-                results["errors"].append(f"agents/{agent_file.name}: {e}")
-
     prompts_dir = project_root / ".pi" / "prompts"
-    if prompts_dir.exists():
-        for prompt_file in prompts_dir.glob("*.md"):
-            prompt_name = prompt_file.stem
-            try:
-                if update_prompt_frontmatter(prompt_file, config, prompt_name):
-                    results["prompts"].append(prompt_name)
-            except Exception as e:
-                results["errors"].append(f"prompts/{prompt_file.name}: {e}")
-
-    return results
+    
+    return sync_models_to_files(
+        config,
+        agents_dir if agents_dir.exists() else None,
+        prompts_dir if prompts_dir.exists() else None,
+    )
 
 
 def run_sync(args: argparse.Namespace) -> int:
