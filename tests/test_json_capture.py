@@ -25,18 +25,22 @@ class TestParseRunArgsCaptureJson:
 
     def test_capture_json_flag_present(self):
         """--capture-json flag should be parsed and returned as True."""
-        ticket, dry_run, flags, log_level, capture_json = parse_run_args(["--capture-json", "abc-123"])
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--capture-json", "abc-123"]
+        )
         assert capture_json is True
         assert ticket == "abc-123"
 
     def test_capture_json_flag_absent(self):
         """When --capture-json is not provided, should default to False."""
-        ticket, dry_run, flags, log_level, capture_json = parse_run_args(["abc-123"])
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["abc-123"]
+        )
         assert capture_json is False
 
     def test_capture_json_with_other_flags(self):
         """--capture-json works with other flags."""
-        ticket, dry_run, flags, log_level, capture_json = parse_run_args(
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
             ["--capture-json", "--verbose", "--dry-run", "abc-123"]
         )
         assert capture_json is True
@@ -195,3 +199,104 @@ class TestCaptureJsonIntegration:
         for value in enable_values:
             # Just verify the test values are valid
             assert value.strip().lower() in ("1", "true", "yes")
+
+
+class TestParseProgressFlags:
+    """Test --progress, --pi-output, and --pi-output-file flag parsing."""
+
+    def test_progress_flag_parsed_run(self):
+        """--progress flag should be parsed in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--progress", "abc-123"]
+        )
+        assert progress is True
+
+    def test_progressbar_alias_parsed_run(self):
+        """--progressbar alias should work in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--progressbar", "abc-123"]
+        )
+        assert progress is True
+
+    def test_progress_defaults_false_run(self):
+        """progress should default to False in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["abc-123"]
+        )
+        assert progress is False
+
+    def test_progress_flag_parsed_start(self):
+        """--progress flag should be parsed in ralph start."""
+        options = parse_start_args(["--progress", "--max-iterations", "10"])
+        assert options["progress"] is True
+
+    def test_pi_output_defaults_inherit_run(self):
+        """--pi-output should default to 'inherit' in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["abc-123"]
+        )
+        assert pi_output == "inherit"
+
+    def test_pi_output_file_parsed_run(self):
+        """--pi-output should accept file mode in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--pi-output", "file", "abc-123"]
+        )
+        assert pi_output == "file"
+
+    def test_pi_output_discard_parsed_run(self):
+        """--pi-output should accept discard mode in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--pi-output=discard", "abc-123"]
+        )
+        assert pi_output == "discard"
+
+    def test_pi_output_file_path_parsed_run(self):
+        """--pi-output-file should parse custom path in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--pi-output-file", "/custom/path.log", "abc-123"]
+        )
+        assert pi_output_file == "/custom/path.log"
+
+    def test_pi_output_file_path_equals_syntax_run(self):
+        """--pi-output-file=path should work in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--pi-output-file=/custom/path.log", "abc-123"]
+        )
+        assert pi_output_file == "/custom/path.log"
+
+    def test_pi_output_file_defaults_none_run(self):
+        """--pi-output-file should default to None in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["abc-123"]
+        )
+        assert pi_output_file is None
+
+    def test_pi_output_defaults_inherit_start(self):
+        """--pi-output should default to 'inherit' in ralph start."""
+        options = parse_start_args(["--max-iterations", "10"])
+        assert options["pi_output"] == "inherit"
+
+    def test_pi_output_file_parsed_start(self):
+        """--pi-output should accept file mode in ralph start."""
+        options = parse_start_args(["--pi-output", "file", "--progress"])
+        assert options["pi_output"] == "file"
+        assert options["progress"] is True
+
+    def test_combined_progress_flags_run(self):
+        """All new flags should work together in ralph run."""
+        ticket, dry_run, flags, log_level, capture_json, progress, pi_output, pi_output_file = parse_run_args(
+            ["--progress", "--pi-output", "file", "--pi-output-file", "/tmp/out.log", "abc-123"]
+        )
+        assert progress is True
+        assert pi_output == "file"
+        assert pi_output_file == "/tmp/out.log"
+
+    def test_combined_progress_flags_start(self):
+        """All new flags should work together in ralph start."""
+        options = parse_start_args(
+            ["--progress", "--pi-output", "discard", "--pi-output-file", "/tmp/out.log"]
+        )
+        assert options["progress"] is True
+        assert options["pi_output"] == "discard"
+        assert options["pi_output_file"] == "/tmp/out.log"

@@ -55,13 +55,30 @@ def usage() -> None:
 
 Usage:
   tf ralph run [ticket-id] [--dry-run] [--verbose|--debug|--quiet] [--capture-json] [--flags '...']
-  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--verbose|--debug|--quiet] [--capture-json] [--flags '...']
+                            [--progress] [--pi-output MODE] [--pi-output-file PATH]
+  tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--verbose|--debug|--quiet]
+                 [--capture-json] [--flags '...'] [--progress] [--pi-output MODE] [--pi-output-file PATH]
 
 Verbosity Options:
   --verbose         Enable verbose output (INFO + DEBUG events)
   --debug           Alias for --verbose (maximum detail)
   --quiet           Minimal output (errors only)
   (default)         Normal output (INFO events only)
+
+Progress Options:
+  --progress, --progressbar
+                    Enable progress indicator (serial mode only).
+                    When used in a TTY, pi output is redirected to a log file
+                    to prevent progress bar corruption.
+
+Pi Output Options:
+  --pi-output MODE  Control pi subprocess output: inherit (default), file, discard.
+                    'inherit' passes output through to terminal.
+                    'file' redirects output to .tf/ralph/logs/<ticket>.log.
+                    'discard' suppresses pi output entirely.
+  --pi-output-file PATH
+                    Override the default log file path when --pi-output=file.
+                    (default: .tf/ralph/logs/<ticket>.log)
 
 JSON Capture Options:
   --capture-json    Capture Pi JSON mode output to .tf/ralph/logs/<ticket>.jsonl
@@ -78,6 +95,7 @@ Notes:
   - CLI flags take precedence over environment variables
   - Parallel mode uses git worktrees + component tags (same as legacy).
   - JSON capture is opt-in; JSONL may contain file paths or snippets.
+  - --progress is only supported in serial mode (--parallel 1 or default).
 """
     )
 
@@ -673,12 +691,23 @@ def update_state(
         agents_path.write_text(agents_path.read_text(encoding="utf-8") + header + lesson_block + "\n", encoding="utf-8")
 
 
-def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel], bool]:
+def parse_run_args(
+    args: List[str],
+) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel], bool, bool, str, Optional[str]]:
+    """Parse arguments for 'tf ralph run'.
+
+    Returns:
+        Tuple of (ticket_override, dry_run, flags_override, log_level, capture_json,
+                  progress, pi_output, pi_output_file)
+    """
     ticket_override: Optional[str] = None
     dry_run = False
     flags_override: Optional[str] = None
     log_level: Optional[LogLevel] = None
     capture_json = False
+    progress = False
+    pi_output = "inherit"
+    pi_output_file: Optional[str] = None
     idx = 0
     while idx < len(args):
         arg = args[idx]
@@ -697,6 +726,25 @@ def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str],
         elif arg == "--quiet":
             log_level = LogLevel.QUIET
             idx += 1
+        elif arg in ("--progress", "--progressbar"):
+            progress = True
+            idx += 1
+        elif arg == "--pi-output":
+            if idx + 1 >= len(args):
+                raise ValueError("Missing value after --pi-output")
+            pi_output = args[idx + 1]
+            idx += 2
+        elif arg.startswith("--pi-output="):
+            pi_output = arg.split("=", 1)[1]
+            idx += 1
+        elif arg == "--pi-output-file":
+            if idx + 1 >= len(args):
+                raise ValueError("Missing value after --pi-output-file")
+            pi_output_file = args[idx + 1]
+            idx += 2
+        elif arg.startswith("--pi-output-file="):
+            pi_output_file = arg.split("=", 1)[1]
+            idx += 1
         elif arg == "--flags":
             if idx + 1 >= len(args):
                 raise ValueError("Missing value after --flags")
@@ -714,10 +762,11 @@ def parse_run_args(args: List[str]) -> Tuple[Optional[str], bool, Optional[str],
                 idx += 1
             else:
                 raise ValueError("Too many arguments for ralph run")
-    return ticket_override, dry_run, flags_override, log_level, capture_json
+    return ticket_override, dry_run, flags_override, log_level, capture_json, progress, pi_output, pi_output_file
 
 
 def parse_start_args(args: List[str]) -> Dict[str, Any]:
+    """Parse arguments for 'tf ralph start'."""
     options: Dict[str, Any] = {
         "max_iterations": None,
         "dry_run": False,
@@ -726,6 +775,9 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         "flags_override": None,
         "log_level": None,
         "capture_json": False,
+        "progress": False,
+        "pi_output": "inherit",
+        "pi_output_file": None,
     }
     idx = 0
     while idx < len(args):
@@ -764,6 +816,25 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         elif arg == "--capture-json":
             options["capture_json"] = True
             idx += 1
+        elif arg in ("--progress", "--progressbar"):
+            options["progress"] = True
+            idx += 1
+        elif arg == "--pi-output":
+            if idx + 1 >= len(args):
+                raise ValueError("Missing value after --pi-output")
+            options["pi_output"] = args[idx + 1]
+            idx += 2
+        elif arg.startswith("--pi-output="):
+            options["pi_output"] = arg.split("=", 1)[1]
+            idx += 1
+        elif arg == "--pi-output-file":
+            if idx + 1 >= len(args):
+                raise ValueError("Missing value after --pi-output-file")
+            options["pi_output_file"] = args[idx + 1]
+            idx += 2
+        elif arg.startswith("--pi-output-file="):
+            options["pi_output_file"] = arg.split("=", 1)[1]
+            idx += 1
         elif arg == "--flags":
             if idx + 1 >= len(args):
                 raise ValueError("Missing value after --flags")
@@ -780,11 +851,31 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
     return options
 
 
+def _validate_pi_output(pi_output: str) -> bool:
+    """Validate --pi-output value."""
+    valid = {"inherit", "file", "discard"}
+    return pi_output in valid
+
+
 def ralph_run(args: List[str]) -> int:
     try:
-        ticket_override, dry_run, flags_override, cli_log_level, cli_capture_json = parse_run_args(args)
+        (
+            ticket_override,
+            dry_run,
+            flags_override,
+            cli_log_level,
+            cli_capture_json,
+            progress,
+            pi_output,
+            pi_output_file,
+        ) = parse_run_args(args)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
+        return 1
+
+    # Validate pi_output value
+    if not _validate_pi_output(pi_output):
+        print(f"Invalid --pi-output value: {pi_output}. Must be one of: inherit, file, discard", file=sys.stderr)
         return 1
 
     project_root = find_project_root()
@@ -894,6 +985,12 @@ def ralph_start(args: List[str]) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
+    # Validate pi_output value
+    pi_output = options.get("pi_output", "inherit")
+    if not _validate_pi_output(pi_output):
+        print(f"Invalid --pi-output value: {pi_output}. Must be one of: inherit, file, discard", file=sys.stderr)
+        return 1
+
     project_root = find_project_root()
     if not project_root:
         print("No .tf directory found. Run in a project with .tf/.", file=sys.stderr)
@@ -971,6 +1068,12 @@ def ralph_start(args: List[str]) -> int:
     if use_parallel > 1 and session_dir and not session_per_ticket:
         logger.warn("sessionPerTicket=false with parallel execution; using per-ticket sessions")
         session_per_ticket = True
+
+    # Validate: --progress is only supported in serial mode
+    progress = options.get("progress", False)
+    if progress and use_parallel > 1:
+        print("Error: --progress is not supported with --parallel > 1 (serial mode only)", file=sys.stderr)
+        return 1
 
     mode = "parallel" if use_parallel > 1 else "serial"
     logger = logger.with_context(mode=mode)
