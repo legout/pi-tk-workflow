@@ -465,3 +465,230 @@ class TestPiOutputDefaults:
         params = sig.parameters
         assert params["pi_output"].default == "inherit"
         assert params["pi_output_file"].default is None
+
+
+class TestOutputRoutingWithoutSubprocess:
+    """Test output routing decisions without invoking subprocess.run.
+    
+    These tests verify that the correct output routing mode is determined
+    based on the pi_output parameter and configuration, without actually
+    running pi subprocess.
+    """
+
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
+    def test_inherit_mode_routing_decision(
+        self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
+    ):
+        """Inherit mode should decide to pass through stdout/stderr."""
+        mock_ensure_pi.return_value = True
+        mock_root.return_value = tmp_path
+        mock_prompt.return_value = True
+
+        mock_logger = MagicMock()
+
+        # Mock subprocess.run to capture what would be called
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            
+            rc = run_ticket(
+                "abc-123",
+                "/tf",
+                "--auto",
+                dry_run=False,
+                logger=mock_logger,
+                pi_output="inherit",
+            )
+
+            assert rc == 0
+            # Verify subprocess.run was called with no stdout/stderr capture
+            mock_run.assert_called_once()
+            call_kwargs = mock_run.call_args.kwargs
+            # Inherit mode means no stdout/stderr redirection
+            assert call_kwargs.get("stdout") is None
+            assert call_kwargs.get("stderr") is None
+
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
+    def test_file_mode_routing_decision(
+        self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
+    ):
+        """File mode should decide to redirect to file."""
+        mock_ensure_pi.return_value = True
+        mock_root.return_value = tmp_path
+        mock_prompt.return_value = True
+
+        mock_logger = MagicMock()
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir(parents=True)
+
+        with patch("subprocess.run") as mock_run:
+            with patch("pathlib.Path.open", mock_open()):
+                mock_run.return_value = MagicMock(returncode=0)
+                
+                rc = run_ticket(
+                    "abc-123",
+                    "/tf",
+                    "--auto",
+                    dry_run=False,
+                    logger=mock_logger,
+                    logs_dir=logs_dir,
+                    pi_output="file",
+                )
+
+                assert rc == 0
+                # File mode should redirect stdout to file
+                mock_run.assert_called_once()
+                call_kwargs = mock_run.call_args.kwargs
+                # stdout should be a file handle, not None
+                assert call_kwargs.get("stdout") is not None
+                assert call_kwargs.get("stderr") == subprocess.STDOUT
+
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
+    def test_discard_mode_routing_decision(
+        self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
+    ):
+        """Discard mode should decide to redirect to devnull."""
+        mock_ensure_pi.return_value = True
+        mock_root.return_value = tmp_path
+        mock_prompt.return_value = True
+
+        mock_logger = MagicMock()
+
+        with patch("subprocess.run") as mock_run:
+            with patch("builtins.open", mock_open()):
+                mock_run.return_value = MagicMock(returncode=0)
+                
+                rc = run_ticket(
+                    "abc-123",
+                    "/tf",
+                    "--auto",
+                    dry_run=False,
+                    logger=mock_logger,
+                    pi_output="discard",
+                )
+
+                assert rc == 0
+                # Discard mode should redirect to devnull
+                mock_run.assert_called_once()
+                call_kwargs = mock_run.call_args.kwargs
+                # stdout should be set (to devnull handle)
+                assert call_kwargs.get("stdout") is not None
+                assert call_kwargs.get("stderr") == subprocess.STDOUT
+
+    @patch("tf_cli.ralph.ensure_pi")
+    @patch("tf_cli.ralph.find_project_root")
+    @patch("tf_cli.ralph.prompt_exists")
+    def test_file_mode_with_custom_path_decision(
+        self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
+    ):
+        """File mode with custom path should use specified path."""
+        mock_ensure_pi.return_value = True
+        mock_root.return_value = tmp_path
+        mock_prompt.return_value = True
+
+        mock_logger = MagicMock()
+        custom_path = str(tmp_path / "custom" / "output.log")
+
+        with patch("subprocess.run") as mock_run:
+            with patch("builtins.open", mock_open()) as mock_file:
+                mock_run.return_value = MagicMock(returncode=0)
+                
+                rc = run_ticket(
+                    "abc-123",
+                    "/tf",
+                    "--auto",
+                    dry_run=False,
+                    logger=mock_logger,
+                    pi_output="file",
+                    pi_output_file=custom_path,
+                )
+
+                assert rc == 0
+                # Should have logged the custom path
+                mock_logger.info.assert_any_call(
+                    f"Pi output written to: {custom_path}",
+                    ticket="abc-123",
+                    pi_log_path=custom_path,
+                )
+
+    def test_dry_run_shows_routing_decision_inherit(self):
+        """Dry run should show inherit routing decision."""
+        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
+            with patch("tf_cli.ralph.find_project_root") as mock_root:
+                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+                    mock_ensure.return_value = True
+                    mock_root.return_value = Path("/tmp")
+                    mock_prompt.return_value = True
+
+                    mock_logger = MagicMock()
+                    
+                    rc = run_ticket(
+                        "abc-123",
+                        "/tf",
+                        "--auto",
+                        dry_run=True,
+                        logger=mock_logger,
+                        pi_output="inherit",
+                    )
+
+                    assert rc == 0
+                    # Inherit mode should not mention output in dry run
+                    call_args = str(mock_logger.info.call_args)
+                    assert "output to" not in call_args.lower() and "discarded" not in call_args.lower()
+
+    def test_dry_run_shows_routing_decision_file(self):
+        """Dry run should show file routing decision."""
+        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
+            with patch("tf_cli.ralph.find_project_root") as mock_root:
+                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+                    mock_ensure.return_value = True
+                    mock_root.return_value = Path("/tmp")
+                    mock_prompt.return_value = True
+
+                    mock_logger = MagicMock()
+                    
+                    rc = run_ticket(
+                        "abc-123",
+                        "/tf",
+                        "--auto",
+                        dry_run=True,
+                        logger=mock_logger,
+                        pi_output="file",
+                        pi_output_file="/tmp/test.log",
+                    )
+
+                    assert rc == 0
+                    # File mode should show output path in dry run
+                    call_args = str(mock_logger.info.call_args)
+                    assert "output to" in call_args
+                    assert "/tmp/test.log" in call_args
+
+    def test_dry_run_shows_routing_decision_discard(self):
+        """Dry run should show discard routing decision."""
+        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
+            with patch("tf_cli.ralph.find_project_root") as mock_root:
+                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+                    mock_ensure.return_value = True
+                    mock_root.return_value = Path("/tmp")
+                    mock_prompt.return_value = True
+
+                    mock_logger = MagicMock()
+                    
+                    rc = run_ticket(
+                        "abc-123",
+                        "/tf",
+                        "--auto",
+                        dry_run=True,
+                        logger=mock_logger,
+                        pi_output="discard",
+                    )
+
+                    assert rc == 0
+                    # Discard mode should show "discarded" in dry run
+                    call_args = str(mock_logger.info.call_args)
+                    assert "output discarded" in call_args
