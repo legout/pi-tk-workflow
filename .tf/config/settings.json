@@ -1,0 +1,164 @@
+{
+  "metaModels": {
+    "planning": {
+      "model": "openai-codex/gpt-5.2",
+      "thinking": "medium",
+      "description": "Fast, capable model for planning and specification"
+    },
+    "worker": {
+      "model": "kimi-coding/k2p5",
+      "thinking": "high",
+      "description": "Strong model for implementation and complex reasoning"
+    },
+    "research": {
+      "model": "minimax/MiniMax-M2.1",
+      "thinking": "medium",
+      "description": "Fast model for research and information gathering"
+    },
+    "fast": {
+      "model": "zai-org/GLM-4.7-Flash",
+      "thinking": "medium",
+      "description": "Cheapest model for quick tasks, fixes, and summaries"
+    },
+    "general": {
+      "model": "zai/glm-4.7",
+      "thinking": "medium",
+      "description": "General-purpose model for admin tasks"
+    },
+    "review-general": {
+      "model": "openai-codex/gpt-5.1-codex-mini",
+      "thinking": "high",
+      "description": "Capable model for general code review"
+    },
+    "review-spec": {
+      "model": "openai-codex/gpt-5.3-codex",
+      "thinking": "medium",
+      "description": "Strong model for specification compliance audit"
+    },
+    "review-secop": {
+      "model": "google-antigravity/gemini-3-flash ",
+      "thinking": "high",
+      "description": "Fast model for second-opinion review"
+    }
+  },
+  "agents": {
+    "reviewer-general": "review-general",
+    "reviewer-spec-audit": "review-spec",
+    "reviewer-second-opinion": "review-secop",
+    "review-merge": "general",
+    "fixer": "general",
+    "closer": "fast",
+    "researcher": "research",
+    "researcher-fetch": "research"
+  },
+  "prompts": {
+    "tf": "worker",
+    "tf-next": "general",
+    "tf-plan": "planning",
+    "tf-plan-consult": "worker",
+    "tf-plan-revise": "planning",
+    "tf-plan-review": "planning",
+    "tf-seed": "planning",
+    "tf-backlog": "planning",
+    "tf-backlog-ls": "fast",
+    "tf-spike": "planning",
+    "tf-baseline": "planning",
+    "tf-followups": "planning",
+    "tf-followups-scan": "planning",
+    "tf-tags-suggest": "planning",
+    "tf-deps-sync": "planning",
+    "tf-dedup": "planning",
+    "tf-backlog-from-openspec": "planning",
+    "tf-sync": "general",
+    "ralph-start": "general"
+  },
+  "checkers": {
+    "python": {
+      "files": "\\.(py|pyi)$",
+      "lint": "ruff check {files} --fix",
+      "format": "ruff format {files}",
+      "typecheck": "ty ."
+    },
+    "typescript": {
+      "files": "\\.(js|jsx|ts|tsx)$",
+      "lint": "eslint {files} --fix",
+      "format": "prettier --write {files}",
+      "typecheck": "tsc --noEmit"
+    },
+    "rust": {
+      "files": "\\.rs$",
+      "lint": "cargo clippy --fix -- -W clippy::all",
+      "format": "cargo fmt",
+      "typecheck": "cargo check"
+    },
+    "go": {
+      "files": "\\.go$",
+      "format": "gofmt -w {files}",
+      "typecheck": "go test ./..."
+    },
+    "markdown": {
+      "files": "\\.(md|mdx)$",
+      "format": "prettier --write {files}",
+      "lint": "markdownlint {files}"
+    },
+    "json": {
+      "files": "\\.json$",
+      "format": "prettier --write {files}"
+    },
+    "yaml": {
+      "files": "\\.(yml|yaml)$",
+      "format": "prettier --write {files}"
+    },
+    "html": {
+      "files": "\\.html?$",
+      "format": "prettier --write {files}"
+    },
+    "css": {
+      "files": "\\.(css|scss|sass|less)$",
+      "format": "prettier --write {files}"
+    },
+    "shell": {
+      "files": "\\.(sh|bash|zsh)$",
+      "format": "shfmt -w -s {files}"
+    }
+  },
+  "workflow": {
+    "clarifyDefault": true,
+    "enableResearcher": true,
+    "knowledgeDir": ".tf/knowledge",
+    "mcpServers": [
+      "context7",
+      "exa",
+      "grep_app",
+      "zai-web-search",
+      "zai-web-reader",
+      "zai-vision"
+    ],
+    "researchParallelAgents": 3,
+    "enableReviewers": [
+      "reviewer-general",
+      "reviewer-spec-audit",
+      "reviewer-second-opinion"
+    ],
+    "enableFixer": true,
+    "enableCloser": true,
+    "enableQualityGate": false,
+    "failOn": [],
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".venv/**",
+      "vendor/**"
+    ]
+  },
+  "ralph": {
+    "parallelWorkers": 1,
+    "parallelWorktreesDir": ".tf/ralph/worktrees",
+    "parallelAllowUntagged": false,
+    "componentTagPrefix": "component:",
+    "parallelKeepWorktrees": false,
+    "parallelAutoMerge": true
+  }
+}
