@@ -405,6 +405,56 @@ Both are out of scope for the original ticket.
 
 ---
 
+### `/tf-followups-scan`
+
+Scan implemented ticket artifacts and create follow-up tickets for those missing `followups.md`.
+
+```
+/tf-followups-scan [--apply]
+```
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `--apply` | Perform actual changes (create tickets, write files). Without this flag, runs in **dry-run mode**. |
+
+**Behavior:**
+1. Scans `.tf/knowledge/tickets/*/` for implemented tickets (detected by presence of `close-summary.md`)
+2. For each ticket **without** `followups.md`:
+   - Reads the ticket's `review.md`
+   - Parses Warnings and Suggestions sections
+   - **Dry-run**: Prints what would be done
+   - **Apply mode**: Creates follow-up tickets via `tk create`, writes `followups.md`
+
+**Idempotency:**
+Safe to re-run. Tickets already having `followups.md` are skipped. Second run produces no changes.
+
+**Output Artifacts:**
+- `followups.md` written to each processed ticket directory
+- Follow-up tickets created in `tk` (tags: `tf,followup`, priority: 3)
+
+**Examples:**
+```bash
+# Dry-run: see what would be processed without making changes
+/tf-followups-scan
+
+# Actually create tickets and write files
+/tf-followups-scan --apply
+```
+
+**Sample Output:**
+```
+=== Follow-ups Scan Summary ===
+Scanned: 15 ticket directories
+Eligible: 5 tickets (have close-summary.md, missing followups.md)
+Processed: 5 tickets
+  - Follow-up tickets created: 7
+  - Marked as "none needed": 1
+Skipped: 10 tickets (already have followups.md)
+```
+
+---
+
 ### `/tf-backlog-from-openspec`
 
 Create backlog tickets from an OpenSpec change and infer dependencies.
