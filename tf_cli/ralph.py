@@ -272,6 +272,59 @@ def build_cmd(workflow: str, ticket: str, flags: str) -> str:
     return cmd
 
 
+def _run_with_timeout(
+    args: List[str],
+    cwd: Optional[Path] = None,
+    timeout_secs: Optional[float] = None,
+    stdout=None,
+    stderr=None,
+) -> Tuple[int, bool]:
+    """Run a subprocess with timeout and safe termination.
+
+    Args:
+        args: Command and arguments to run
+        cwd: Working directory for the subprocess
+        timeout_secs: Timeout in seconds (None = no timeout)
+        stdout: File object for stdout redirection
+        stderr: File object for stderr redirection
+
+    Returns:
+        Tuple of (return_code, timed_out)
+        - return_code: Exit code of the process (or -1 if timed out)
+        - timed_out: True if the process was terminated due to timeout
+    """
+    # Start the process
+    proc = subprocess.Popen(
+        args,
+        cwd=cwd,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    try:
+        # Wait for process to complete with timeout
+        return_code = proc.wait(timeout=timeout_secs)
+        return return_code, False
+    except subprocess.TimeoutExpired:
+        # Timeout occurred - need to terminate the process safely
+        # Step 1: Try graceful termination (SIGTERM)
+        proc.terminate()
+
+        # Step 2: Wait briefly for graceful shutdown
+        try:
+            proc.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            # Step 3: Force kill if still running (SIGKILL)
+            proc.kill()
+
+        # Step 4: Must wait to reap the process and prevent zombies
+        # This ensures we don't leave zombie processes
+        proc.wait()
+
+        # Return -1 to indicate timeout distinctly (for restart logic)
+        return -1, True
+
+
 def run_ticket(
     ticket: str,
     workflow: str,
@@ -349,58 +402,62 @@ def run_ticket(
         log.info(f"Attempt timeout: {timeout_ms}ms ({timeout_secs}s)", ticket=ticket)
 
     # Handle pi output routing
-    try:
-        if jsonl_path and pi_output == "file":
-            # Both JSON capture and pi output to file - combine them
-            logs_dir.mkdir(parents=True, exist_ok=True) if logs_dir else None
-            pi_log_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(jsonl_path, "w", encoding="utf-8") as jsonl_file:
-                with open(pi_log_path, "w", encoding="utf-8") as pi_log_file:
-                    # JSON capture goes to jsonl_file, pi output goes to pi_log_file
-                    # We need to capture both separately
-                    result = subprocess.run(
-                        args, cwd=cwd, stdout=pi_log_file, stderr=subprocess.STDOUT,
-                        timeout=timeout_secs
-                    )
-            log.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path))
-            log.info(f"Pi output written to: {pi_log_path}", ticket=ticket, pi_log_path=str(pi_log_path))
-        elif jsonl_path:
-            # Only JSON capture
-            logs_dir.mkdir(parents=True, exist_ok=True)
-            with open(jsonl_path, "w", encoding="utf-8") as jsonl_file:
-                result = subprocess.run(
-                    args, cwd=cwd, stdout=jsonl_file, stderr=subprocess.STDOUT,
-                    timeout=timeout_secs
-                )
-            log.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path))
-        elif pi_output == "file" and pi_log_path:
-            # Only pi output to file
-            pi_log_path.parent.mkdir(parents=True, exist_ok=True)
+    timed_out = False
+    return_code = 0
+
+    if jsonl_path and pi_output == "file":
+        # Both JSON capture and pi output to file - combine them
+        logs_dir.mkdir(parents=True, exist_ok=True) if logs_dir else None
+        pi_log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(jsonl_path, "w", encoding="utf-8") as jsonl_file:
             with open(pi_log_path, "w", encoding="utf-8") as pi_log_file:
-                result = subprocess.run(
+                # JSON capture goes to jsonl_file, pi output goes to pi_log_file
+                # We need to capture both separately
+                return_code, timed_out = _run_with_timeout(
                     args, cwd=cwd, stdout=pi_log_file, stderr=subprocess.STDOUT,
-                    timeout=timeout_secs
+                    timeout_secs=timeout_secs
                 )
-            log.info(f"Pi output written to: {pi_log_path}", ticket=ticket, pi_log_path=str(pi_log_path))
-        elif pi_output == "discard":
-            # Discard output
-            with open(os.devnull, "w") as devnull:
-                result = subprocess.run(
-                    args, cwd=cwd, stdout=devnull, stderr=subprocess.STDOUT,
-                    timeout=timeout_secs
-                )
-        else:
-            # inherit - default behavior
-            result = subprocess.run(args, cwd=cwd, timeout=timeout_secs)
-    except subprocess.TimeoutExpired:
+        log.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path))
+        log.info(f"Pi output written to: {pi_log_path}", ticket=ticket, pi_log_path=str(pi_log_path))
+    elif jsonl_path:
+        # Only JSON capture
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        with open(jsonl_path, "w", encoding="utf-8") as jsonl_file:
+            return_code, timed_out = _run_with_timeout(
+                args, cwd=cwd, stdout=jsonl_file, stderr=subprocess.STDOUT,
+                timeout_secs=timeout_secs
+            )
+        log.info(f"JSONL trace written to: {jsonl_path}", ticket=ticket, jsonl_path=str(jsonl_path))
+    elif pi_output == "file" and pi_log_path:
+        # Only pi output to file
+        pi_log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(pi_log_path, "w", encoding="utf-8") as pi_log_file:
+            return_code, timed_out = _run_with_timeout(
+                args, cwd=cwd, stdout=pi_log_file, stderr=subprocess.STDOUT,
+                timeout_secs=timeout_secs
+            )
+        log.info(f"Pi output written to: {pi_log_path}", ticket=ticket, pi_log_path=str(pi_log_path))
+    elif pi_output == "discard":
+        # Discard output
+        with open(os.devnull, "w") as devnull:
+            return_code, timed_out = _run_with_timeout(
+                args, cwd=cwd, stdout=devnull, stderr=subprocess.STDOUT,
+                timeout_secs=timeout_secs
+            )
+    else:
+        # inherit - default behavior
+        return_code, timed_out = _run_with_timeout(args, cwd=cwd, timeout_secs=timeout_secs)
+
+    # Handle timeout
+    if timed_out:
         log.error(f"Attempt timed out after {timeout_ms}ms", ticket=ticket)
         return -1  # Special return code to indicate timeout for restart handling
 
     # On failure with file capture, print exit code + log path
-    if result.returncode != 0 and pi_output == "file" and pi_log_path:
-        log.error(f"Command failed with exit code {result.returncode}. Output log: {pi_log_path}", ticket=ticket)
+    if return_code != 0 and pi_output == "file" and pi_log_path:
+        log.error(f"Command failed with exit code {return_code}. Output log: {pi_log_path}", ticket=ticket)
 
-    return result.returncode
+    return return_code
 
 
 def extract_components(ticket_id: str, tag_prefix: str, allow_untagged: bool) -> Optional[set]:
