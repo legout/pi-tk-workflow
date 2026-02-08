@@ -419,7 +419,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         from textual.app import App, ComposeResult
         from textual.widgets import (
             Static, Header, Footer, ListView, ListItem, Label,
-            TabbedContent, TabPane, Input, Markdown
+            TabbedContent, TabPane, Input, Markdown, Button
         )
         from textual.containers import Horizontal, Vertical, VerticalScroll
         from textual.reactive import reactive
@@ -653,12 +653,29 @@ def main(argv: Optional[list[str]] = None) -> int:
         board_view: reactive[Optional[BoardView]] = reactive(None)
         selected_ticket: reactive[Optional[ClassifiedTicket]] = reactive(None)
         
+        # Filter state
+        search_query: reactive[str] = reactive("")
+        status_filter: reactive[str] = reactive("")
+        tag_filter: reactive[str] = reactive("")
+        assignee_filter: reactive[str] = reactive("")
+        external_ref_filter: reactive[str] = reactive("")
+        
         def compose(self) -> ComposeResult:
             """Compose the ticket board layout."""
             with Horizontal():
                 # Left side: Board columns
                 with Vertical(id="board-container"):
                     yield Static("[b]Ticket Board[/b]", id="board-header")
+                    
+                    # Filter bar
+                    with Horizontal(id="filter-bar"):
+                        yield Input(placeholder="Search title/body...", id="search-input")
+                        yield Input(placeholder="Status...", id="status-filter")
+                        yield Input(placeholder="Tag...", id="tag-filter")
+                        yield Input(placeholder="Assignee...", id="assignee-filter")
+                        yield Input(placeholder="External ref...", id="external-ref-filter")
+                        yield Button("Clear", id="clear-filters", variant="primary")
+                    
                     with Horizontal(id="board-columns"):
                         # Four columns: Ready, Blocked, In Progress, Closed
                         with VerticalScroll(id="col-ready", classes="board-column"):
@@ -703,6 +720,94 @@ def main(argv: Optional[list[str]] = None) -> int:
                 list_view.clear()
             self.query_one("#ticket-detail-content", Static).update(f"[red]{message}[/red]")
         
+        def on_input_changed(self, event: Input.Changed) -> None:
+            """Handle filter input changes."""
+            input_id = event.input.id
+            if input_id == "search-input":
+                self.search_query = event.value
+            elif input_id == "status-filter":
+                self.status_filter = event.value.lower()
+            elif input_id == "tag-filter":
+                self.tag_filter = event.value.lower()
+            elif input_id == "assignee-filter":
+                self.assignee_filter = event.value.lower()
+            elif input_id == "external-ref-filter":
+                self.external_ref_filter = event.value.lower()
+            self.update_board()
+        
+        def on_button_pressed(self, event: Button.Pressed) -> None:
+            """Handle button presses."""
+            if event.button.id == "clear-filters":
+                self._clear_filters()
+        
+        def _clear_filters(self) -> None:
+            """Clear all filter inputs and restore full ticket set."""
+            # Reset reactive filter state
+            self.search_query = ""
+            self.status_filter = ""
+            self.tag_filter = ""
+            self.assignee_filter = ""
+            self.external_ref_filter = ""
+            
+            # Clear input widgets
+            self.query_one("#search-input", Input).value = ""
+            self.query_one("#status-filter", Input).value = ""
+            self.query_one("#tag-filter", Input).value = ""
+            self.query_one("#assignee-filter", Input).value = ""
+            self.query_one("#external-ref-filter", Input).value = ""
+            
+            self.notify("Filters cleared")
+        
+        def _apply_filters(self, tickets: list[ClassifiedTicket]) -> list[ClassifiedTicket]:
+            """Apply all active filters to the ticket list.
+            
+            Args:
+                tickets: List of classified tickets to filter
+                
+            Returns:
+                Filtered list of tickets matching all criteria
+            """
+            filtered = tickets
+            
+            # Search query (title or body)
+            if self.search_query:
+                query = self.search_query.lower()
+                filtered = [
+                    ct for ct in filtered
+                    if query in ct.ticket.title.lower()
+                    or query in ct.ticket.body.lower()
+                ]
+            
+            # Status filter
+            if self.status_filter:
+                filtered = [
+                    ct for ct in filtered
+                    if self.status_filter in ct.ticket.status.lower()
+                ]
+            
+            # Tag filter (substring match on any tag)
+            if self.tag_filter:
+                filtered = [
+                    ct for ct in filtered
+                    if any(self.tag_filter in tag.lower() for tag in ct.ticket.tags)
+                ]
+            
+            # Assignee filter
+            if self.assignee_filter:
+                filtered = [
+                    ct for ct in filtered
+                    if ct.ticket.assignee and self.assignee_filter in ct.ticket.assignee.lower()
+                ]
+            
+            # External ref filter
+            if self.external_ref_filter:
+                filtered = [
+                    ct for ct in filtered
+                    if ct.ticket.external_ref and self.external_ref_filter in ct.ticket.external_ref.lower()
+                ]
+            
+            return filtered
+        
         def update_detail_counts(self) -> None:
             """Update the board header with ticket counts."""
             if not self.board_view:
@@ -735,6 +840,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                 list_view.clear()
                 
                 tickets = self.board_view.get_by_column(column)
+                # Apply filters
+                tickets = self._apply_filters(tickets)
+                
                 for ct in tickets:
                     # Format: ID - Title (truncated if needed)
                     title = ct.title[:35] + "..." if len(ct.title) > 35 else ct.title
@@ -870,6 +978,21 @@ def main(argv: Optional[list[str]] = None) -> int:
             padding-bottom: 1;
             border-bottom: solid $primary-darken-2;
             margin-bottom: 1;
+        }
+        
+        #filter-bar {
+            height: auto;
+            padding-bottom: 1;
+            margin-bottom: 1;
+        }
+        
+        #filter-bar Input {
+            width: 1fr;
+            margin-right: 1;
+        }
+        
+        #filter-bar Input:last-child {
+            margin-right: 0;
         }
         
         #board-columns {
