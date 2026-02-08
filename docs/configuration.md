@@ -313,8 +313,17 @@ Ralph loop settings in `.tf/ralph/config.json`:
 | `sleepBetweenRetries` | 10000 | Ms to wait before retrying when no ticket found |
 | `promiseOnComplete` | true | Emit `<promise>COMPLETE</promise>` on completion |
 | `lessonsMaxCount` | 50 | Max lessons before pruning |
+| `sessionDir` | `~/.pi/agent/sessions` | Directory for Pi session artifacts (default: Pi's standard session dir) |
+| `sessionPerTicket` | `true` | Write one session file per ticket (false = one file per loop) |
 | `logLevel` | `normal` | Logging verbosity: `quiet`, `normal`, `verbose`, `debug` |
 | `captureJson` | false | Capture Pi JSON mode output to `.tf/ralph/logs/{ticket}.jsonl` |
+
+**Session Storage Notes:**
+
+- **Default location**: `~/.pi/agent/sessions/` (Pi's standard session directory)
+- **Legacy location**: `.tf/ralph/sessions/` (backward compatibility detected with warning)
+- **Override env var**: `RALPH_FORCE_LEGACY_SESSIONS=1` forces use of legacy location
+- If legacy directory exists and you haven't explicitly configured `sessionDir`, Ralph warns but uses the new default
 
 ---
 

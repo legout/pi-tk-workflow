@@ -99,7 +99,7 @@ done
   "includePlanningDocs": true,
   "promiseOnComplete": true,
   "lessonsMaxCount": 50,
-  "sessionDir": ".tf/ralph/sessions",
+  "sessionDir": "~/.pi/agent/sessions",
   "sessionPerTicket": true
 }
 ```
@@ -115,8 +115,35 @@ done
 | `sleepBetweenTickets` | 5000 | Ms to wait between tickets |
 | `promiseOnComplete` | true | Emit `<promise>COMPLETE</promise>` on completion |
 | `lessonsMaxCount` | 50 | Max lessons before pruning |
-| `sessionDir` | `.tf/ralph/sessions` | Directory for saved session files |
+| `sessionDir` | `~/.pi/agent/sessions` | Directory for saved session files (default: Pi's standard session dir) |
 | `sessionPerTicket` | `true` | Write one session file per ticket (false = one per loop) |
+
+### Session Storage
+
+Ralph stores session artifacts (Pi conversation logs) per ticket. By default, these are written to Pi's standard session directory:
+
+```
+~/.pi/agent/sessions/
+```
+
+**Configuration:**
+
+Override the default location in `.tf/ralph/config.json`:
+
+```json
+{
+  "sessionDir": "/custom/path/to/sessions"
+}
+```
+
+**Legacy Behavior:**
+
+Previous versions of Ralph stored sessions at `.tf/ralph/sessions/`. For backward compatibility:
+
+- If the legacy directory exists and you haven't explicitly configured `sessionDir`, Ralph emits a warning but uses the new default location
+- To continue using the legacy location, either:
+  - Set `RALPH_FORCE_LEGACY_SESSIONS=1` environment variable, or
+  - Add `"sessionDir": ".tf/ralph/sessions"` to `.tf/ralph/config.json`
 
 ---
 

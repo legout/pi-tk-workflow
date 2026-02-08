@@ -158,6 +158,20 @@ Environment Variables:
   RALPH_CAPTURE_JSON        Set to 1 to enable JSON mode capture (same as --capture-json)
   RALPH_FORCE_LEGACY_SESSIONS  Set to 1 to force using legacy .tf/ralph/sessions directory
 
+Session Storage:
+  By default, Ralph stores session artifacts in Pi's standard session directory:
+    ~/.pi/agent/sessions/
+
+  Override via .tf/ralph/config.json:
+    {"sessionDir": "/custom/path"}
+
+  Legacy Behavior:
+    If .tf/ralph/sessions/ exists and you haven't explicitly configured sessionDir,
+    Ralph emits a warning but uses the new default location. To suppress the
+    warning or continue using the legacy location, either:
+    - Set RALPH_FORCE_LEGACY_SESSIONS=1, or
+    - Add {"sessionDir": ".tf/ralph/sessions"} to .tf/ralph/config.json
+
 Configuration (in .tf/ralph/config.json):
   attemptTimeoutMs      Per-ticket attempt timeout in milliseconds (default: 600000 = 10 min)
                         Set to 0 to disable timeout. Serial mode only.
