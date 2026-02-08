@@ -10,13 +10,71 @@ import time
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 # Import new logger
 from tf_cli.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
 
 # Import shared utilities
 from tf_cli.utils import find_project_root
+
+
+class ProgressDisplay:
+    """Conservative per-ticket progress display for tf ralph (serial mode only).
+
+    Uses stdlib only. Updates at ticket boundaries (start/complete/fail).
+    In TTY mode: uses carriage return + clear line for stable progress line.
+    In non-TTY mode: plain text output with no control characters.
+    """
+
+    def __init__(self, output: TextIO = sys.stderr, is_tty: Optional[bool] = None):
+        self.output = output
+        self.is_tty = is_tty if is_tty is not None else output.isatty()
+        self.current_ticket: Optional[str] = None
+        self.completed = 0
+        self.failed = 0
+        self.total = 0
+        self._last_line_len = 0
+
+    def start_ticket(self, ticket_id: str, iteration: int, total: int) -> None:
+        """Called when a ticket starts processing."""
+        self.current_ticket = ticket_id
+        self.total = total
+        self._draw(f"[{iteration + 1}/{total}] Processing {ticket_id}...")
+
+    def complete_ticket(self, ticket_id: str, status: str, iteration: int) -> None:
+        """Called when a ticket completes (success or failure)."""
+        if status == "COMPLETE":
+            self.completed += 1
+            msg = f"✓ {ticket_id} complete"
+        elif status == "FAILED":
+            self.failed += 1
+            msg = f"✗ {ticket_id} failed"
+        else:
+            msg = f"? {ticket_id} {status.lower()}"
+
+        self.current_ticket = None
+        self._draw(f"[{iteration + 1}/{self.total}] {msg}", final=True)
+
+    def _draw(self, text: str, final: bool = False) -> None:
+        """Draw progress line. In TTY mode, uses carriage return for in-place updates.
+        In non-TTY mode, always writes new lines (no control characters).
+        """
+        if self.is_tty:
+            # Clear line and carriage return for stable progress line
+            # \x1b[2K clears the entire line
+            # \r returns to start of line
+            clear_seq = "\x1b[2K\r"
+            self.output.write(f"{clear_seq}{text}")
+            if final:
+                self.output.write("\n")
+            self.output.flush()
+        else:
+            # Non-TTY: plain text, no control characters
+            if final:
+                self.output.write(f"{text}\n")
+                self.output.flush()
+            # In non-TTY mode, we don't show intermediate progress to avoid spam
 
 # Module-level cache for ticket titles to avoid repeated tk show calls
 _ticket_title_cache: dict[str, Optional[str]] = {}
@@ -1124,12 +1182,13 @@ def ralph_start(args: List[str]) -> int:
     if progress and use_parallel > 1:
         print("Error: --progress is not supported with --parallel > 1 (serial mode only)", file=sys.stderr)
         return 1
-    
-    # Also validate pi_output for parallel mode compatibility
-    if pi_output != "inherit" and use_parallel > 1:
-        # pi_output is only relevant for subprocess output which is captured in parallel mode via worktrees
-        # For now, we'll allow it but the output will go to worktree logs
-        pass
+
+    # When --progress is used in TTY mode, force --pi-output=file to prevent progress bar corruption
+    if progress and sys.stderr.isatty() and pi_output == "inherit":
+        pi_output = "file"
+        logs_dir = ralph_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("--progress in TTY mode: forcing --pi-output=file to prevent progress bar corruption")
 
     mode = "parallel" if use_parallel > 1 else "serial"
     logger = logger.with_context(mode=mode)
@@ -1150,6 +1209,9 @@ def ralph_start(args: List[str]) -> int:
             loop_session_path = session_dir / f"loop-{utc_now()}.jsonl"
 
         if use_parallel <= 1:
+            # Initialize progress display if requested
+            progress_display = ProgressDisplay(output=sys.stderr) if progress else None
+
             while iteration < max_iterations:
                 if backlog_empty(completion_check):
                     logger.log_loop_complete(reason="backlog_empty", iterations_completed=iteration, mode=mode)
@@ -1165,6 +1227,10 @@ def ralph_start(args: List[str]) -> int:
                     logger.log_no_ticket_selected(sleep_seconds=sleep_sec, reason="no_ready_tickets", mode=mode, iteration=iteration)
                     time.sleep(sleep_sec)
                     continue
+
+                # Update progress display at ticket start
+                if progress_display:
+                    progress_display.start_ticket(ticket, iteration, max_iterations)
 
                 # Fetch ticket title only in verbose mode (DEBUG or VERBOSE)
                 ticket_title: Optional[str] = None
@@ -1201,11 +1267,17 @@ def ralph_start(args: List[str]) -> int:
                 if not options["dry_run"]:
                     if rc != 0:
                         error_msg = f"pi -p failed (exit {rc})"
+                        # Update progress display on failure
+                        if progress_display:
+                            progress_display.complete_ticket(ticket, "FAILED", iteration)
                         knowledge_dir = resolve_knowledge_dir(project_root)
                         artifact_path = str(knowledge_dir / "tickets" / ticket)
                         ticket_logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration, ticket_title=ticket_title)
                         update_state(ralph_dir, project_root, ticket, "FAILED", error_msg)
                         return rc
+                    # Update progress display on success
+                    if progress_display:
+                        progress_display.complete_ticket(ticket, "COMPLETE", iteration)
                     ticket_logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", iteration=iteration, ticket_title=ticket_title)
                     update_state(ralph_dir, project_root, ticket, "COMPLETE", "")
 
