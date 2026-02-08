@@ -107,6 +107,12 @@ DEFAULTS: Dict[str, Any] = {
     "maxRestarts": 0,  # 0 = no restarts, N = up to N restarts per ticket. Serial mode only.
 }
 
+# Legacy session directory for backward compatibility detection
+LEGACY_SESSION_DIR = ".tf/ralph/sessions"
+
+# Track if legacy warning has been emitted (warn once per run)
+_legacy_warning_emitted = False
+
 
 def usage() -> None:
     # Usage goes to stdout as it's user-facing help text
@@ -145,11 +151,12 @@ JSON Capture Options:
                     (experimental, for debugging tool execution)
 
 Environment Variables:
-  RALPH_LOG_LEVEL       Set log level: quiet, normal, verbose, debug
-  RALPH_VERBOSE         Set to 1 to enable verbose mode
-  RALPH_DEBUG           Set to 1 to enable debug mode
-  RALPH_QUIET           Set to 1 to enable quiet mode
-  RALPH_CAPTURE_JSON    Set to 1 to enable JSON mode capture (same as --capture-json)
+  RALPH_LOG_LEVEL           Set log level: quiet, normal, verbose, debug
+  RALPH_VERBOSE             Set to 1 to enable verbose mode
+  RALPH_DEBUG               Set to 1 to enable debug mode
+  RALPH_QUIET               Set to 1 to enable quiet mode
+  RALPH_CAPTURE_JSON        Set to 1 to enable JSON mode capture (same as --capture-json)
+  RALPH_FORCE_LEGACY_SESSIONS  Set to 1 to force using legacy .tf/ralph/sessions directory
 
 Configuration (in .tf/ralph/config.json):
   attemptTimeoutMs      Per-ticket attempt timeout in milliseconds (default: 600000 = 10 min)
@@ -623,13 +630,67 @@ def resolve_max_restarts(config: Dict[str, Any]) -> int:
         return DEFAULTS["maxRestarts"]
 
 
-def resolve_session_dir(project_root: Path, config: Dict[str, Any]) -> Optional[Path]:
+def resolve_session_dir(
+    project_root: Path,
+    config: Dict[str, Any],
+    raw_config: Optional[Dict[str, Any]] = None,
+    logger: Optional[RalphLogger] = None,
+) -> Optional[Path]:
+    """Resolve session directory with backward compatibility for legacy location.
+
+    Args:
+        project_root: Project root path
+        config: Merged config (defaults + user config)
+        raw_config: Raw user config to detect explicit sessionDir setting
+        logger: Optional logger for warnings
+
+    Returns:
+        Resolved session directory path or None if disabled
+    """
+    global _legacy_warning_emitted
+
+    # Check if user explicitly configured sessionDir (not using default)
+    raw = raw_config or {}
+    user_explicitly_set = "sessionDir" in raw and raw["sessionDir"] not in (None, "")
+
+    # Check for legacy sessions directory
+    legacy_path = project_root / LEGACY_SESSION_DIR
+    legacy_exists = legacy_path.is_dir() and any(legacy_path.iterdir())
+
+    # Check for force legacy env var
+    force_legacy = os.environ.get("RALPH_FORCE_LEGACY_SESSIONS", "").strip().lower() in ("1", "true", "yes")
+
+    # Determine which sessionDir to use
+    if force_legacy:
+        # User explicitly wants legacy behavior via env var
+        path = legacy_path
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     value = config.get("sessionDir", DEFAULTS["sessionDir"])
     if value in (None, "", False):
         return None
+
     path = Path(str(value)).expanduser()
     if not path.is_absolute():
         path = project_root / path
+
+    # Emit warning if legacy exists and user hasn't explicitly configured sessionDir
+    if legacy_exists and not user_explicitly_set and not _legacy_warning_emitted:
+        _legacy_warning_emitted = True
+        warning_msg = (
+            f"\n[ralph] Warning: Legacy session directory detected at '{LEGACY_SESSION_DIR}'\n"
+            f"[ralph] New default location is: {DEFAULTS['sessionDir']}\n"
+            f"[ralph] Options:\n"
+            f"[ralph]   1. To use the new location: Move files from {LEGACY_SESSION_DIR} to {DEFAULTS['sessionDir']}\n"
+            f"[ralph]   2. To keep using legacy location: Set RALPH_FORCE_LEGACY_SESSIONS=1 or\n"
+            f"[ralph]      add '{{\"sessionDir\": \"{LEGACY_SESSION_DIR}\"}}' to .tf/ralph/config.json\n"
+        )
+        if logger:
+            logger.warn(warning_msg.strip())
+        else:
+            print(warning_msg, file=sys.stderr)
+
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -1170,7 +1231,16 @@ def ralph_run(args: List[str]) -> int:
     if flags_override:
         workflow_flags = f"{workflow_flags} {flags_override}".strip()
 
-    session_dir = resolve_session_dir(project_root, config)
+    # Load raw config to detect explicit sessionDir setting
+    raw_config = {}
+    config_path = ralph_dir / "config.json"
+    if config_path.exists():
+        try:
+            raw_config = json_load(config_path)
+        except Exception:
+            raw_config = {}
+
+    session_dir = resolve_session_dir(project_root, config, raw_config, logger)
     session_per_ticket = parse_bool(
         config.get("sessionPerTicket", DEFAULTS["sessionPerTicket"]),
         DEFAULTS["sessionPerTicket"],
@@ -1333,7 +1403,16 @@ def ralph_start(args: List[str]) -> int:
     if options["flags_override"]:
         workflow_flags = f"{workflow_flags} {options['flags_override']}".strip()
 
-    session_dir = resolve_session_dir(project_root, config)
+    # Load raw config to detect explicit sessionDir setting
+    raw_config = {}
+    config_path = ralph_dir / "config.json"
+    if config_path.exists():
+        try:
+            raw_config = json_load(config_path)
+        except Exception:
+            raw_config = {}
+
+    session_dir = resolve_session_dir(project_root, config, raw_config, logger)
     session_per_ticket = parse_bool(
         config.get("sessionPerTicket", DEFAULTS["sessionPerTicket"]),
         DEFAULTS["sessionPerTicket"],
