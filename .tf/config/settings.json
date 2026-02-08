@@ -16,7 +16,7 @@
       "description": "Fast model for research and information gathering"
     },
     "fast": {
-      "model": "zai-org/GLM-4.7-Flash",
+      "model": "chutes/zai-org/GLM-4.7-Flash",
       "thinking": "medium",
       "description": "Cheapest model for quick tasks, fixes, and summaries"
     },
@@ -31,12 +31,12 @@
       "description": "Capable model for general code review"
     },
     "review-spec": {
-      "model": "openai-codex/gpt-5.3-codex",
+      "model": "openai-codex/gpt-5.2-codex",
       "thinking": "medium",
       "description": "Strong model for specification compliance audit"
     },
     "review-secop": {
-      "model": "google-antigravity/gemini-3-flash ",
+      "model": "google-antigravity/gemini-3-flash",
       "thinking": "high",
       "description": "Fast model for second-opinion review"
     }
