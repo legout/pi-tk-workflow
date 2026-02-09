@@ -48,6 +48,21 @@
 - pt-2xr4: COMPLETE (2026-02-09T14:36:15Z)
   - Summary: Add dark-mode toggle (or auto dark mode) for web UI
   - Issues: Critical(0)/Major(0)/Minor(0)
+- abc-123: COMPLETE (2026-02-09T18:19:00Z)
+  - Summary: Demo hello-world utility - workflow re-run with --auto flag
+  - Issues: Critical(0)/Major(0)/Minor(5)
+  - Status: COMPLETE
+  - Commit: fbcb359
+- abc-123: COMPLETE (2026-02-09T18:17:00Z)
+  - Summary: Workflow execution - fixed None handling and docstring in hello utility
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Status: COMPLETE
+  - Commit: 938ee0f
+- abc-123: COMPLETE (2026-02-09T18:12:00Z)
+  - Summary: Workflow re-executed for demo hello-world utility
+  - Issues: Critical(0)/Major(0)/Minor(3) - Critical and Major issues fixed
+  - Status: COMPLETE
+  - Commit: 8e958a6
 - abc-123: COMPLETE (2026-02-09T18:06:06Z)
   - Summary: Workflow re-run - Fixed docstring placement and removed duplicate CLI entry point
   - Issues: Critical(0)/Major(0)/Minor(3)
@@ -181,3 +196,45 @@
   - Issues: Critical(0)/Major(0 to 1 fixed)/Minor(2 to 1 fixed)
   - Status: COMPLETE
   - Commit: 2522237
+
+- abc-123: COMPLETE - 2026-02-09T18:08:00Z
+  - Summary: Re-run workflow with --auto flag, applied CLI whitespace fix
+  - Issues: Critical:0, Major:0, Minor:5
+  - Status: COMPLETE
+
+- abc-123: COMPLETE (2026-02-09T18:10:00Z)
+  - Summary: Fixed Major issue - main() now returns proper exit code
+  - Issues: Critical(0)/Major(0)/Minor(2)
+  - Status: COMPLETE
+  - Commit: d7cc352
+
+- abc-123: COMPLETE (2026-02-09T18:11:00Z)
+  - Summary: Fixed empty string handling and added type annotation
+  - Issues: Critical(0)/Major(0)/Minor(2)
+  - Status: COMPLETE
+
+- abc-123: COMPLETE (2026-02-09T18:11:00Z)
+  - Summary: Workflow re-run with --auto flag on closed demo ticket
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: COMPLETE
+  - Commit: e7e8f6a
+- pt-m06z: FAILED (2026-02-09T18:13:06Z)
+  - Summary: Update tests to use tf namespace + add regression test for tf_cli shim
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Status: FAILED
+  - Error: Ticket failed after 2 attempt(s) due to timeout (threshold: 450000ms)
+- abc-123: CLOSED (2026-02-09T18:16:00Z)
+  - Summary: Hello-world utility implementation verified, all tests passing
+  - Issues: Critical(0)/Major(0)/Minor(2)
+  - Status: COMPLETE
+
+- abc-123: COMPLETE (2026-02-09T18:18:00Z)
+  - Summary: Workflow re-execution - verified hello-world utility
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Status: COMPLETE
+  - Commit: 6b73ad3
+
+- pt-m06z: COMPLETE (2026-02-09T18:15:00Z)
+  - Summary: Updated 24 test files to use tf.* namespace, fixed 18 mock patch path mismatches
+  - Issues: Critical(18)/Major(2)/Minor(0) - all fixed
+  - Status: COMPLETE
