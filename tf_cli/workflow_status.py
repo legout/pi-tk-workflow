@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-# Use existing frontmatter pattern from ticket_loader
-FRONTMATTER_PATTERN = re.compile(r"^---\s*\r?\n(.*?)\r?\n---\s*\r?\n(.*)$", re.DOTALL)
+# Import from ticket_loader to avoid duplication
+from tf_cli.ticket_loader import TicketLoader
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ class WorkflowStats(NamedTuple):
     open_tickets: int
     ready_tickets: int
     in_progress: int
-    recent_closed: int
+    total_closed: int
     has_ralph: bool
     knowledge_entries: int
 
@@ -31,71 +30,36 @@ class WorkflowStatus:
     config_exists: bool
 
 
-def _parse_frontmatter_status(content: str) -> tuple[str, list[str]] | None:
-    """Extract status and deps from frontmatter using proper regex.
-    
-    Returns:
-        Tuple of (status, deps_list) or None if no frontmatter found.
-    """
-    match = FRONTMATTER_PATTERN.match(content)
-    if not match:
-        return None
-    
-    frontmatter = match.group(1)
-    status = "unknown"
-    deps: list[str] = []
-    
-    for line in frontmatter.split("\n"):
-        line = line.strip()
-        if line.startswith("status:"):
-            status = line.split(":", 1)[1].strip()
-        elif line.startswith("deps:"):
-            value = line.split(":", 1)[1].strip()
-            if value.startswith("[") and value.endswith("]"):
-                # Parse [item1, item2]
-                deps = [d.strip().strip('"\'') for d in value[1:-1].split(",") if d.strip()]
-            elif value == "[]":
-                deps = []
-    
-    return status, deps
-
-
 def count_tickets_by_status(tickets_dir: Path) -> dict[str, int]:
-    """Count tickets by their status from frontmatter."""
+    """Count tickets by their status using TicketLoader."""
     counts = {"open": 0, "ready": 0, "in_progress": 0, "closed": 0}
     
     if not tickets_dir.exists():
         return counts
     
-    for ticket_file in tickets_dir.glob("*.md"):
-        try:
-            # Read only first 2KB for frontmatter (efficient)
-            content = ticket_file.read_bytes()[:2048].decode("utf-8", errors="ignore")
-            
-            parsed = _parse_frontmatter_status(content)
-            if parsed is None:
-                continue
+    try:
+        loader = TicketLoader(tickets_dir)
+        loader.load_all()
+        status_counts = loader.count_by_status
+        
+        # Map loader counts to our expected keys
+        for status, count in status_counts.items():
+            if status in counts:
+                counts[status] = count
+        
+        # Count ready tickets (open with no deps)
+        for ticket in loader._tickets:
+            if ticket.status == "open" and len(ticket.deps) == 0:
+                counts["ready"] += 1
                 
-            status, deps = parsed
-            
-            if status == "open":
-                counts["open"] += 1
-                # Ready = open with no unresolved dependencies
-                if len(deps) == 0:
-                    counts["ready"] += 1
-            elif status == "closed":
-                counts["closed"] += 1
-            elif status == "in_progress":
-                counts["in_progress"] += 1
-        except (IOError, OSError) as e:
-            logger.warning(f"Could not read ticket {ticket_file.name}: {e}")
-            continue
+    except Exception as e:
+        logger.warning(f"Could not load tickets: {e}")
     
     return counts
 
 
 def get_knowledge_entries(knowledge_dir: Path) -> int:
-    """Count knowledge base entries."""
+    """Count knowledge base entries (actual .md files, not directories)."""
     if not knowledge_dir.exists():
         return 0
     
@@ -103,7 +67,8 @@ def get_knowledge_entries(knowledge_dir: Path) -> int:
     for subdir in ["topics", "spikes", "tickets"]:
         subpath = knowledge_dir / subdir
         if subpath.exists():
-            entries += len([x for x in subpath.iterdir() if x.is_dir()])
+            # Count actual markdown files, not directories
+            entries += len(list(subpath.rglob("*.md")))
     
     return entries
 
@@ -138,7 +103,7 @@ def get_workflow_status(project_root: Path | str | None = None) -> WorkflowStatu
         open_tickets=ticket_counts["open"],
         ready_tickets=ticket_counts["ready"],
         in_progress=ticket_counts["in_progress"],
-        recent_closed=ticket_counts["closed"],
+        total_closed=ticket_counts["closed"],
         has_ralph=ralph_dir.exists(),
         knowledge_entries=get_knowledge_entries(knowledge_dir),
     )
@@ -164,7 +129,7 @@ def print_status(status: WorkflowStatus | None = None) -> None:
     print(f"   Open:       {status.stats.open_tickets}")
     print(f"   Ready:      {status.stats.ready_tickets}")
     print(f"   In Progress:{status.stats.in_progress}")
-    print(f"   Closed:     {status.stats.recent_closed}")
+    print(f"   Closed:     {status.stats.total_closed}")
     print()
     print("📚 Knowledge Base")
     print(f"   Entries:    {status.stats.knowledge_entries}")

@@ -1,1 +1,2 @@
 tf_cli/workflow_status.py
+tests/test_workflow_status.py

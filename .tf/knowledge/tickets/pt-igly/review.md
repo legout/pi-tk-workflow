@@ -1,44 +1,33 @@
 # Review: pt-igly
 
 ## Critical (must fix)
-- `tf_cli/workflow_status.py:59` - **Wrong tickets directory path**: Uses `tf_dir / "tickets"` but tickets are stored in `.tickets/` at project root per `ticket_loader.py:105`. This causes utility to always report 0 tickets. Fix: Use `project_root / ".tickets"` or leverage `TicketLoader`.
+- `tf_cli/workflow_status.py:14` - Frontmatter regex is duplicated from `ticket_loader.py`. If `ticket_loader.FRONTMATTER_PATTERN` changes, this will silently break. Should import from ticket_loader or use a shared constant.
 
 ## Major (should fix)
-- `tf_cli/workflow_status.py:6` - **Unused import**: `subprocess` is imported but never used. Remove it.
-- `tf_cli/workflow_status.py:37-54` - **Fragile frontmatter parsing**: Uses substring matching (`"status: open" in content`) which matches body text, not just frontmatter. Also doesn't handle different YAML formats. Should use existing `FRONTMATTER_PATTERN` from `ticket_loader.py` or call `TicketLoader` directly.
-- `tf_cli/workflow_status.py:47-49` - **Incorrect "ready" logic**: Treats missing `deps:` as ready, but "ready" semantically means "unblocked" (dependencies satisfied), not "no dependencies". Also misrepresents workflow state.
+- `tf_cli/workflow_status.py:26` - Field name `recent_closed` is misleading. It counts ALL closed tickets, not just recent ones. Rename to `total_closed`.
+- `tf_cli/workflow_status.py:44-71` - `_parse_frontmatter_status()` reimplements parsing logic that exists in `ticket_loader.py`. The ticket_loader has more robust parsing with YAML fallback.
+- `tf_cli/workflow_status.py` - No unit tests for this new module. All other CLI modules have corresponding `test_*.py` files.
 
 ## Minor (nice to fix)
-- `tf_cli/workflow_status.py:45-46` - **Inefficient I/O**: Reads entire file with `read_text()` when only frontmatter (~20 lines) is needed.
-- `tf_cli/workflow_status.py:37-54` - **No tests**: Module lacks unit tests for `count_tickets_by_status()` logic.
-- `tf_cli/workflow_status.py:51` - **Silent errors**: `except Exception: continue` hides permission denied, malformed files, etc. Consider logging.
-- `tf_cli/workflow_status.py:67-71` - **Inconsistent root detection**: Uses while-loop pattern; codebase convention uses `for parent in [cwd, *cwd.parents]` per `ticket_loader.py:103`.
-- `tf_cli/workflow_status.py:15-24` - **Over-engineered structures**: NamedTuple + dataclass adds complexity; simple dataclass or dict would suffice.
+- `tf_cli/workflow_status.py:60-86` - The 2KB file read limit is efficient but doesn't validate frontmatter length. Consider logging a warning when frontmatter appears incomplete.
+- `tf_cli/workflow_status.py:79` - The "in_progress" status check won't match any tickets. Actual ticket statuses are "open" and "closed" only.
+- `tf_cli/workflow_status.py:62-63` - The deps parsing logic only handles single-line YAML lists. Multi-line YAML list syntax would fail.
+- `tf_cli/workflow_status.py:178` - Implementation.md claims 152 lines but actual file is 178 lines. Keep documentation accurate.
 
 ## Warnings (follow-up ticket)
-- Consider integrating as `tf status` subcommand in main CLI for discoverability.
-- Duplication of ticket loading logic creates maintenance burden when format changes. Refactor to use `TicketLoader`.
+- `tf_cli/workflow_status.py` - Module is standalone but not integrated into the main CLI (`cli.py`). Consider adding as `tf status` command.
+- `tf_cli/workflow_status.py:111` - Tickets directory is hardcoded as `.tickets/`. Should be configurable via settings.json.
+- `tf_cli/workflow_status.py:98` - `get_knowledge_entries()` counts directories, not actual knowledge documents.
 
 ## Suggestions (follow-up ticket)
-- Add CLI arguments (`--json`, `--watch`, `--component`, `--tag` filters).
-- Add real-time Ralph loop status detection (pid file check).
-- Consider caching ticket counts for performance.
-
-## Positive Notes
-- Clean separation between data gathering and presentation.
-- Good use of type hints throughout.
-- Self-contained with no external dependencies (stdlib only).
-- Auto-discovers project root by finding `.tf` directory.
-- Defensive programming: handles missing directories gracefully.
+- `tf_cli/workflow_status.py` - Add `--json` flag for machine-readable output.
+- `tf_cli/workflow_status.py` - Add filtering options like `--status open` or `--component cli`.
+- `tf_cli/workflow_status.py` - Consider caching computed stats to a file for faster repeated queries.
+- `tf_cli/workflow_status.py` - Consider refactoring to use the existing `TicketLoader` class.
 
 ## Summary Statistics
 - Critical: 1
 - Major: 3
-- Minor: 5
-- Warnings: 2
-- Suggestions: 3
-
-## Review Sources
-- reviewer-general: Found unused import, fragile parsing, inefficient I/O, missing tests
-- reviewer-spec-audit: Confirmed fragile parsing, noted spec is minimal (demo ticket)
-- reviewer-second-opinion: Found critical path bug, incorrect ready logic, pattern inconsistency
+- Minor: 4
+- Warnings: 3
+- Suggestions: 4
