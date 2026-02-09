@@ -38,5 +38,5 @@ def hello(name: str = "World") -> str:
 
 
 if __name__ == "__main__":
-    name = sys.argv[1] if len(sys.argv) > 1 else "World"
+    name = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "World"
     print(hello(name))

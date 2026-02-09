@@ -5,6 +5,10 @@ Covers default parameter, custom names, and edge cases.
 """
 from __future__ import annotations
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from demo.hello import hello
 
 
