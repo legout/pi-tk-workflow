@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+- **`tf_cli` package namespace** - The `tf_cli` Python package is now deprecated in favor of `tf`. The `tf_cli` package serves as a compatibility shim re-exporting from `tf` and will be removed in version 0.5.0. See [docs/deprecation-policy.md](docs/deprecation-policy.md) for migration guide and timeline. Set `TF_CLI_DEPRECATION_WARN=1` to enable deprecation warnings.
+
 ### Removed
 
 ### Fixed

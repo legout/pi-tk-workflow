@@ -1,5 +1,7 @@
 # pi-ticketflow
 
+> **Migration Notice:** The Python package namespace has changed from `tf_cli` to `tf`. The `tf_cli` package is now a compatibility shim and will be removed in version 0.5.0. See [Migration Guide](#migrating-from-tf_cli-to-tf) below and [docs/deprecation-policy.md](docs/deprecation-policy.md) for details.
+
 A comprehensive Pi workflow package for ticket-based development using the **Implement → Review → Fix → Close** cycle.
 
 ```
@@ -89,6 +91,60 @@ uvx --from . tf install
 | Pi extensions + MCP/web-search config | `~/.pi/agent/` | - |
 | TF agents, prompts, skills | - | `.pi/` |
 | TF config + state (knowledge, ralph, etc.) | - | `.tf/` |
+
+---
+
+## Migrating from `tf_cli` to `tf`
+
+The Python package namespace has changed from `tf_cli` to `tf`. The CLI command remains `tf` (unchanged), but Python imports should now use the `tf` package.
+
+### Timeline
+
+| Phase | Version | Behavior |
+|-------|---------|----------|
+| **Current** | 0.4.x | `tf/` is canonical; `tf_cli/` is a compatibility shim |
+| **Deprecation** | 0.4.x | Opt-in warnings via `TF_CLI_DEPRECATION_WARN=1` |
+| **Removal** | 0.5.0 | `tf_cli/` shim removed |
+
+### Import Migration
+
+```python
+# Before (deprecated, removal in 0.5.0)
+from tf_cli.ticket_factory import TicketDef
+from tf_cli import get_version
+from tf_cli.doctor import run_doctor
+
+# After (preferred)
+from tf.ticket_factory import TicketDef
+from tf import get_version
+from tf.doctor import run_doctor
+```
+
+### Enabling Deprecation Warnings
+
+To see warnings when using the old `tf_cli` imports:
+
+```bash
+export TF_CLI_DEPRECATION_WARN=1
+python -c "from tf_cli import get_version"  # Will emit DeprecationWarning
+```
+
+### Module Execution
+
+The `tf` package now supports module execution:
+
+```bash
+# New capability
+python -m tf --help
+python -m tf doctor
+```
+
+### Full Details
+
+See [docs/deprecation-policy.md](docs/deprecation-policy.md) for the complete deprecation policy, including:
+- Full migration checklist
+- Automated migration commands
+- Rollback procedures
 
 ---
 
@@ -409,7 +465,7 @@ textual serve --command "tf ui"
 
 **Development fallback (from repo checkout):**
 ```bash
-textual serve "python -m tf_cli.ui"
+textual serve "python -m tf.ui"
 ```
 
 > **Note:** CLI commands require the `--command` flag, while Python module invocations work directly.
@@ -679,9 +735,9 @@ pi-ticketflow/
 ├── skills/                 # Domain expertise
 ├── prompts/                # Command entry points
 ├── workflows/              # Workflow configurations
-├── tf_cli/                 # Python CLI package
+├── tf/                     # Python CLI package (canonical)
+├── tf_cli/                 # Compatibility shim (deprecated, removal 0.5.0)
 ├── bin/tf                  # Python shim entrypoint
-├── scripts/tf_legacy.sh    # Legacy bash CLI (install.sh/curl)
 ├── install.sh              # Installation script
 └── docs/                   # Documentation
 ```
