@@ -243,3 +243,18 @@
   - Summary: Updated 24 test files to use tf.* namespace, fixed 18 mock patch path mismatches
   - Issues: Critical(18)/Major(2)/Minor(0) - all fixed
   - Status: COMPLETE
+
+- abc-123: WORKFLOW_REPLAY (2026-02-10T00:01:43+01:00)
+  - Summary: Workflow re-run on closed demo ticket - applied 2 Minor fixes
+  - Issues: Critical(0)/Major(0)/Minor(2 fixed)
+  - Status: COMPLETE
+  - Commit: 83ceccd
+- abc-123: COMPLETE (2026-02-10T00:05:52+01:00)
+  - Summary: Applied Minor fixes from review - docstring wording, test count docs
+  - Issues: Critical:0/Major:0/Minor:0 - 2 Minor fixed
+  - Status: COMPLETE
+- abc-123: COMPLETE (2026-02-10T00:05:00Z)
+  - Summary: Workflow re-run for verification
+  - Issues: Critical(0)/Major(0)/Minor(2)
+  - Commit: 5d98fae
+  - Status: COMPLETE

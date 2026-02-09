@@ -1,36 +1,35 @@
-# Workflow Chain Summary: abc-123
+# Chain Summary: abc-123
 
-## Execution
+## Workflow Execution
 - **Ticket**: abc-123
 - **Flags**: --auto
-- **Started**: 2026-02-10T00:01:43+01:00
-- **Completed**: 2026-02-10T00:01:43+01:00
+- **Status**: COMPLETED
+- **Commit**: 5d98fae
 
-## Chain Steps
-
-| Step | Status | Model | Artifacts |
-|------|--------|-------|-----------|
-| 1. Re-Anchor | ✅ | - | - |
-| 2. Research | ⏭️ | - | research.md (existing) |
-| 3. Implement (Verify) | ✅ | kimi-coding/k2p5 | implementation.md |
-| 4. Parallel Reviews | ✅ | 3 reviewers | review-{general,spec,second}.md |
-| 5. Merge Reviews | ✅ | zai/glm-4.7 | review.md |
-| 6. Fix Issues | ✅ | zai/glm-4.7 | fixes.md |
-| 7. Close Ticket | ⏭️ | - | close-summary.md |
+## Steps Executed
+| Step | Status | Details |
+|------|--------|---------|
+| Re-Anchor | ✅ | Loaded AGENTS.md, existing research, ticket details |
+| Research | ✅ | Used existing research.md |
+| Implement | ✅ | Verified implementation, updated documentation |
+| Parallel Reviews | ✅ | 3 reviewers completed (2/3 agents succeeded) |
+| Merge Reviews | ✅ | Consolidated into review.md |
+| Fix Issues | ✅ | Fixed 1 Minor (docs), 1 already fixed |
+| Close Ticket | ✅ | Note added, already closed |
 
 ## Artifacts
-- `.tf/knowledge/tickets/abc-123/research.md` - Research (existing)
-- `.tf/knowledge/tickets/abc-123/implementation.md` - Implementation verification
-- `.tf/knowledge/tickets/abc-123/review.md` - Merged review (0 Critical, 0 Major, 3 Minor)
-- `.tf/knowledge/tickets/abc-123/fixes.md` - Fixes applied (2 Minor fixed)
-- `.tf/knowledge/tickets/abc-123/close-summary.md` - Final summary
-- `.tf/knowledge/tickets/abc-123/files_changed.txt` - Tracked files
-- `.tf/knowledge/tickets/abc-123/ticket_id.txt` - Ticket ID
+- [research.md](research.md)
+- [implementation.md](implementation.md)
+- [review.md](review.md)
+- [fixes.md](fixes.md)
+- [close-summary.md](close-summary.md)
 
-## Results
-- **Commit**: 83ceccd
-- **Tests**: 6/6 passing
-- **Quality Gate**: ✅ Passed (0 Critical, 0 Major issues)
-- **Ticket Status**: Already closed (workflow replay)
+## Review Summary
+- Critical: 0
+- Major: 0
+- Minor: 2
+- Warnings: 2
+- Suggestions: 8
 
-<promise>TICKET_abc-123_COMPLETE</promise>
+## Test Results
+✅ 6/6 tests passing
