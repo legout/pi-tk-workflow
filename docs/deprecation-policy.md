@@ -1,10 +1,10 @@
 # Deprecation Policy for TF Legacy Namespaces
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Effective Date:** 2026-02-07  
-**Last Updated:** 2026-02-07  
+**Last Updated:** 2026-02-09  
 **Status:** Active  
-**Ticket:** pt-az2p
+**Tickets:** pt-az2p (original), pt-mu0s (tf_cli namespace)
 
 ---
 
@@ -19,6 +19,7 @@ This document defines the deprecation policy for legacy TF (TicketFlow) namespac
 | `scripts/tf_legacy.sh` | **Removed** | `tf_cli/` Python modules | 2026-02-07 | **2026-02-07** |
 | `*_new.py` module suffix | Deprecated | Remove `_new` suffix | 2026-02-07 | 2026-03-15 |
 | `tf new` command prefix | Deprecated | Direct `tf` commands | 2026-02-07 | 2026-03-01 |
+| `tf_cli` package | Planned | `tf` package | 0.4.0 | 0.5.0 |
 
 ---
 
@@ -176,6 +177,93 @@ tf backlog-ls
 
 ---
 
+### 3.4 `tf_cli` Package Namespace → `tf`
+
+**Status:** Planned  
+**Ticket:** pt-mu0s (policy definition), pt-hpme (implementation)  
+**Deprecation Notice:** 0.4.0  
+**Removal Target:** 0.5.0
+
+**Rationale:**
+Align the Python package namespace with the user-facing CLI command (`tf`). The current `tf_cli` package name is redundant (CLI is implied by the tool nature) and creates unnecessary typing overhead for Python imports.
+
+**Current State:**
+- Canonical implementation lives in `tf_cli/` package
+- Console script `tf` points to `tf_cli.cli:main`
+- Public API exports in `tf_cli/__init__.py`:
+  - `TicketDef`, `CreatedTicket`
+  - `apply_dependencies`, `apply_links`, `create_tickets`
+  - `print_created_summary`, `score_tickets`, `write_backlog_md`
+  - `get_version`, `__version__`
+
+**Target State:**
+- Canonical implementation moves to `tf/` package
+- Console script `tf` points to `tf.cli:main`
+- `python -m tf` works for module execution
+- `tf_cli/` becomes a compatibility shim (re-exports from `tf`)
+
+**Migration Path:**
+```python
+# Old (deprecated from 0.4.0, removal 0.5.0)
+from tf_cli.ticket_factory import TicketDef
+from tf_cli import get_version
+from tf_cli.doctor import run_doctor
+
+# New (preferred from 0.4.0+)
+from tf.ticket_factory import TicketDef
+from tf import get_version
+from tf.doctor import run_doctor
+```
+
+**CLI Usage Unchanged:**
+```bash
+# These continue to work exactly the same
+tf --help
+tf doctor
+tf sync
+
+# Module execution (new capability)
+python -m tf --help
+```
+
+**Deprecation Strategy:**
+
+| Phase | Version | Behavior |
+|-------|---------|----------|
+| Notice | 0.3.x → 0.4.0 | Policy published, no runtime changes |
+| Soft | 0.4.x | Shim active, opt-in warnings available |
+| Hard | 0.5.0 | `tf_cli/` shim removed |
+
+**Warning Behavior:**
+- **Default**: No warnings emitted (avoids CI/test noise)
+- **Opt-in**: Set `TF_CLI_DEPRECATION_WARN=1` to enable `DeprecationWarning`
+- Import-time check in shim modules:
+
+```python
+import os
+import warnings
+
+if os.environ.get("TF_CLI_DEPRECATION_WARN"):
+    warnings.warn(
+        "tf_cli is deprecated. Use 'tf' package instead. "
+        "See docs/migration-guide.md for details.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+```
+
+**Removal Criteria:**
+1. [ ] `tf/` package created with all modules migrated (pt-ce2e, pt-tupn)
+2. [ ] `tf_cli/` shim implemented with full re-exports (pt-hpme)
+3. [ ] Console script updated to `tf.cli:main` (pt-62g6)
+4. [ ] All internal imports updated to `tf.*` (pt-m06z)
+5. [ ] Tests added for `tf_cli` shim compatibility (pt-m06z)
+6. [ ] Documentation updated with migration guide (pt-7li0)
+7. [ ] 0.4.x release published with deprecation notice
+8. [ ] Minimum one release cycle elapsed (0.4.x series)
+
+---
+
 ## 4. Communication Strategy
 
 ### 4.1 User Communication
@@ -278,6 +366,16 @@ Before final removal of each artifact, the following must be satisfied:
 - [ ] All internal scripts updated
 - [ ] Command alias removed from CLI parser
 
+### `tf_cli` Package Namespace Specific
+- [ ] `tf/` package created with all modules migrated
+- [ ] `tf_cli/` shim implemented with full re-exports
+- [ ] Console script updated to `tf.cli:main`
+- [ ] All internal imports updated to `tf.*`
+- [ ] Tests added for `tf_cli` shim compatibility
+- [ ] Documentation updated with migration guide
+- [ ] 0.4.x release published with deprecation notice
+- [ ] Minimum one release cycle elapsed (0.4.x series)
+
 ---
 
 ## 7. Rollback Plan
@@ -312,9 +410,17 @@ If issues arise post-removal:
 
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| pt-az2p | Define deprecation policy (this work) | In Progress |
+| pt-az2p | Define deprecation policy (original) | In Progress |
 | pt-g42s | Remove legacy shell runtime per policy | Blocked |
 | pt-ynqf | Dependency - prerequisite cleanup | Open |
+| **pt-mu0s** | **Define tf_cli deprecation strategy** | **Completed** |
+| pt-hpme | Implement tf_cli compatibility shims | Blocked on pt-mu0s, pt-62g6, pt-ce2e |
+| pt-62g6 | Wire packaging/entrypoints for tf namespace | Blocked on pt-mu0s, pt-k2rk |
+| pt-ce2e | Introduce tf package skeleton | Blocked on pt-mu0s, pt-k2rk |
+| pt-k2rk | Inventory packaging + entrypoints | Ready |
+| pt-tupn | Move CLI dispatcher to tf package | Blocked on pt-62g6, pt-ce2e |
+| pt-m06z | Update tests for tf namespace | Blocked on pt-hpme, pt-tupn |
+| pt-7li0 | Update docs for tf namespace | Blocked on pt-hpme, pt-tupn |
 
 ---
 
@@ -322,6 +428,7 @@ If issues arise post-removal:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2026-02-09 | TF Team | Added Section 3.4: tf_cli Package Namespace deprecation strategy |
 | 1.0 | 2026-02-07 | TF Team | Initial deprecation policy |
 
 ---
@@ -341,6 +448,16 @@ grep -r "from tf_cli.*_new" --include="*.py" .
 grep -r "tf new " --include="*.sh" --include="*.md" .
 ```
 
+### Check for tf_cli Imports (after 0.4.0)
+```bash
+# Find tf_cli imports that should migrate to tf
+grep -r "from tf_cli" --include="*.py" .
+grep -r "import tf_cli" --include="*.py" .
+
+# Find console script references
+grep -r "tf_cli.cli:main" --include="*.toml" --include="*.cfg" --include="*.txt" .
+```
+
 ### Test Migration
 ```bash
 # Verify Python CLI works
@@ -348,7 +465,10 @@ tf doctor
 tf sync
 tf --help
 
-# Verify imports work
-python -c "from tf_cli.doctor import run_doctor; print('OK')"
-python -c "from tf_cli.sync import sync_config; print('OK')"
+# Verify imports work (new tf package)
+python -c "from tf.doctor import run_doctor; print('OK')"
+python -c "from tf.sync import sync_config; print('OK')"
+
+# Verify shim compatibility (deprecated tf_cli package)
+TF_CLI_DEPRECATION_WARN=1 python -c "from tf_cli.doctor import run_doctor; print('OK')"
 ```
