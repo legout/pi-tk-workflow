@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple, Union
 
 # Import new logger
 from tf_cli.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
@@ -33,16 +33,17 @@ class ProgressDisplay:
         self.current_ticket: Optional[str] = None
         self.completed = 0
         self.failed = 0
-        self.total = 0
+        self.total: Union[int, str] = 0
         self._last_line_len = 0
 
-    def start_ticket(self, ticket_id: str, iteration: int, total_tickets: int) -> None:
+    def start_ticket(self, ticket_id: str, iteration: int, total_tickets: Union[int, str]) -> None:
         """Called when a ticket starts processing.
 
         Args:
             ticket_id: The ID of the ticket being processed
             iteration: Current loop iteration (0-indexed)
-            total_tickets: Total number of tickets to process (for UI display)
+            total_tickets: Total number of tickets to process (for UI display),
+                          can be '?' if ticket listing failed
         """
         self.current_ticket = ticket_id
         self.total = total_tickets
@@ -1459,6 +1460,15 @@ def ralph_start(args: List[str]) -> int:
             # Initialize progress display if requested
             progress_display = ProgressDisplay(output=sys.stderr) if progress else None
 
+            # Compute ready tickets count once at loop start for accurate progress display
+            ready_tickets_count: Optional[int] = None
+            if progress:
+                try:
+                    ready_tickets = list_ready_tickets(ticket_list_query(ticket_query))
+                    ready_tickets_count = len(ready_tickets) if ready_tickets else None
+                except Exception:
+                    ready_tickets_count = None
+
             while iteration < max_iterations:
                 if backlog_empty(completion_check):
                     logger.log_loop_complete(reason="backlog_empty", iterations_completed=iteration, mode=mode)
@@ -1477,14 +1487,13 @@ def ralph_start(args: List[str]) -> int:
 
                 # Update progress display at ticket start
                 if progress_display:
-                    # Get total tickets for accurate progress display (decoupled from max_iterations)
-                    # Use min with remaining iterations to show accurate progress when max_iterations limits execution
-                    ready_tickets = list_ready_tickets(ticket_list_query(ticket_query))
-                    remaining_iterations = max_iterations - iteration
-                    total_tickets = min(len(ready_tickets), remaining_iterations)
-                    # Ensure at least 1 to avoid [N/0] display edge case
-                    total_tickets = max(total_tickets, 1)
-                    progress_display.start_ticket(ticket, iteration, total_tickets)
+                    # Use pre-computed ready tickets count for progress display
+                    # If listing failed, show '?' as placeholder instead of default 50
+                    if ready_tickets_count is not None:
+                        total_display = str(ready_tickets_count)
+                    else:
+                        total_display = "?"
+                    progress_display.start_ticket(ticket, iteration, total_display)
 
                 # Fetch ticket title only in verbose mode (DEBUG or VERBOSE)
                 ticket_title: Optional[str] = None
