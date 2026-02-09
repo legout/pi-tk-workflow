@@ -427,7 +427,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     except ImportError:
         print("Error: Textual is not installed. Run: pip install textual", file=sys.stderr)
         return 1
-    
+
+    class DataListItem(ListItem):
+        """ListItem that can store arbitrary data."""
+        def __init__(self, *children, data=None, **kwargs):
+            super().__init__(*children, **kwargs)
+            self.data = data
+
     class TopicBrowser(Static):
         """Widget for browsing knowledge topics."""
         
@@ -482,7 +488,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                     ))
                     # Add topics
                     for topic in sorted(by_type[type_name], key=lambda t: t.title):
-                        list_view.append(ListItem(
+                        list_view.append(DataListItem(
                             Label(f"  {topic.title}"),
                             data=topic
                         ))
@@ -617,8 +623,14 @@ def main(argv: Optional[list[str]] = None) -> int:
                 self.notify("No pager or editor found. Set $PAGER or $EDITOR.", severity="error")
                 return
             
-            # Run the command
-            exit_code = os.system(cmd)
+            # Run the command with terminal suspend for external pagers/editors
+            try:
+                with self.app.suspend():
+                    exit_code = os.system(cmd)
+            except Exception as e:
+                self.notify(f"Failed to suspend terminal: {e}", severity="error")
+                return
+            
             if exit_code != 0:
                 self.notify(f"Failed to open document (exit code: {exit_code})", severity="error")
             else:
@@ -638,9 +650,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                 
                 list_view = self.query_one("#topic-list", ListView)
                 list_view.clear()
-                
+
                 for topic in sorted(results, key=lambda t: t.title):
-                    list_view.append(ListItem(
+                    list_view.append(DataListItem(
                         Label(f"[{topic.topic_type}] {topic.title}"),
                         data=topic
                     ))
@@ -848,8 +860,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                     title = ct.title[:35] + "..." if len(ct.title) > 35 else ct.title
                     priority_indicator = f"[P{ct.ticket.priority}] " if ct.ticket.priority is not None else ""
                     label_text = f"{priority_indicator}{ct.id}: {title}"
-                    
-                    list_view.append(ListItem(
+
+                    list_view.append(DataListItem(
                         Label(label_text),
                         data=ct
                     ))
