@@ -33,6 +33,9 @@ from sanic.response import html
 from jinja2 import Environment, FileSystemLoader
 import markdown
 
+from datastar_py.sanic import DatastarResponse
+from datastar_py import ServerSentEventGenerator
+
 from tf_cli.board_classifier import BoardClassifier, BoardColumn
 from tf_cli.ticket_loader import TicketLoader
 
@@ -145,29 +148,51 @@ async def ticket_detail(request, ticket_id: str):
 @app.get("/api/refresh")
 async def refresh_board(request):
     """Datastar endpoint to refresh the kanban board.
-    
-    Returns HTML fragment that Datastar will morph into the DOM.
+
+    Returns a DatastarResponse with SSE events that patch both the board
+    and the stats counters, enabling multi-target updates from one action.
     """
     board_view = get_board_data()
-    
+
     if not board_view:
-        return html("<p class='error'>Error loading tickets</p>")
-    
+        # Return error as SSE event for consistent Datastar handling
+        error_event = ServerSentEventGenerator.patch_elements(
+            elements="<p class='error'>Error loading tickets</p>",
+            selector="#board"
+        )
+        return DatastarResponse([error_event], status=500)
+
     columns = {
         "ready": [],
         "blocked": [],
         "in_progress": [],
         "closed": []
     }
-    
+
     for column in BoardColumn:
         tickets = board_view.get_by_column(column)
         for ct in tickets:
             columns[column.value].append(_ticket_to_dict(ct))
-    
-    template = env.get_template("_board.html")
-    rendered = template.render(columns=columns)
-    return html(rendered)
+
+    # Render board fragment
+    board_template = env.get_template("_board.html")
+    board_html = board_template.render(columns=columns)
+
+    # Render stats fragment
+    stats_template = env.get_template("_board_stats.html")
+    stats_html = stats_template.render(counts=board_view.counts)
+
+    # Create SSE events for multi-target patching
+    board_event = ServerSentEventGenerator.patch_elements(
+        elements=board_html,
+        selector="#board"
+    )
+    stats_event = ServerSentEventGenerator.patch_elements(
+        elements=stats_html,
+        selector="#board-stats"
+    )
+
+    return DatastarResponse([board_event, stats_event])
 
 
 if __name__ == "__main__":

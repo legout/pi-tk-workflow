@@ -1,0 +1,3 @@
+examples/web-ui-poc/sanic-datastar/web_app.py
+examples/web-ui-poc/sanic-datastar/templates/index.html
+examples/web-ui-poc/sanic-datastar/templates/_board_stats.html
