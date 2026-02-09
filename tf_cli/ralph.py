@@ -357,7 +357,6 @@ def run_ticket(
     workflow: str,
     flags: str,
     dry_run: bool,
-    session_path: Optional[Path] = None,
     cwd: Optional[Path] = None,
     logger: Optional[RalphLogger] = None,
     mode: str = "serial",
@@ -384,7 +383,6 @@ def run_ticket(
             return 1
 
     cmd = build_cmd(workflow, ticket, flags)
-    session_flag = f" --session {session_path}" if session_path else ""
 
     # Determine JSON capture path if enabled
     jsonl_path: Optional[Path] = None
@@ -410,17 +408,15 @@ def run_ticket(
             output_note = f" (output to {pi_log_path})"
         elif pi_output == "discard":
             output_note = " (output discarded)"
-        log.info(f"Dry run: pi -p{json_flag}{session_flag} \"{cmd}\"{prefix}{output_note}", ticket=ticket)
+        log.info(f"Dry run: pi -p{json_flag} \"{cmd}\"{prefix}{output_note}", ticket=ticket)
         return 0
 
     json_flag_str = " --mode json" if capture_json else ""
-    log.info(f"Running: pi -p{json_flag_str}{session_flag} \"{cmd}\"", ticket=ticket)
+    log.info(f"Running: pi -p{json_flag_str} \"{cmd}\"", ticket=ticket)
     args = ["pi", "-p"]
     if capture_json:
         args.append("--mode")
         args.append("json")
-    if session_path:
-        args += ["--session", str(session_path)]
     args.append(cmd)
 
     # Calculate timeout in seconds (0 = no timeout)
@@ -1259,21 +1255,6 @@ def ralph_run(args: List[str]) -> int:
     if flags_override:
         workflow_flags = f"{workflow_flags} {flags_override}".strip()
 
-    # Load raw config to detect explicit sessionDir setting
-    raw_config = {}
-    config_path = ralph_dir / "config.json"
-    if config_path.exists():
-        try:
-            raw_config = json_load(config_path)
-        except Exception:
-            raw_config = {}
-
-    session_dir = resolve_session_dir(project_root, config, raw_config, logger)
-    session_per_ticket = parse_bool(
-        config.get("sessionPerTicket", DEFAULTS["sessionPerTicket"]),
-        DEFAULTS["sessionPerTicket"],
-    )
-
     # Set up logs directory for JSON capture or pi output file mode
     logs_dir: Optional[Path] = None
     if capture_json or pi_output == "file":
@@ -1292,13 +1273,6 @@ def ralph_run(args: List[str]) -> int:
     else:
         logger = logger.with_context(ticket=ticket)
     logger.log_ticket_start(ticket, mode="serial", ticket_title=ticket_title)
-
-    session_path = None
-    if session_dir:
-        if session_per_ticket:
-            session_path = session_dir / f"{ticket}.jsonl"
-        else:
-            session_path = session_dir / f"loop-{utc_now()}.jsonl"
 
     # Resolve timeout and restart configuration
     timeout_ms = resolve_attempt_timeout_ms(config)
@@ -1320,7 +1294,6 @@ def ralph_run(args: List[str]) -> int:
             workflow,
             workflow_flags,
             dry_run,
-            session_path=session_path,
             logger=logger,
             mode="serial",
             capture_json=capture_json,
@@ -1431,21 +1404,6 @@ def ralph_start(args: List[str]) -> int:
     if options["flags_override"]:
         workflow_flags = f"{workflow_flags} {options['flags_override']}".strip()
 
-    # Load raw config to detect explicit sessionDir setting
-    raw_config = {}
-    config_path = ralph_dir / "config.json"
-    if config_path.exists():
-        try:
-            raw_config = json_load(config_path)
-        except Exception:
-            raw_config = {}
-
-    session_dir = resolve_session_dir(project_root, config, raw_config, logger)
-    session_per_ticket = parse_bool(
-        config.get("sessionPerTicket", DEFAULTS["sessionPerTicket"]),
-        DEFAULTS["sessionPerTicket"],
-    )
-
     parallel_workers = int(config.get("parallelWorkers", DEFAULTS["parallelWorkers"]))
     if options["parallel_override"] is not None:
         parallel_workers = options["parallel_override"]
@@ -1459,10 +1417,6 @@ def ralph_start(args: List[str]) -> int:
         if repo_root is None:
             logger.warn("git repo not found; falling back to serial")
             use_parallel = 1
-
-    if use_parallel > 1 and session_dir and not session_per_ticket:
-        logger.warn("sessionPerTicket=false with parallel execution; using per-ticket sessions")
-        session_per_ticket = True
 
     # Safety check: timeout/restart is not supported in parallel mode
     # Per constraint: prefer warn+disable over partial/unsafe behavior
@@ -1501,10 +1455,6 @@ def ralph_start(args: List[str]) -> int:
 
     try:
         iteration = 0
-
-        loop_session_path: Optional[Path] = None
-        if session_dir and not session_per_ticket:
-            loop_session_path = session_dir / f"loop-{utc_now()}.jsonl"
 
         if use_parallel <= 1:
             # Initialize progress display if requested
@@ -1546,13 +1496,6 @@ def ralph_start(args: List[str]) -> int:
                     ticket_logger = logger.with_context(ticket=ticket, iteration=iteration)
                 ticket_logger.log_ticket_start(ticket, mode="serial", iteration=iteration, ticket_title=ticket_title)
 
-                session_path = None
-                if session_dir:
-                    if session_per_ticket:
-                        session_path = session_dir / f"{ticket}.jsonl"
-                    else:
-                        session_path = loop_session_path
-
                 # Bounded restart loop for timeout handling
                 attempt = 0
                 max_attempts = max_restarts + 1 if max_restarts > 0 else 1
@@ -1569,7 +1512,6 @@ def ralph_start(args: List[str]) -> int:
                         workflow,
                         workflow_flags,
                         options["dry_run"],
-                        session_path=session_path,
                         logger=ticket_logger,
                         mode="serial",
                         capture_json=capture_json,
@@ -1698,13 +1640,12 @@ def ralph_start(args: List[str]) -> int:
             if options["dry_run"]:
                 for ticket in selected:
                     cmd = build_cmd(workflow, ticket, workflow_flags)
-                    session_note = f" --session {session_dir / (ticket + '.jsonl')}" if session_dir else ""
                     json_note = " --mode json" if capture_json else ""
                     ticket_title = ticket_titles.get(ticket) if ticket_titles else None
                     if ticket_title:
-                        logger.info(f"Dry run: pi -p{json_note}{session_note} \"{cmd}\" (worktree)", ticket=ticket, ticket_title=ticket_title)
+                        logger.info(f"Dry run: pi -p{json_note} \"{cmd}\" (worktree)", ticket=ticket, ticket_title=ticket_title)
                     else:
-                        logger.info(f"Dry run: pi -p{json_note}{session_note} \"{cmd}\" (worktree)", ticket=ticket)
+                        logger.info(f"Dry run: pi -p{json_note} \"{cmd}\" (worktree)", ticket=ticket)
                 iteration += len(selected)
                 time.sleep(sleep_between / 1000)
                 continue
@@ -1753,10 +1694,6 @@ def ralph_start(args: List[str]) -> int:
                         ticket, "add", str(worktree_path), success=True, mode=mode, iteration=iteration
                     )
 
-                session_path = None
-                if session_dir:
-                    session_path = session_dir / f"{ticket}.jsonl"
-
                 # Determine JSON capture path if enabled
                 jsonl_path: Optional[Path] = None
                 if capture_json and logs_dir:
@@ -1767,8 +1704,6 @@ def ralph_start(args: List[str]) -> int:
                 if capture_json:
                     args.append("--mode")
                     args.append("json")
-                if session_path:
-                    args += ["--session", str(session_path)]
                 args.append(cmd)
 
                 if jsonl_path:
