@@ -19,6 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from tf_cli.board_classifier import BoardClassifier, BoardColumn
 from tf_cli.ticket_loader import TicketLoader
+from tf_cli.ui import TopicIndexLoader, TopicIndexLoadError
 
 
 def _find_repo_root() -> Path | None:
@@ -96,6 +97,68 @@ def _ticket_to_dict(ct):
     }
 
 
+def _topic_to_dict(topic):
+    """Convert Topic to dict for templates."""
+    return {
+        "id": topic.id,
+        "title": topic.title,
+        "topic_type": topic.topic_type,
+        "keywords": topic.keywords,
+        "has_overview": topic.overview is not None and topic.overview.exists,
+        "has_sources": topic.sources is not None and topic.sources.exists,
+        "has_plan": topic.plan is not None and topic.plan.exists,
+        "has_backlog": topic.backlog is not None and topic.backlog.exists,
+        "available_docs": list(topic.available_docs.keys()),
+    }
+
+
+def get_topics_data(search_query: str = ""):
+    """Load topics for the topic browser.
+    
+    Args:
+        search_query: Optional search query to filter topics
+        
+    Returns:
+        tuple: (topics_by_type dict, total_count) or (None, 0) on error
+    """
+    # Sanitize search query: trim and limit length
+    search_query = search_query.strip()[:100] if search_query else ""
+    
+    try:
+        loader = TopicIndexLoader()
+        loader.load()
+        
+        # Search if query provided
+        if search_query:
+            topics = loader.search(search_query)
+        else:
+            topics = loader.get_all()
+        
+        # Group by type
+        topics_by_type = {
+            "seed": [],
+            "plan": [],
+            "spike": [],
+            "baseline": [],
+            "unknown": [],
+        }
+        
+        for topic in topics:
+            topics_by_type[topic.topic_type].append(_topic_to_dict(topic))
+        
+        # Sort each group by title
+        for topic_type in topics_by_type:
+            topics_by_type[topic_type].sort(key=lambda t: t["title"].lower())
+        
+        return topics_by_type, len(topics)
+    except TopicIndexLoadError as e:
+        print(f"Error loading topics: {e}", file=sys.stderr)
+        return None, 0
+    except Exception as e:
+        print(f"Unexpected error loading topics: {e}", file=sys.stderr)
+        return None, 0
+
+
 @app.get("/")
 async def index(request):
     """Main kanban board page."""
@@ -171,6 +234,67 @@ async def refresh_board(request):
         counts=board_view.counts,
     )
     return response.html(rendered)
+
+
+@app.get("/topics")
+async def topics_browser(request):
+    """Topic browser page for navigating knowledge base topics."""
+    search_query = request.args.get("search", [""])[0]
+    topics_by_type, total_count = get_topics_data(search_query)
+    
+    if topics_by_type is None:
+        return response.html("<h1>Error loading topics</h1>", status=500)
+    
+    template = env.get_template("topics.html")
+    rendered = template.render(
+        topics_by_type=topics_by_type,
+        total_count=total_count,
+        search_query=search_query,
+    )
+    return response.html(rendered)
+
+
+@app.get("/api/topics")
+async def api_topics(request):
+    """Datastar endpoint for topic search/filter.
+    
+    Returns HTML fragment with filtered topic list.
+    """
+    search_query = request.args.get("search", [""])[0]
+    topics_by_type, total_count = get_topics_data(search_query)
+    
+    if topics_by_type is None:
+        return response.html("<p class='error'>Error loading topics</p>")
+    
+    template = env.get_template("_topics_list.html")
+    rendered = template.render(
+        topics_by_type=topics_by_type,
+        total_count=total_count,
+        search_query=search_query,
+    )
+    return response.html(rendered)
+
+
+@app.get("/topic/<topic_id>")
+async def topic_detail(request, topic_id: str):
+    """Individual topic detail page."""
+    try:
+        loader = TopicIndexLoader()
+        loader.load()
+        
+        topic = loader.get_by_id(topic_id)
+        
+        if not topic:
+            return response.html(f"<h1>Topic {topic_id} not found</h1>", status=404)
+        
+        template = env.get_template("topic_detail.html")
+        rendered = template.render(
+            topic=_topic_to_dict(topic),
+            topic_obj=topic,  # Pass original topic object for doc paths
+        )
+        return response.html(rendered)
+    except Exception as e:
+        return response.html(f"<h1>Error rendering topic: {e}</h1>", status=500)
 
 
 def run_web_server(host: str = "127.0.0.1", port: int = 8000) -> int:

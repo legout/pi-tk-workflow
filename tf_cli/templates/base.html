@@ -27,16 +27,42 @@
             color: white;
             padding: 1rem 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
+
         header h1 {
             font-size: 1.5rem;
             font-weight: 600;
+            margin: 0;
         }
-        
+
         header a {
             color: white;
             text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            padding: 0.5rem 0;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        nav a:hover {
+            border-bottom-color: rgba(255,255,255,0.5);
+        }
+
+        nav a.active {
+            border-bottom-color: white;
         }
         
         main {
@@ -85,6 +111,10 @@
 <body>
     <header>
         <h1><a href="/">🎫 Ticketflow</a></h1>
+        <nav>
+            <a href="/">Board</a>
+            <a href="/topics">Topics</a>
+        </nav>
     </header>
     
     <main>

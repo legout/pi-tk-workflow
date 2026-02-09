@@ -1,0 +1,37 @@
+{% if total_count == 0 %}
+<div class="no-topics">
+    <p>No topics found matching your search.</p>
+</div>
+{% else %}
+<div class="topics-container" id="topics-list">
+    {% for topic_type in ['plan', 'spike', 'seed', 'baseline'] %}
+        {% set topics = topics_by_type[topic_type] %}
+        {% if topics %}
+        <div class="topic-group">
+            <div class="topic-group-header">
+                <span>{{ topic_type.upper() }}S</span>
+                <span class="topic-group-count">{{ topics|length }}</span>
+            </div>
+            {% for topic in topics %}
+            <div class="topic-card" data-on:click="@get('/topic/{{ topic.id|urlencode }}')">
+                <span class="topic-type topic-type-{{ topic.topic_type }}">{{ topic.topic_type }}</span>
+                <div class="topic-title">{{ topic.title }}</div>
+                <div class="topic-id">{{ topic.id }}</div>
+                {% if topic.keywords %}
+                <div class="topic-keywords">{{ topic.keywords[:5]|join(', ') }}{% if topic.keywords|length > 5 %}...{% endif %}</div>
+                {% endif %}
+                {% if topic.available_docs %}
+                <div class="topic-docs">
+                    {% if topic.has_overview %}<span title="Overview">📄</span>{% endif %}
+                    {% if topic.has_sources %}<span title="Sources">📚</span>{% endif %}
+                    {% if topic.has_plan %}<span title="Plan">📋</span>{% endif %}
+                    {% if topic.has_backlog %}<span title="Backlog">✅</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
