@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -356,7 +355,7 @@ Test implementation.
         assert not agents_path.exists(), "AGENTS.md should not be created for empty lessons section"
 
     def test_lesson_extracted_from_correct_heading_level(self, tmp_path: Path) -> None:
-        """Test: Lessons Learned section is extracted from both ## and ### heading levels."""
+        """Test: Lessons Learned section is extracted from ## (H2) heading level."""
         # Set up directory structure
         ralph_dir = tmp_path / ".tf" / "ralph"
         ralph_dir.mkdir(parents=True)
