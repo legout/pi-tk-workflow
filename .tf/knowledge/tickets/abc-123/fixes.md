@@ -1,34 +1,21 @@
 # Fixes: abc-123
 
-## Summary
-Fixed all 4 Critical and 2 Major issues identified in review.
+## Status
+Fixer enabled. 0 Critical, 0 Major issues found. Applied 1 Minor fix.
 
-## Critical Fixes (Docstring Placement)
+## Fixes Applied
 
-### `demo/__init__.py`
-- Moved module docstring to line 1 (before imports)
+### Minor Fix
+- `demo/__main__.py:12` - Added `.strip()` to handle whitespace-only arguments
+  - Before: `name = " ".join(sys.argv[1:]) or "World"`
+  - After: `name = " ".join(sys.argv[1:]).strip() or "World"`
+  - Rationale: Prevents "Hello,  !" output when whitespace-only args passed
 
-### `demo/__main__.py`
-- Added blank line after module docstring for proper formatting
-
-### `demo/hello.py`
-- Moved module docstring to line 1 (before imports)
-- Removed `import sys` (no longer needed without CLI block)
-
-### `tests/test_demo_hello.py`
-- Moved module docstring to line 1 (before imports)
-
-## Major Fixes
-
-### `demo/hello.py`
-- **Removed duplicate CLI entry point**: Deleted `if __name__ == "__main__":` block
-- **Updated CLI documentation**: Changed examples from `python -m demo.hello` to `python -m demo`
+## Skipped (Nice-to-fix, not required)
+- Missing test for multi-word names
+- No CLI test coverage for `__main__.py`
+- Empty string behavior discussion
+- Doctest runner configuration
 
 ## Verification
-- All 3 tests passing
-- `python -m demo Alice` → "Hello, Alice!"
-- `python -c "from demo.hello import hello; print(hello('Test'))"` → "Hello, Test!"
-
-## Remaining Issues (Not Fixed)
-- Minor: Unused `sys` import in `__main__.py` - actually needed for `sys.argv`
-- Minor/Warnings/Suggestions - deferred as low priority or follow-up tickets
+Tests re-run after fix: 3 passed

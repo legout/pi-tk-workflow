@@ -9,7 +9,7 @@ from demo.hello import hello
 
 def main() -> None:
     """Run the hello CLI."""
-    name = " ".join(sys.argv[1:]) or "World"
+    name = " ".join(sys.argv[1:]).strip() or "World"
     print(hello(name))
 
 
