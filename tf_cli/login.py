@@ -54,7 +54,12 @@ def configure_mcp(target_base: Path, *, zai_key: str, ctx7_key: str, exa_key: st
         headers = {"Authorization": f"Bearer {zai_key}"}
         set_server("zai-web-search", "https://api.z.ai/api/mcp/web_search_prime/mcp", headers=headers, auth="bearer")
         set_server("zai-web-reader", "https://api.z.ai/api/mcp/web_reader/mcp", headers=headers, auth="bearer")
-        set_server("zai-vision", "https://api.z.ai/api/mcp/vision/mcp", headers=headers, auth="bearer")
+        # zai-vision uses command-based server
+        mcp_config["mcpServers"]["zai-vision"] = {
+            "command": "npx",
+            "args": ["-y", "@z_ai/mcp-server"],
+            "env": {"Z_AI_API_KEY": zai_key, "Z_AI_MODE": "ZAI"}
+        }
     else:
         print("ZAI_API_KEY not provided; skipping ZAI MCP servers.", file=sys.stderr)
 
