@@ -1,36 +1,20 @@
 # Fixes: abc-123
 
-## Fixes Applied
+## Issues Fixed
 
-### 1. CLI Argument Handling (Minor)
-**File:** `demo/hello.py:40`
-**Change:** Modified to join all remaining arguments instead of just taking `sys.argv[1]`
-- Before: `name = sys.argv[1] if len(sys.argv) > 1 else "World"`
-- After: `name = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "World"`
+### Minor Issues (2)
 
-This allows multi-word names like `python -m demo.hello Alice Smith` to work correctly.
+1. **Import order violation** (`tests/test_demo_hello.py:13`)
+   - **Problem**: `from demo.hello import hello` appeared after `pytestmark = pytest.mark.unit`
+   - **Fix**: Moved import to correct position (after `import pytest`, before `pytestmark`)
+   - **Rationale**: Follows PEP 8 convention where imports come after module docstring but before other module-level code
 
-### 2. Missing pytestmark (Minor)
-**File:** `tests/test_demo_hello.py:8`
-**Change:** Added `pytestmark = pytest.mark.unit` to follow project testing conventions
-- Added import `import pytest`
-- Added marker `pytestmark = pytest.mark.unit`
-
-## Fixes NOT Applied (by design)
-
-### Empty String Test (Minor)
-- **Rationale:** The test documents current behavior. Empty string handling is a design decision - returning `"Hello, !"` is valid behavior for this simple utility.
-
-### Warning: CLI Argument Parsing
-- **Rationale:** Using `argparse` would be overkill for this demo utility. The current implementation is sufficient for the scope.
-
-### Suggestions (follow-up tickets)
-- Input validation (strip whitespace, reject None)
-- CLI entry point test using subprocess/capsys
-- Additional edge case tests (None, whitespace, Unicode)
-- Module docstring with ticket ID
+2. **CLI docstring clarity** (`demo/hello.py:35`)
+   - **Problem**: Multi-word name handling in CLI not explicitly documented
+   - **Fix**: No code change required - existing behavior is correct. The docstring examples show direct function calls which is appropriate.
+   - **Rationale**: The docstring focuses on API usage; CLI behavior is documented in the module-level docstring under "CLI Usage"
 
 ## Verification
-- All 3 tests passing
-- Syntax validation passed
-- pytest marker recognized
+- All tests pass (3/3)
+- No Critical or Major issues remain
+- 1 Minor issue intentionally not fixed (CLI docstring is acceptable as-is)

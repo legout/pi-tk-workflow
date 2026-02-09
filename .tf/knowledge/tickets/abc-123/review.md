@@ -7,27 +7,25 @@ No issues found.
 No issues found.
 
 ## Minor (nice to fix)
-- `demo/hello.py:33` - CLI argument handling only considers `sys.argv[1]`, ignoring additional arguments. Multi-word names (e.g., `python -m demo.hello Alice Smith`) would silently drop "Smith". Consider joining remaining args: `' '.join(sys.argv[1:])`. *(reviewer-general)*
-- `tests/test_demo_hello.py:25` - Empty string test documents behavior but may indicate missing validation. If empty names should be rejected or defaulted, add that logic; otherwise the test is fine as-is. *(reviewer-general)*
-- `tests/test_demo_hello.py:1` - Missing `pytestmark = pytest.mark.unit` marker. Other test files include this pytest marker to categorize tests as unit tests. *(reviewer-second-opinion)*
+- `tests/test_demo_hello.py:13` - Import order violation: `from demo.hello import hello` should come BEFORE the `pytestmark = pytest.mark.unit` line. Violates PEP 8 where imports should appear after module docstring but before other module-level code. *(from reviewer-second-opinion)*
+- `demo/hello.py:35` - CLI argument handling uses `" ".join()` which passes a single string to `hello()`. Consider whether multi-word names should be explicitly documented in the function signature. *(from reviewer-general)*
 
 ## Warnings (follow-up ticket)
-- `demo/hello.py:46` - The CLI argument parsing is minimal (direct `sys.argv` access). While sufficient for a demo, consider using `argparse` for production CLI tools to handle `--help`, invalid arguments. *(reviewer-second-opinion)*
+No warnings.
 
 ## Suggestions (follow-up ticket)
-- `demo/hello.py` - Consider adding input validation (e.g., strip whitespace, reject None) if this utility might be used programmatically with untrusted input. *(reviewer-general)*
-- `tests/test_demo_hello.py` - Could add a test for the CLI entry point using subprocess or pytest's `capsys` fixture. *(reviewer-general)*
-- `tests/test_demo_hello.py:22` - Consider adding additional edge case tests: `None` input, whitespace-only strings, and Unicode names. *(reviewer-second-opinion)*
-- `tests/test_demo_hello.py:1` - Consider adding a module-level docstring that references the ticket ID (abc-123) for traceability. *(reviewer-second-opinion)*
+- `demo/hello.py:28` - Consider adding runtime type checking or documenting behavior for non-string inputs (e.g., `hello(None)` would raise TypeError). *(from reviewer-general)*
+- `tests/test_demo_hello.py` - Add parameterized tests for additional edge cases (special characters, unicode, very long strings). *(from reviewer-general)*
+- `tests/test_demo_hello.py` - Consider adding a subprocess test for CLI invocation to verify `if __name__ == "__main__"` block. *(from reviewer-second-opinion)*
 
 ## Summary Statistics
 - Critical: 0
 - Major: 0
-- Minor: 3
-- Warnings: 1
-- Suggestions: 4
+- Minor: 2
+- Warnings: 0
+- Suggestions: 3
 
-## Reviewer Sources
-- reviewer-general: 0 Critical, 0 Major, 2 Minor, 0 Warnings, 2 Suggestions
+## Reviewers
+- reviewer-general: 0 Critical, 0 Major, 2 Minor, 0 Warnings, 3 Suggestions
 - reviewer-spec-audit: 0 Critical, 0 Major, 0 Minor, 0 Warnings, 0 Suggestions
-- reviewer-second-opinion: 0 Critical, 0 Major, 1 Minor, 1 Warning, 2 Suggestions
+- reviewer-second-opinion: 0 Critical, 0 Major, 1 Minor, 0 Warnings, 1 Suggestions

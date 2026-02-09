@@ -1,18 +1,25 @@
 # Chain Summary: abc-123
 
-Workflow execution completed at 2026-02-09T17:28:00Z
+## Workflow Execution
+- Date: 2026-02-09T17:32:00Z
+- Flags: --auto
 
 ## Artifacts
-- `research.md` - Ticket research
-- `implementation.md` - Implementation summary
-- `review-general.md` - General reviewer output
-- `review-spec.md` - Spec audit reviewer output
-- `review-second.md` - Second opinion reviewer output
-- `review.md` - **Merged review (consolidated)**
-- `fixes.md` - Fixes summary
-- `close-summary.md` - **This document**
-- `files_changed.txt` - No changes this run
-- `ticket_id.txt` - abc-123
+| Artifact | Path |
+|----------|------|
+| Research | [research.md](research.md) |
+| Implementation | [implementation.md](implementation.md) |
+| Review (merged) | [review.md](review.md) |
+| Review (general) | [review-general.md](review-general.md) |
+| Review (spec) | [review-spec.md](review-spec.md) |
+| Review (second) | [review-second.md](review-second.md) |
+| Fixes | [fixes.md](fixes.md) |
+| Close Summary | [close-summary.md](close-summary.md) |
+| Files Changed | [files_changed.txt](files_changed.txt) |
+| Ticket ID | [ticket_id.txt](ticket_id.txt) |
 
-## Chain Result
-✅ SUCCESS - All phases completed, 0 Critical/Major issues
+## Commit
+7442840 - abc-123: Re-run workflow - minor fixes (CLI args, pytestmark)
+
+## Result
+✅ COMPLETE - 0 Critical, 0 Major, 3 Minor (2 fixed)

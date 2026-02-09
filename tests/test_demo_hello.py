@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from demo.hello import hello
+
+pytestmark = pytest.mark.unit
 
 
 def test_hello_default() -> None:

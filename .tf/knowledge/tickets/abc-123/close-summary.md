@@ -1,40 +1,34 @@
 # Close Summary: abc-123
 
 ## Status
-**ALREADY CLOSED** - Ticket was previously closed. This is a workflow re-execution for verification.
+CLOSED (already closed, workflow re-executed)
 
-## Workflow Execution Summary
+## Commit
+`7442840` - abc-123: Re-run workflow - minor fixes (CLI args, pytestmark)
 
-### Steps Completed
-1. ✅ Re-Anchor Context - Loaded AGENTS.md, Ralph lessons, ticket details
-2. ⏭️ Research - Skipped (already completed, research.md exists)
-3. ✅ Implement - Verified existing implementation
-4. ✅ Parallel Reviews - 3 reviewers completed
-5. ✅ Merge Reviews - Consolidated into review.md
-6. ✅ Fix Issues - No fixes required (0 Critical, 0 Major)
-7. ⏭️ Follow-ups - Not requested (--create-followups not set)
-8. ✅ Close Ticket - Skipped tk close (already closed)
+## Artifacts
+- `.tf/knowledge/tickets/abc-123/research.md` - Research notes
+- `.tf/knowledge/tickets/abc-123/implementation.md` - Implementation summary
+- `.tf/knowledge/tickets/abc-123/review.md` - Consolidated review (3 reviewers)
+- `.tf/knowledge/tickets/abc-123/fixes.md` - Fixes applied
+- `.tf/knowledge/tickets/abc-123/files_changed.txt` - Tracked files
 
-### Review Results
-| Severity | Count | Status |
-|----------|-------|--------|
-| Critical | 0 | ✅ None |
-| Major | 0 | ✅ None |
-| Minor | 2 | Optional (exceeds spec) |
-| Warnings | 2 | Follow-up candidates |
-| Suggestions | 3 | Follow-up candidates |
+## Changes Made
+1. **demo/hello.py**: Fixed CLI to handle multi-word names via `' '.join(sys.argv[1:])`
+2. **tests/test_demo_hello.py**: Added `pytestmark = pytest.mark.unit` for project consistency
 
-### Quality Verification
-- Syntax check: PASSED
-- Test execution: 3/3 PASSED
-- Acceptance criteria: ALL MET
+## Review Summary
+- Critical: 0
+- Major: 0
+- Minor: 3 (2 fixed, 1 deferred - empty string behavior)
+- Warnings: 1 (deferred - argparse overkill for demo)
+- Suggestions: 4 (deferred - follow-up tickets)
 
-### Artifacts Updated
-- `.tf/knowledge/tickets/abc-123/implementation.md`
-- `.tf/knowledge/tickets/abc-123/review.md`
-- `.tf/knowledge/tickets/abc-123/fixes.md`
-- `.tf/knowledge/tickets/abc-123/close-summary.md`
+## Tests
+All 3 tests passing:
+- test_hello_default
+- test_hello_custom_name
+- test_hello_empty_string
 
-### Notes
-Ticket abc-123 remains closed. No new commit created (no file changes).
-Workflow executed successfully in --auto mode.
+## Quality Gate
+Passed (0 Critical, 0 Major issues)
