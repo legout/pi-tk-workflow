@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli.ralph import ProgressDisplay
+from tf.ralph import ProgressDisplay
 
 
 # Timestamp pattern: HH:MM:SS (24-hour format)

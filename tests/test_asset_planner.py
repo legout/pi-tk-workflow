@@ -1,4 +1,4 @@
-"""Tests for tf_cli.asset_planner module."""
+"""Tests for tf.asset_planner module."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,8 +8,8 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli import asset_planner
-from tf_cli.asset_planner import AssetAction, AssetEntry, AssetPlan, PlanResult
+from tf import asset_planner
+from tf.asset_planner import AssetAction, AssetEntry, AssetPlan, PlanResult
 
 
 class TestParseManifest:

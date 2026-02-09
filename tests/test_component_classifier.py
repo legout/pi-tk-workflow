@@ -4,7 +4,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli.component_classifier import (
+from tf.component_classifier import (
     ClassificationResult,
     classify_components,
     format_tags_for_tk,

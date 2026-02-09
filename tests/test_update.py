@@ -1,4 +1,4 @@
-"""Tests for tf_cli.update module using asset_planner."""
+"""Tests for tf.update module using asset_planner."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,8 +8,8 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli import update
-from tf_cli.asset_planner import AssetAction, AssetEntry, AssetPlan
+from tf import update
+from tf.asset_planner import AssetAction, AssetEntry, AssetPlan
 
 
 class TestResolveTargetBase:
@@ -23,7 +23,7 @@ class TestResolveTargetBase:
 
     def test_uses_global_when_flag_set(self, tmp_path: Path) -> None:
         """Should use global path when --global flag set."""
-        with mock.patch("tf_cli.update.Path.home", return_value=tmp_path / "home"):
+        with mock.patch("tf.update.Path.home", return_value=tmp_path / "home"):
             args = mock.Mock(project=None, global_install=True)
             result = update.resolve_target_base(args)
             assert result == tmp_path / "home" / ".pi" / "agent"
@@ -31,15 +31,15 @@ class TestResolveTargetBase:
     def test_uses_cwd_pi_when_exists(self, tmp_path: Path) -> None:
         """Should use cwd/.pi when it exists."""
         (tmp_path / ".pi").mkdir()
-        with mock.patch("tf_cli.update.Path.cwd", return_value=tmp_path):
+        with mock.patch("tf.update.Path.cwd", return_value=tmp_path):
             args = mock.Mock(project=None, global_install=False)
             result = update.resolve_target_base(args)
             assert result == tmp_path / ".pi"
 
     def test_falls_back_to_global(self, tmp_path: Path) -> None:
         """Should fall back to global when no .pi in cwd."""
-        with mock.patch("tf_cli.update.Path.cwd", return_value=tmp_path):
-            with mock.patch("tf_cli.update.Path.home", return_value=tmp_path / "home"):
+        with mock.patch("tf.update.Path.cwd", return_value=tmp_path):
+            with mock.patch("tf.update.Path.home", return_value=tmp_path / "home"):
                 args = mock.Mock(project=None, global_install=False)
                 result = update.resolve_target_base(args)
                 assert result == tmp_path / "home" / ".pi" / "agent"
@@ -108,7 +108,7 @@ class TestRunUpdate:
         args = mock.Mock(project=str(tmp_path), global_install=False)
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([], []),
         ):
             result = update.run_update(args)
@@ -130,12 +130,12 @@ class TestRunUpdate:
         )
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([mock_plan], []),
         ):
-            with mock.patch("tf_cli.update.prompt_yes_no", return_value=True):
+            with mock.patch("tf.update.prompt_yes_no", return_value=True):
                 with mock.patch(
-                    "tf_cli.asset_planner.update_assets",
+                    "tf.asset_planner.update_assets",
                     return_value=mock.Mock(updated=1, skipped=0, errors=0, error_details=[]),
                 ) as mock_update:
                     result = update.run_update(args)
@@ -157,10 +157,10 @@ class TestRunUpdate:
         )
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([mock_plan], []),
         ):
-            with mock.patch("tf_cli.update.prompt_yes_no", return_value=False):
+            with mock.patch("tf.update.prompt_yes_no", return_value=False):
                 result = update.run_update(args)
 
         assert result == 0
@@ -173,7 +173,7 @@ class TestRunUpdate:
         args = mock.Mock(project=str(tmp_path), global_install=False)
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([],["Failed to load manifest"]),
         ):
             result = update.run_update(args)
@@ -194,12 +194,12 @@ class TestRunUpdate:
         )
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([mock_plan], []),
         ):
-            with mock.patch("tf_cli.update.prompt_yes_no", return_value=True):
+            with mock.patch("tf.update.prompt_yes_no", return_value=True):
                 with mock.patch(
-                    "tf_cli.asset_planner.update_assets",
+                    "tf.asset_planner.update_assets",
                     return_value=mock.Mock(updated=0, skipped=0, errors=1, error_details=["agents/test.md: failed"]),
                 ):
                     result = update.run_update(args)
@@ -232,7 +232,7 @@ class TestMain:
         (tmp_path / ".tf").mkdir(parents=True)
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([], []),
         ):
             result = update.main(["--project", str(tmp_path)])
@@ -244,7 +244,7 @@ class TestMain:
         project_path.mkdir(parents=True)
 
         with mock.patch(
-            "tf_cli.asset_planner.check_for_updates",
+            "tf.asset_planner.check_for_updates",
             return_value=([], []),
         ):
             result = update.main(["--project", str(project_path)])
@@ -256,6 +256,6 @@ class TestMain:
         project_path = tmp_path / "project"
         project_path.mkdir(parents=True)
 
-        with mock.patch("tf_cli.update.run_update") as mock_update:
+        with mock.patch("tf.update.run_update") as mock_update:
             update.main(["--project", str(project_path)])
             mock_update.assert_called_once()

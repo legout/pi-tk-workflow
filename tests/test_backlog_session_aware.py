@@ -17,7 +17,7 @@ from typing import Generator
 
 import pytest
 
-from tf_cli.session_store import (
+from tf.session_store import (
     STATE_ACTIVE,
     STATE_ARCHIVED,
     add_spike_to_session,

@@ -1,38 +1,44 @@
 # Review (Second Opinion): abc-123
 
 ## Overall Assessment
-This is a well-implemented hello-world utility with good documentation, type hints, and comprehensive test coverage. The code follows Python best practices and handles edge cases properly. The implementation.md is slightly misleading about test count but the actual tests are thorough.
+The implementation is clean, well-documented, and follows Python best practices. All tests pass. However, the implementation.md under-reports the test count (4 vs actual 6), and the docstring in `hello.py` has a minor wording inconsistency that doesn't match the actual behavior.
 
 ## Critical (must fix)
-- No issues found
+No issues found.
 
 ## Major (should fix)
-- `tests/test_demo_hello.py:26-29` - Test naming inconsistency: `test_hello_whitespace_various` is redundant with `test_hello_whitespace_only`. Both test the same code path (whitespace-only strings fall back to "World"). Consider consolidating or removing the duplicate to avoid confusion about what additional coverage it provides.
+No issues found.
 
 ## Minor (nice to fix)
-- `demo/__main__.py:39` - Missing docstring example for empty string argument. The `hello()` function handles empty strings specially, but this CLI behavior isn't documented in the module-level docstring examples.
-- `tests/test_demo_hello.py:33-43` - CLI tests patch `sys.argv` but don't test the actual `if __name__ == "__main__"` block. This is minor since the main() function is tested, but the entry point block has no coverage.
+- `demo/hello.py:22-23` - Docstring says "fall back to 'World'" but the function returns "Hello, World!" not just "World". The wording should be: "Empty strings and whitespace-only strings return 'Hello, World!'" to match actual behavior.
+
+- `.tf/knowledge/tickets/abc-123/implementation.md:18-24` - The "Tests Run" section claims 4 tests, but `tests/test_demo_hello.py` actually contains 6 tests (4 unit tests for `hello()` function + 2 CLI tests for `main()`). Update the documentation to accurately reflect the test suite.
 
 ## Warnings (follow-up ticket)
-- `tests/test_demo_hello.py:1` - No tests for invalid input types. While Python's duck typing makes this less critical, consider adding a follow-up ticket to test behavior with non-string inputs (e.g., None, integers) if the function should be defensive.
-- `demo/__main__.py:22` - Consider adding `--version` flag for CLI completeness in a follow-up ticket.
+- `tests/test_demo_hello.py` - The CLI tests (`test_cli_default`, `test_cli_with_name`) test the `main()` function directly but don't test the `if __name__ == "__main__":` execution branch. Consider adding a subprocess-based test that actually runs `python -m demo` to verify the entry point works end-to-end.
+
+- `tests/test_demo_hello.py` - No tests for CLI argument parsing edge cases (e.g., multiple names like `python -m demo Alice Bob`). The argparse is configured with `nargs="?"` so it only accepts one, but this behavior is not verified.
 
 ## Suggestions (follow-up ticket)
-- `demo/hello.py:35` - The fallback behavior for empty/whitespace strings could be configurable via an optional parameter (e.g., `fallback_name: str = "World"`) for more flexibility in follow-up work.
-- `tests/test_demo_hello.py:1` - Add integration tests that actually invoke the CLI via subprocess to test the full execution path including `sys.exit()` handling.
+- `demo/hello.py` - Consider adding type validation or stricter handling. Currently, passing `None` would raise `AttributeError` on `.strip()` rather than a clear `TypeError`. While the type hint indicates `str`, runtime validation could be defensive.
+
+- `tests/test_demo_hello.py` - Add parametrized tests using `@pytest.mark.parametrize` for the whitespace-only test case to improve test readability and reduce the for-loop in the test body.
+
+- `demo/__main__.py` - Consider adding `--version` flag for CLI completeness, following common CLI conventions.
 
 ## Positive Notes
-- Excellent docstrings throughout with usage examples in `demo/hello.py` module docstring
-- Proper type hints on all functions including return types (`-> str`, `-> int`)
-- Good edge case handling for empty/whitespace-only strings in `hello()`
-- Clean separation of concerns: `hello()` for logic, `main()` for CLI, argparse for argument handling
-- Proper use of `__all__` in `demo/__init__.py` for clean public API
-- CLI returns proper exit codes (0 for success) enabling shell scripting
-- Tests use pytest fixtures (`capsys`) and mocking appropriately
+- Excellent use of `from __future__ import annotations` for forward compatibility
+- Proper type hints throughout all modules
+- Comprehensive docstrings with Args/Returns sections and CLI examples
+- Good separation of concerns: library code (`hello.py`) cleanly separated from CLI (`__main__.py`)
+- Proper use of `__all__` in `__init__.py` for explicit exports
+- CLI properly returns exit codes (int) and uses `sys.exit(main())` pattern
+- Tests use `pytest.mark.unit` marker and proper fixtures (`capsys`)
+- Edge case handling for empty/whitespace strings is well-thought-out
 
 ## Summary Statistics
 - Critical: 0
-- Major: 1
+- Major: 0
 - Minor: 2
 - Warnings: 2
-- Suggestions: 2
+- Suggestions: 3

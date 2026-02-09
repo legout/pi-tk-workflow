@@ -1,4 +1,4 @@
-"""Tests for tf_cli.seed_cli module."""
+"""Tests for tf.seed_cli module."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli import seed_cli as seed_module
+from tf import seed_cli as seed_module
 
 
 class TestCmdActive:

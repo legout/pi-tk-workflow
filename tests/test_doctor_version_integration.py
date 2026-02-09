@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from unittest import mock
 
-from tf_cli.doctor import (
+from tf.doctor import (
     build_parser,
     run_doctor,
 )
@@ -38,11 +38,11 @@ class TestRunDoctorVersionIntegration:
         """Mock all external dependencies to isolate version check testing."""
         with (
             mock.patch("shutil.which", return_value="/usr/bin/tk"),
-            mock.patch("tf_cli.doctor.check_cmd"),
-            mock.patch("tf_cli.doctor.get_pi_list_cache", return_value=""),
-            mock.patch("tf_cli.doctor.check_extension"),
-            mock.patch("tf_cli.doctor.load_workflow_config", return_value={}),
-            mock.patch("tf_cli.doctor.check_mcp_config"),
+            mock.patch("tf.doctor.check_cmd"),
+            mock.patch("tf.doctor.get_pi_list_cache", return_value=""),
+            mock.patch("tf.doctor.check_extension"),
+            mock.patch("tf.doctor.load_workflow_config", return_value={}),
+            mock.patch("tf.doctor.check_mcp_config"),
         ):
             yield
 

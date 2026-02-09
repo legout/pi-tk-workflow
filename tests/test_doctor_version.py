@@ -20,7 +20,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli.doctor import (
+from tf.doctor import (
     check_version_consistency,
     detect_manifest_versions,
     get_cargo_version,

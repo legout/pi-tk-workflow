@@ -1,4 +1,4 @@
-"""Tests for tf_cli.agentsmd module."""
+"""Tests for tf.agentsmd module."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli import agentsmd as agentsmd_module
+from tf import agentsmd as agentsmd_module
 
 
 class TestDetectPackageManager:

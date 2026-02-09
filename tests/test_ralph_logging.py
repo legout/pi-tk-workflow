@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
+from tf.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
 
 
 class TestLoggerFormattingAndFiltering:

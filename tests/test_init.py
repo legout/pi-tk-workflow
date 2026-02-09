@@ -1,4 +1,4 @@
-"""Tests for tf_cli.init module."""
+"""Tests for tf.init module."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,7 +8,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli import init
+from tf import init
 
 
 class TestInitProject:
@@ -16,7 +16,7 @@ class TestInitProject:
 
     def test_creates_tf_state_dirs_and_calls_bundle_install(self, tmp_path: Path) -> None:
         """Should create state dirs and install the workflow bundle into the project."""
-        with mock.patch("tf_cli.asset_planner.install_bundle", return_value=(0, 0)) as mock_install:
+        with mock.patch("tf.asset_planner.install_bundle", return_value=(0, 0)) as mock_install:
             result = init.init_project(tmp_path)
 
         assert result == 0
@@ -28,7 +28,7 @@ class TestInitProject:
     def test_handles_install_bundle_failure(self, tmp_path: Path) -> None:
         """Should return error when bundle install fails."""
         with mock.patch(
-            "tf_cli.asset_planner.install_bundle",
+            "tf.asset_planner.install_bundle",
             side_effect=RuntimeError("Install failed"),
         ):
             result = init.init_project(tmp_path)
@@ -58,7 +58,7 @@ class TestMain:
 
     def test_uses_cwd_when_no_project_arg(self, tmp_path: Path) -> None:
         """Should use current directory when no --project."""
-        with mock.patch("tf_cli.init.Path.cwd", return_value=tmp_path):
+        with mock.patch("tf.init.Path.cwd", return_value=tmp_path):
             with mock.patch.object(init, "init_project", return_value=0) as mock_init:
                 result = init.main([])
 

@@ -19,7 +19,7 @@ from typing import Generator
 
 import pytest
 
-from tf_cli.session_store import (
+from tf.session_store import (
     ACTIVE_SESSION_FILE,
     SCHEMA_VERSION,
     SESSIONS_DIR,

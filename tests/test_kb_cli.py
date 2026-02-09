@@ -19,7 +19,7 @@ from typing import Generator
 
 import pytest
 
-from tf_cli.kb_cli import (
+from tf.kb_cli import (
     cmd_ls,
     cmd_show,
     cmd_archive,
@@ -28,7 +28,7 @@ from tf_cli.kb_cli import (
     cmd_validate,
     cmd_index_status,
 )
-from tf_cli.kb_helpers import atomic_write_index, atomic_read_index
+from tf.kb_helpers import atomic_write_index, atomic_read_index
 
 
 @pytest.fixture

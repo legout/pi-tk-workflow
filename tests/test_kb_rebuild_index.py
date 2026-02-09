@@ -17,8 +17,8 @@ from typing import Generator
 
 import pytest
 
-from tf_cli.kb_cli import cmd_rebuild_index, _extract_title_from_frontmatter
-from tf_cli.kb_helpers import atomic_read_index, atomic_write_index
+from tf.kb_cli import cmd_rebuild_index, _extract_title_from_frontmatter
+from tf.kb_helpers import atomic_read_index, atomic_write_index
 
 
 @pytest.fixture

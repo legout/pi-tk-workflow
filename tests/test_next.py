@@ -1,4 +1,4 @@
-"""Tests for tf_cli.next module."""
+"""Tests for tf.next module."""
 from __future__ import annotations
 
 import json
@@ -10,7 +10,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-from tf_cli import next
+from tf import next
 
 
 class TestFindProjectRoot:
@@ -20,7 +20,7 @@ class TestFindProjectRoot:
         """Should find project root when .tf directory exists."""
         (tmp_path / ".tf").mkdir()
 
-        with mock.patch("tf_cli.next.Path.cwd", return_value=tmp_path):
+        with mock.patch("tf.next.Path.cwd", return_value=tmp_path):
             result = next.find_project_root()
             assert result == tmp_path
 
@@ -30,13 +30,13 @@ class TestFindProjectRoot:
         subdir = tmp_path / "subdir" / "nested"
         subdir.mkdir(parents=True)
 
-        with mock.patch("tf_cli.next.Path.cwd", return_value=subdir):
+        with mock.patch("tf.next.Path.cwd", return_value=subdir):
             result = next.find_project_root()
             assert result == tmp_path
 
     def test_returns_none_when_no_tf_dir(self, tmp_path: Path) -> None:
         """Should return None when no .tf directory found."""
-        with mock.patch("tf_cli.next.Path.cwd", return_value=tmp_path):
+        with mock.patch("tf.next.Path.cwd", return_value=tmp_path):
             result = next.find_project_root()
             assert result is None
 

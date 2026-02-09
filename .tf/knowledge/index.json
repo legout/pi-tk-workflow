@@ -2,7 +2,7 @@
   "topics": [
     {
       "id": "plan-auto-planning-sessions-linkage",
-      "title": "Automatic planning sessions for seed↔spike↔plan↔backlog linkage",
+      "title": "Automatic planning sessions for seed\u2194spike\u2194plan\u2194backlog linkage",
       "keywords": [
         "planning-session",
         "auto-linking",
@@ -78,7 +78,7 @@
     },
     {
       "id": "seed-automatic-planning-sessions-linkage",
-      "title": "Automatic planning sessions for seed↔spike↔plan↔backlog linkage",
+      "title": "Automatic planning sessions for seed\u2194spike\u2194plan\u2194backlog linkage",
       "keywords": [
         "planning-session",
         "auto-linking",
@@ -126,7 +126,7 @@
     },
     {
       "id": "seed-pi-command-reclassify-priorities",
-      "title": "Add a Pi command to reclassify ticket priorities (P0–P4)",
+      "title": "Add a Pi command to reclassify ticket priorities (P0\u2013P4)",
       "keywords": [
         "priorities",
         "triage",
@@ -528,7 +528,39 @@
       "overview": "topics/spike-modern-simple-css-dashboard-kanban/overview.md",
       "sources": "topics/spike-modern-simple-css-dashboard-kanban/sources.md",
       "backlog": "topics/spike-modern-simple-css-dashboard-kanban/backlog.md"
+    },
+    {
+      "id": "seed-refactor-restructure-the-python-cli",
+      "title": "Refactor/restructure the Python CLI (move from tf_cli to tf)",
+      "keywords": [
+        "refactor",
+        "restructure",
+        "python",
+        "cli",
+        "packaging",
+        "module-layout",
+        "backwards-compatibility"
+      ],
+      "overview": "topics/seed-refactor-restructure-the-python-cli/overview.md",
+      "sources": "topics/seed-refactor-restructure-the-python-cli/sources.md"
+    },
+    {
+      "id": "plan-refactor-tf-cli-to-tf",
+      "title": "Refactor Python package namespace from tf_cli \u2192 tf",
+      "keywords": [
+        "refactor",
+        "python",
+        "cli",
+        "packaging",
+        "module-layout",
+        "deprecation",
+        "backwards-compatibility"
+      ],
+      "overview": "topics/plan-refactor-tf-cli-to-tf/plan.md",
+      "sources": "topics/plan-refactor-tf-cli-to-tf/sources.md",
+      "plan": "topics/plan-refactor-tf-cli-to-tf/plan.md",
+      "backlog": "topics/plan-refactor-tf-cli-to-tf/backlog.md"
     }
   ],
-  "updated": "2026-02-09T13:42:03.997996+00:00"
+  "updated": "2026-02-09T16:25:55.093469+00:00"
 }

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tf_cli import ralph as ralph_module
+from tf import ralph as ralph_module
 
 
 class TestUpdateStateLessonsLearned:

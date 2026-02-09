@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
 
-from tf_cli.logger import LogLevel
-from tf_cli.ralph import (
+from tf.logger import LogLevel
+from tf.ralph import (
     DEFAULTS,
     parse_run_args,
     parse_start_args,
@@ -137,9 +137,9 @@ class TestParseStartArgsPiOutput:
 class TestRunTicketPiOutput:
     """Test run_ticket function with pi_output modes."""
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_dry_run_shows_file_output(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -167,9 +167,9 @@ class TestRunTicketPiOutput:
         assert "output to" in str(call_args)
         assert "/tmp/test.log" in str(call_args)
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_dry_run_shows_discard_output(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -195,9 +195,9 @@ class TestRunTicketPiOutput:
         call_args = mock_logger.info.call_args
         assert "output discarded" in str(call_args)
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_dry_run_inherit_no_note(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -227,9 +227,9 @@ class TestRunTicketPiOutput:
 class TestPiOutputFileMode:
     """Test file output mode functionality."""
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_file_mode_creates_log(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -263,9 +263,9 @@ class TestPiOutputFileMode:
             pi_log_path=str(logs_dir / "abc-123.log"),
         )
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_file_mode_with_custom_path(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -299,9 +299,9 @@ class TestPiOutputFileMode:
             pi_log_path=custom_path,
         )
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_file_mode_failure_shows_log_path(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -339,9 +339,9 @@ class TestPiOutputFileMode:
 class TestPiOutputDiscardMode:
     """Test discard output mode functionality."""
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_discard_mode_runs_without_capture(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -376,9 +376,9 @@ class TestPiOutputDiscardMode:
 class TestPiOutputInheritMode:
     """Test inherit output mode (default) functionality."""
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_inherit_mode_passes_through(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -411,9 +411,9 @@ class TestPiOutputInheritMode:
 class TestPiOutputWithJsonCapture:
     """Test pi_output combined with capture_json."""
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     @patch("subprocess.run")
     def test_both_json_and_file_mode(
         self, mock_run, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
@@ -475,9 +475,9 @@ class TestOutputRoutingWithoutSubprocess:
     running pi subprocess.
     """
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     def test_inherit_mode_routing_decision(
         self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
     ):
@@ -509,9 +509,9 @@ class TestOutputRoutingWithoutSubprocess:
             assert call_kwargs.get("stdout") is None
             assert call_kwargs.get("stderr") is None
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     def test_file_mode_routing_decision(
         self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
     ):
@@ -546,9 +546,9 @@ class TestOutputRoutingWithoutSubprocess:
                 assert call_kwargs.get("stdout") is not None
                 assert call_kwargs.get("stderr") == subprocess.STDOUT
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     def test_discard_mode_routing_decision(
         self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
     ):
@@ -580,9 +580,9 @@ class TestOutputRoutingWithoutSubprocess:
                 assert call_kwargs.get("stdout") is not None
                 assert call_kwargs.get("stderr") == subprocess.STDOUT
 
-    @patch("tf_cli.ralph.ensure_pi")
-    @patch("tf_cli.ralph.find_project_root")
-    @patch("tf_cli.ralph.prompt_exists")
+    @patch("tf.ralph.ensure_pi")
+    @patch("tf.ralph.find_project_root")
+    @patch("tf.ralph.prompt_exists")
     def test_file_mode_with_custom_path_decision(
         self, mock_prompt, mock_root, mock_ensure_pi, tmp_path: Path
     ):
@@ -618,9 +618,9 @@ class TestOutputRoutingWithoutSubprocess:
 
     def test_dry_run_shows_routing_decision_inherit(self):
         """Dry run should show inherit routing decision."""
-        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
-            with patch("tf_cli.ralph.find_project_root") as mock_root:
-                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+        with patch("tf.ralph.ensure_pi") as mock_ensure:
+            with patch("tf.ralph.find_project_root") as mock_root:
+                with patch("tf.ralph.prompt_exists") as mock_prompt:
                     mock_ensure.return_value = True
                     mock_root.return_value = Path("/tmp")
                     mock_prompt.return_value = True
@@ -643,9 +643,9 @@ class TestOutputRoutingWithoutSubprocess:
 
     def test_dry_run_shows_routing_decision_file(self):
         """Dry run should show file routing decision."""
-        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
-            with patch("tf_cli.ralph.find_project_root") as mock_root:
-                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+        with patch("tf.ralph.ensure_pi") as mock_ensure:
+            with patch("tf.ralph.find_project_root") as mock_root:
+                with patch("tf.ralph.prompt_exists") as mock_prompt:
                     mock_ensure.return_value = True
                     mock_root.return_value = Path("/tmp")
                     mock_prompt.return_value = True
@@ -670,9 +670,9 @@ class TestOutputRoutingWithoutSubprocess:
 
     def test_dry_run_shows_routing_decision_discard(self):
         """Dry run should show discard routing decision."""
-        with patch("tf_cli.ralph.ensure_pi") as mock_ensure:
-            with patch("tf_cli.ralph.find_project_root") as mock_root:
-                with patch("tf_cli.ralph.prompt_exists") as mock_prompt:
+        with patch("tf.ralph.ensure_pi") as mock_ensure:
+            with patch("tf.ralph.find_project_root") as mock_root:
+                with patch("tf.ralph.prompt_exists") as mock_prompt:
                     mock_ensure.return_value = True
                     mock_root.return_value = Path("/tmp")
                     mock_prompt.return_value = True

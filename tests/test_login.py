@@ -1,4 +1,4 @@
-"""Tests for tf_cli.login module."""
+"""Tests for tf.login module."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli import login as login_module
+from tf import login as login_module
 
 
 class TestConfigureWebSearch:

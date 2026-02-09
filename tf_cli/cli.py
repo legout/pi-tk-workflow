@@ -23,6 +23,7 @@ if os.environ.get("TF_CLI_DEPRECATION_WARN"):
 # Re-export only public API from canonical tf package
 # Internal functions (install_main, read_root_file, etc.) are not exported
 from tf.cli import main, can_import_tf
+from tf import get_version
 
 # Keep backward compatibility for any code importing can_import_tf_cli
 # (renamed to can_import_tf in the new package)
@@ -32,6 +33,7 @@ __all__ = [
     "main",
     "can_import_tf",
     "can_import_tf_cli",  # backward compat alias
+    "get_version",
 ]
 
 # For module execution: python -m tf_cli.cli

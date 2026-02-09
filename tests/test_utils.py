@@ -1,4 +1,4 @@
-"""Tests for tf_cli.utils module."""
+"""Tests for tf.utils module."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tf_cli.utils import find_project_root, merge, read_json
+from tf.utils import find_project_root, merge, read_json
 
 
 class TestReadJson:

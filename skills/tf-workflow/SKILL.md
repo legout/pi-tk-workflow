@@ -217,6 +217,7 @@ Each reviewer uses a different meta-model:
 **Execute parallel subagents** (run from repo root so `src/...` and `tk show` work):
 ```json
 {
+  "agentScope": "project",
   "tasks": [
     {"agent": "reviewer-general", "task": "{ticket}", "cwd": "{repoRoot}"},
     {"agent": "reviewer-spec-audit", "task": "{ticket}", "cwd": "{repoRoot}"},
@@ -224,6 +225,8 @@ Each reviewer uses a different meta-model:
   ]
 }
 ```
+
+`agentScope: "project"` is required so reviewer agents are discovered from `.pi/agents/` in this repository.
 
 Ensure reviewers read `{artifactDir}/implementation.md` (derive `artifactDir` from config or default `.tf/knowledge`).
 Store returned paths for next step.

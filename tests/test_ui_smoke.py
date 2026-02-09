@@ -11,8 +11,8 @@ from unittest import mock
 
 import pytest
 
-from tf_cli import ui as ui_module
-from tf_cli.cli import main as cli_main
+from tf import ui as ui_module
+from tf.cli import main as cli_main
 
 
 class TestUiHelp:
@@ -94,16 +94,16 @@ class TestUiErrorHandling:
 
 
 class TestUiHeadlessImport:
-    """Test that tf_cli.ui can be imported in CI/headless contexts.
+    """Test that tf.ui can be imported in CI/headless contexts.
 
     These tests verify the module doesn't crash on import when running
     in non-TTY environments (e.g., CI, web-served contexts).
     """
 
     def test_ui_module_imports_without_error(self):
-        """Importing tf_cli.ui should not raise in headless contexts."""
+        """Importing tf.ui should not raise in headless contexts."""
         # This test verifies the basic import works - critical for CI
-        import tf_cli.ui as ui
+        import tf.ui as ui
 
         assert ui is not None
 
@@ -119,11 +119,11 @@ class TestUiHeadlessImport:
         monkeypatch.setattr(sys, "stdout", mock_stdout)
 
         # Force re-import by clearing cache
-        if "tf_cli.ui" in sys.modules:
-            del sys.modules["tf_cli.ui"]
+        if "tf.ui" in sys.modules:
+            del sys.modules["tf.ui"]
 
         # Import should not raise
-        import tf_cli.ui as ui
+        import tf.ui as ui
 
         assert ui is not None
 
@@ -133,20 +133,20 @@ class TestUiModuleImports:
 
     def test_ui_imports_ticket_loader(self):
         """ui module should import ticket_loader components."""
-        from tf_cli.ui import TicketLoader, Ticket
+        from tf.ui import TicketLoader, Ticket
         assert TicketLoader is not None
         assert Ticket is not None
 
     def test_ui_imports_board_classifier(self):
         """ui module should import board_classifier components."""
-        from tf_cli.ui import BoardClassifier, BoardColumn, ClassifiedTicket
+        from tf.ui import BoardClassifier, BoardColumn, ClassifiedTicket
         assert BoardClassifier is not None
         assert BoardColumn is not None
         assert ClassifiedTicket is not None
 
     def test_ui_imports_topic_index_loader(self):
         """ui module should import TopicIndexLoader."""
-        from tf_cli.ui import TopicIndexLoader, Topic, TopicIndexLoadError
+        from tf.ui import TopicIndexLoader, Topic, TopicIndexLoadError
         assert TopicIndexLoader is not None
         assert Topic is not None
         assert TopicIndexLoadError is not None
@@ -157,7 +157,7 @@ class TestUiTopicFunctions:
 
     def test_get_topic_type_recognizes_prefixes(self):
         """get_topic_type should recognize all topic type prefixes."""
-        from tf_cli.ui import get_topic_type
+        from tf.ui import get_topic_type
         
         assert get_topic_type("seed-add-versioning") == "seed"
         assert get_topic_type("plan-kb-management") == "plan"
@@ -167,7 +167,7 @@ class TestUiTopicFunctions:
 
     def test_resolve_knowledge_dir_returns_path(self):
         """resolve_knowledge_dir should return a Path."""
-        from tf_cli.ui import resolve_knowledge_dir
+        from tf.ui import resolve_knowledge_dir
         from pathlib import Path
         
         result = resolve_knowledge_dir()
@@ -175,7 +175,7 @@ class TestUiTopicFunctions:
 
     def test_resolve_knowledge_dir_cwd_fallback(self, monkeypatch, tmp_path):
         """resolve_knowledge_dir should fallback to cwd/.tf/knowledge."""
-        from tf_cli.ui import resolve_knowledge_dir
+        from tf.ui import resolve_knowledge_dir
         
         monkeypatch.chdir(tmp_path)
         # Clear any env variable
@@ -190,7 +190,7 @@ class TestUiSmokeIntegration:
 
     def test_topic_index_loader_can_be_instantiated(self):
         """TopicIndexLoader should be instantiable."""
-        from tf_cli.ui import TopicIndexLoader
+        from tf.ui import TopicIndexLoader
         
         loader = TopicIndexLoader()
         assert loader is not None
@@ -198,7 +198,7 @@ class TestUiSmokeIntegration:
 
     def test_board_classifier_can_be_instantiated(self):
         """BoardClassifier should be instantiable."""
-        from tf_cli.ui import BoardClassifier
+        from tf.ui import BoardClassifier
         
         classifier = BoardClassifier()
         assert classifier is not None

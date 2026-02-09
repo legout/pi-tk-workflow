@@ -36,7 +36,7 @@
       "description": "Strong model for specification compliance audit"
     },
     "review-secop": {
-      "model": "google-antigravity/gemini-3-flash",
+      "model": "minimax/MiniMax-M2.1",
       "thinking": "high",
       "description": "Fast model for second-opinion review"
     }

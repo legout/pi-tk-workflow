@@ -11,14 +11,14 @@ from pathlib import Path
 
 import pytest
 
-from tf_cli.board_classifier import (
+from tf.board_classifier import (
     BoardClassifier,
     BoardColumn,
     BoardView,
     ClassifiedTicket,
     classify_tickets,
 )
-from tf_cli.ticket_loader import Ticket
+from tf.ticket_loader import Ticket
 
 
 def create_ticket(
@@ -451,7 +451,7 @@ status: open
 Description here.
 """)
             
-            from tf_cli.ticket_loader import TicketLoader
+            from tf.ticket_loader import TicketLoader
             loader = TicketLoader(tickets_dir)
             classifier = BoardClassifier(loader=loader)
             board = classifier.classify_all()

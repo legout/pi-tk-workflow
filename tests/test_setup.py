@@ -1,4 +1,4 @@
-"""Tests for tf_cli.setup module."""
+"""Tests for tf.setup module."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tf_cli import setup as tf_setup_module
+from tf import setup as tf_setup_module
 
 
 class TestPromptYesNo:
