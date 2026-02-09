@@ -388,6 +388,84 @@ See [docs/commands.md](docs/commands.md) for complete reference with all flags a
 
 ---
 
+## Web Mode (Browser UI)
+
+The Ticketflow TUI can be run in a web browser using Textual's `textual serve` command. This is useful for remote access or when you prefer a browser interface over a terminal.
+
+### Prerequisites
+
+The `textual` CLI is provided by the `textual-dev` package. Install it if you haven't already:
+
+```bash
+pip install textual-dev
+```
+
+### Running in Web Mode
+
+**Installed CLI (recommended):**
+```bash
+textual serve --command "tf ui"
+```
+
+**Development fallback (from repo checkout):**
+```bash
+textual serve "python -m tf_cli.ui"
+```
+
+> **Note:** CLI commands require the `--command` flag, while Python module invocations work directly.
+
+### Accessing the UI
+
+By default, the UI will be available at:
+```
+http://localhost:8000
+```
+
+The terminal will display the exact URL when the server starts.
+
+### Customizing Host and Port
+
+Use the standard `textual serve` flags to customize binding:
+
+```bash
+# Custom port
+textual serve --command "tf ui" --port 8080
+
+# Custom host (see Security Warning below)
+textual serve --command "tf ui" --host 0.0.0.0
+```
+
+See `textual serve --help` for the complete list of available options.
+
+### ⚠️ Security Warning: Public Binding
+
+**The default localhost binding is the only officially supported configuration.**
+
+If you bind to a non-localhost address (e.g., `0.0.0.0` or a public IP), be aware that:
+
+- The UI will be accessible to anyone who can reach the network interface
+- No authentication is provided by `textual serve`
+- **Do not expose the UI publicly without additional security measures**
+
+If you need remote access, consider these mitigations:
+- Use an SSH tunnel instead of public binding
+- Place a reverse proxy with authentication in front of the service
+- Restrict access via firewall rules or VPN
+- Only bind to specific, trusted network interfaces
+
+### Session Lifecycle
+
+When running in web mode:
+
+- **The app runs in the terminal** where you started `textual serve`
+- **Closing the browser tab does NOT stop the app** — the process continues running
+- **Use Ctrl+C** in the terminal to shut down the server
+- Each browser tab creates a new session; closing one tab doesn't affect others
+
+This behavior differs from some web applications that terminate when the browser disconnects. The Textual app remains active until you explicitly stop it.
+
+---
+
 ## Architecture
 
 This package uses a **skill-centric** architecture:
