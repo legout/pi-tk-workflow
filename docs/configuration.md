@@ -135,6 +135,7 @@ Models are configured in `config/settings.json`:
     "tf": "worker",
     "tf-next": "general",
     "tf-plan": "planning",
+    "tf-plan-chain": "planning",
     "tf-plan-consult": "planning",
     "tf-plan-revise": "planning",
     "tf-plan-review": "planning",

@@ -115,6 +115,27 @@ Creates a structured plan in `.tf/knowledge/topics/plan-*/`:
 /tf-plan-review plan-auth-refactor --high-accuracy
 ```
 
+**Prompt chaining flow (recommended):**
+```
+/tf-plan-chain Refactor auth flow to support OAuth + magic links
+```
+
+---
+
+### `/tf-plan-chain`
+
+Run the complete plan lifecycle in one go:
+- `tf-plan`
+- `tf-plan-consult`
+- `tf-plan-revise`
+- `tf-plan-review --high-accuracy`
+
+```
+/tf-plan-chain <request description>
+```
+
+Uses `pi-prompt-template-model` prompt chaining (`/chain-prompts`) when available; otherwise falls back to sequential execution.
+
 ---
 
 ### `/tf-plan-consult`
@@ -286,7 +307,7 @@ Generates appropriately-sized tickets to cover the scope (could be 1 ticket for 
 - `backlog.md` written to topic directory
 
 **Component Tag Assignment:**
-`/tf-backlog` uses the shared `tf_cli.component_classifier` module to automatically
+`/tf-backlog` uses the shared `tf.component_classifier` module to automatically
 assign `component:*` tags based on keyword matching in ticket titles and descriptions.
 This ensures consistency with `/tf-tags-suggest`, which uses the same classifier.
 
@@ -338,7 +359,7 @@ Suggest missing `component:*` tags for open tickets.
 Component tags enable safe parallel scheduling in Ralph. Run this after `/tf-backlog` if tickets lack component tags.
 
 **Shared Classifier:**
-This command uses the same `tf_cli.component_classifier` module as `/tf-backlog`,
+This command uses the same `tf.component_classifier` module as `/tf-backlog`,
 ensuring consistent `component:*` suggestions whether tags are assigned during
 backlog creation or via explicit suggestion.
 
@@ -556,13 +577,13 @@ The `validate` command detects:
 
 ## Priority Reclassification Commands
 
-### `/tf-priority-reclassify` (Prompt) / `tf new priority-reclassify` (CLI)
+### `/tf-priority-reclassify` (Prompt) / `tf priority-reclassify` (CLI)
 
 Review and reclassify ticket priorities according to the P0–P4 rubric.
 
 **CLI Usage:**
 ```
-tf new priority-reclassify [--apply] [--ids <id1,id2,...>] [--ready] [--status <status>] [--tag <tag>]
+tf priority-reclassify [--apply] [--ids <id1,id2,...>] [--ready] [--status <status>] [--tag <tag>]
 ```
 
 **Arguments:**
@@ -610,24 +631,24 @@ The rubric uses keyword matching on ticket titles, descriptions, and tags:
 /tf-priority-reclassify --ready
 
 # Apply changes to ready tickets with confirmation
-tf new priority-reclassify --ready --apply
+tf priority-reclassify --ready --apply
 
 # Process specific tickets
-tf new priority-reclassify --ids abc-123,def-456 --apply --yes
+tf priority-reclassify --ids abc-123,def-456 --apply --yes
 
 # Filter by tag
-tf new priority-reclassify --tag bug --apply
+tf priority-reclassify --tag bug --apply
 
 # Output as JSON for scripting
-tf new priority-reclassify --ready --json
+tf priority-reclassify --ready --json
 
 # Generate audit report
-tf new priority-reclassify --ready --apply --report
+tf priority-reclassify --ready --apply --report
 ```
 
 **Customizing Classification Rules:**
 
-The rubric is defined in `tf_cli/priority_reclassify_new.py`:
+The rubric is defined in `tf/priority_reclassify.py`:
 - `RUBRIC` dict - keyword definitions for each priority level
 - `TAG_MAP` - tag-to-priority mappings (tags take precedence)
 - `TYPE_DEFAULTS` - fallback priorities by ticket type

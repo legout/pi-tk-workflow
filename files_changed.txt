@@ -1,5 +1,0 @@
-/tmp/pytest-of-volker/pytest-282/test_track_file0/src/test.py
-/tmp/pytest-of-volker/pytest-282/test_track_duplicate_file0/test.py
-/tmp/pytest-of-volker/pytest-282/test_track_multiple_files0/file1.py
-/tmp/pytest-of-volker/pytest-282/test_track_multiple_files0/file2.py
-/tmp/pytest-of-volker/pytest-282/test_creates_parent_directorie0/test.py

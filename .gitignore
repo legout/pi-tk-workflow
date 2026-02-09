@@ -36,6 +36,9 @@ yarn-error.log*
 .tf/ralph/sessions/
 .tf/ralph/lock
 .pi/
+files_changed.txt
+ENDENTRY
+EOF
 
 
 # IDE / Editor

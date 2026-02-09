@@ -15,7 +15,7 @@ This module consolidates all that logic into testable, reusable functions.
 ## Quick Example
 
 ```python
-from tf_cli.ticket_factory import (
+from tf.ticket_factory import (
     TicketDef,
     create_tickets,
     write_backlog_md,
@@ -226,7 +226,7 @@ PY
 **After:**
 
 ```python
-from tf_cli.ticket_factory import (
+from tf.ticket_factory import (
     TicketDef,
     create_tickets,
     write_backlog_md,

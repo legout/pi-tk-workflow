@@ -60,6 +60,14 @@ Use the seed + spike context in your plan prompt.
 
 ### 5. Planning loop (if plan used)
 
+Recommended one-shot chain:
+
+```
+/tf-plan-chain "Implement X based on seed-build-x and spike-auth-strategy"
+```
+
+Equivalent manual loop:
+
 ```
 /tf-plan-consult plan-build-x
 /tf-plan-revise plan-build-x
@@ -215,6 +223,14 @@ The plan will include:
 ### Step 3: Iterate the Plan (Optional)
 
 For complex features, run the plan through review:
+
+One command (prompt chaining):
+
+```
+/tf-plan-chain "Distributed task queue: implement core message broker with Redis streams"
+```
+
+Equivalent manual loop:
 
 ```
 /tf-plan-consult plan-distributed-task-queue   # Detect gaps

@@ -67,6 +67,7 @@ Skills are the core expertise containers. They live in `skills/*/SKILL.md`.
 | Skill | Purpose | Key Procedures |
 |-------|---------|----------------|
 | `tf-workflow` | Core implementation | Re-anchor, Research, Implement, Review, Fix, Close |
+| `tf-review` | Shared reviewer contract | Artifact resolution, findings format, severity accounting |
 | `tf-planning` | Research & planning | Seed capture, Backlog generation, Plan lifecycle, Research spike, Baseline, Follow-ups, OpenSpec bridge |
 | `tf-config` | Setup & maintenance | Verify setup, Sync models, Check MCP |
 | `ralph` | Autonomous loop | Initialize, Start loop, Extract lessons, Progress tracking |
@@ -131,7 +132,7 @@ Follow the **TF Workflow Skill** procedures.
 | Category | Commands | Skill |
 |----------|----------|-------|
 | Implementation | `/tf`, `/ralph-start` | tf-workflow, ralph |
-| Planning | `/tf-plan`, `/tf-plan-consult`, `/tf-plan-revise`, `/tf-plan-review` | tf-planning |
+| Planning | `/tf-plan`, `/tf-plan-chain`, `/tf-plan-consult`, `/tf-plan-revise`, `/tf-plan-review` | tf-planning |
 | Research | `/tf-seed`, `/tf-spike`, `/tf-baseline` | tf-planning |
 | Ticket Creation | `/tf-backlog`, `/tf-backlog-ls`, `/tf-followups`, `/tf-backlog-from-openspec` | tf-planning |
 | Config | `/tf-sync` | tf-config |
@@ -150,9 +151,9 @@ Agents are subagent definitions in `agents/*.md`. They are:
 
 | Agent | Purpose | When Spawned |
 |-------|---------|--------------|
-| `reviewer-general` | General code review | Parallel with others |
-| `reviewer-spec-audit` | Spec compliance check | Parallel with others |
-| `reviewer-second-opinion` | Alternative perspective | Parallel with others |
+| `reviewer-general` | General code review wrapper (shared `tf-review` skill) | Parallel with others |
+| `reviewer-spec-audit` | Spec compliance wrapper (shared `tf-review` skill) | Parallel with others |
+| `reviewer-second-opinion` | Alternate-perspective wrapper (shared `tf-review` skill) | Parallel with others |
 | `review-merge` | Consolidate reviews | After parallel reviews |
 | `fixer` | Fix identified issues | After review merge |
 | `closer` | Close ticket, summarize | After fixes complete |
@@ -382,9 +383,9 @@ pi install npm:pi-mcp-adapter    # MCP tools for research
 
 ---
 
-## Shared Modules (tf_cli)
+## Shared Modules (`tf`)
 
-The `tf_cli` Python package provides reusable modules that skills can import to avoid repetitive inline scripts:
+The canonical `tf` Python package provides reusable modules that skills can import to avoid repetitive inline scripts:
 
 ### component_classifier
 
@@ -396,7 +397,7 @@ Maps keywords in ticket titles/descriptions to component tags (`component:cli`, 
 
 **Example:**
 ```python
-from tf_cli.component_classifier import classify_components
+from tf.component_classifier import classify_components
 
 result = classify_components("Add --version flag to CLI")
 print(result.tags)  # ['component:cli']
@@ -420,7 +421,7 @@ Reusable functions for creating tickets during backlog generation. Eliminates re
 
 **Example:**
 ```python
-from tf_cli.ticket_factory import (
+from tf.ticket_factory import (
     TicketDef, create_tickets, score_tickets,
     apply_dependencies, write_backlog_md
 )
@@ -444,4 +445,13 @@ See `docs/ticket_factory.md` for complete API documentation.
 4. **Composability**: Skills can be combined and reused
 5. **Maintainability**: Change logic in one place, all commands benefit
 6. **Clarity**: Commands show their dependencies in autocomplete
-7. **Shared Modules**: Common functionality in `tf_cli` avoids repetitive inline scripts
+7. **Shared Modules**: Common functionality in `tf` avoids repetitive inline scripts
+
+---
+
+## Web UI Namespace
+
+- Canonical web app module: `tf/web/app.py`
+- Compatibility shim: `tf_cli/web_ui.py`
+- Canonical web assets: `tf/web/templates/`, `tf/web/static/`
+- Legacy asset paths remain present for compatibility: `tf_cli/templates/`, `tf_cli/static/`

@@ -25,7 +25,7 @@ Fix issues from the review described in the Task input.
 5. **Track file changes**: After every `edit` or `write`, run `tf track <path>` to append the file path (deduped) to `files_changed.txt`. Prefer an absolute tracking file path:
    - If the task provides an artifact or chain dir, use `tf track <path> --file {artifactDir}/files_changed.txt`
    - Otherwise, place `files_changed.txt` next to `fixes.md` (expected under `.tf/knowledge/tickets/<ticket-id>/`)
-   - If `tf` is not in PATH, fix your PATH or invoke `python -m tf_cli.cli track ...` as a fallback
+   - If `tf` is not in PATH, fix your PATH or invoke `python -m tf.cli track ...` as a fallback
 6. **Fix Critical issues**: Address ALL critical issues
 7. **Fix Major issues**: Address all major issues if feasible
 8. **Fix Minor issues**: Address minor issues if low effort
