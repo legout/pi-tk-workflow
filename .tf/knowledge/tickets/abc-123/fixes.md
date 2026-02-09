@@ -1,29 +1,20 @@
 # Fixes: abc-123
 
-## Fixed Issues
+## Status
+No fixes applied.
 
-### Critical (1 fixed)
-- `pyproject.toml:62` - Added `"demo"` to coverage `source` list so the demo package is included in coverage tracking.
+## Rationale
+- 0 Critical issues (none to fix)
+- 0 Major issues (none to fix)
+- 2 Minor issues identified but deemed low-priority:
+  1. Pytest marker registration - cosmetic warning only
+  2. CLI validation layer - current implementation is functional
 
-### Major (1 fixed)
-- `demo/__main__.py` - Refactored CLI to use `argparse` instead of raw `sys.argv` parsing:
-  - Changed `main()` signature to accept `argv: Optional[list[str]] = None`
-  - Added `argparse.ArgumentParser` with proper help text
-  - Added positional `name` argument with default "World"
-  - Updated docstring with examples showing multi-word name support
-  - Now follows project convention established in `tf/hello.py`
+All 4 tests passing. Implementation meets all acceptance criteria.
 
 ## Verification
-```bash
-python -m demo
-# Hello, World!
-
-python -m demo Alice
-# Hello, Alice!
-
-python -m demo --help
-# usage: demo [-h] [name]
-# Print a hello message
+Tests re-run after review:
 ```
-
-All 4 tests passing after fixes.
+python3 -m pytest tests/test_demo_hello.py -v
+============================== 4 passed in 0.02s ===============================
+```
