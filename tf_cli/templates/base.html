@@ -4,17 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Ticketflow{% endblock %}</title>
-    
+
     <!-- Datastar CDN (pinned to v1.0.0-RC.7) -->
     <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.7/bundles/datastar.js"></script>
-    
+
     <!-- Pico.css classless (pinned to v2) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
-    
+
     <!-- Ticketflow custom styles -->
     <link rel="stylesheet" href="/static/web-ui.css">
-    
+
     <style>
+        /* Theme toggle button styles */
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--brand-text);
+            font-size: 1rem;
+            line-height: 1;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .theme-toggle:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+        }
+
         /* Page-specific styles can be added via extra_styles block in child templates */
         /* This block is intentionally empty by default - styles are loaded from /static/web-ui.css */
         {% block extra_styles %}{% endblock %}
@@ -26,13 +49,79 @@
         <nav class="app-nav">
             <a href="/">Board</a>
             <a href="/topics">Topics</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                🌓
+            </button>
         </nav>
     </header>
-    
+
     <main class="app-main">
         {% block content %}{% endblock %}
     </main>
-    
+
+    <!-- Theme toggle script - minimal inline JS for persistence -->
+    <script>
+        (function() {
+            const html = document.documentElement;
+            const toggle = document.getElementById('theme-toggle');
+            const STORAGE_KEY = 'ticketflow-theme';
+
+            // Get saved theme or default to 'auto' (system preference)
+            function getSavedTheme() {
+                try {
+                    return localStorage.getItem(STORAGE_KEY) || 'auto';
+                } catch (e) {
+                    return 'auto';
+                }
+            }
+
+            // Apply theme to document
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                } else if (theme === 'light') {
+                    html.setAttribute('data-theme', 'light');
+                } else {
+                    // 'auto' - remove attribute to use prefers-color-scheme
+                    html.removeAttribute('data-theme');
+                }
+            }
+
+            // Save theme preference
+            function saveTheme(theme) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, theme);
+                } catch (e) {
+                    // Storage not available, continue without persistence
+                }
+            }
+
+            // Cycle through themes: auto -> dark -> light -> auto
+            function cycleTheme() {
+                const current = getSavedTheme();
+                let next;
+                if (current === 'auto') {
+                    next = 'dark';
+                } else if (current === 'dark') {
+                    next = 'light';
+                } else {
+                    next = 'auto';
+                }
+                applyTheme(next);
+                saveTheme(next);
+            }
+
+            // Initialize theme on page load
+            const savedTheme = getSavedTheme();
+            applyTheme(savedTheme);
+
+            // Bind toggle button
+            if (toggle) {
+                toggle.addEventListener('click', cycleTheme);
+            }
+        })();
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

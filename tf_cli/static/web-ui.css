@@ -2,12 +2,22 @@
  * Extracted from inline styles for maintainability and theming support
  */
 
-/* Design Tokens - small consistent set for the UI */
+/* ============================================
+   THEME SYSTEM: Light/Dark mode support
+   Uses CSS custom properties that align with Pico CSS v2
+   ============================================ */
+
+/* Light theme (default) - CSS custom properties */
 :root {
-    /* Surface colors */
+    /* Surface colors - light mode */
     --surface: #ffffff;
     --surface-2: #f6f7f9;
     --surface-3: #ecf0f1;
+
+    /* Text colors */
+    --text-primary: #2c3e50;
+    --text-secondary: #5f6a6a;
+    --text-muted: #7f8c8d;
 
     /* Brand colors */
     --brand-primary: #2c3e50;
@@ -35,6 +45,62 @@
     /* Focus ring for accessibility */
     --focus-ring: 0 0 0 3px rgba(52, 152, 219, 0.5);
     --focus-ring-offset: 2px;
+}
+
+/* Dark theme - CSS custom properties */
+[data-theme="dark"] {
+    /* Surface colors - dark mode */
+    --surface: #1a1a2e;
+    --surface-2: #16213e;
+    --surface-3: #0f3460;
+
+    /* Text colors - dark mode */
+    --text-primary: #e8e8e8;
+    --text-secondary: #b8b8b8;
+    --text-muted: #888888;
+
+    /* Brand colors - adjusted for dark mode */
+    --brand-primary: #1e3a5f;
+    --brand-text: #e8e8e8;
+
+    /* Border & shadow - dark mode */
+    --border: #2d3748;
+    --border-strong: #4a5568;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 2px 4px rgba(0,0,0,0.4);
+    --shadow-lg: 0 4px 8px rgba(0,0,0,0.5);
+
+    /* Focus ring - adjusted for dark backgrounds */
+    --focus-ring: 0 0 0 3px rgba(100, 180, 255, 0.6);
+}
+
+/* Auto theme - respects system preference when no data-theme is set */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        /* Surface colors - dark mode */
+        --surface: #1a1a2e;
+        --surface-2: #16213e;
+        --surface-3: #0f3460;
+
+        /* Text colors - dark mode */
+        --text-primary: #e8e8e8;
+        --text-secondary: #b8b8b8;
+        --text-muted: #888888;
+
+        /* Brand colors - adjusted for dark mode */
+        --brand-primary: #1e3a5f;
+        --brand-text: #e8e8e8;
+
+        /* Border & shadow - dark mode */
+        --border: #2d3748;
+        --border-strong: #4a5568;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow-md: 0 2px 4px rgba(0,0,0,0.4);
+        --shadow-lg: 0 4px 8px rgba(0,0,0,0.5);
+
+        /* Focus ring - adjusted for dark backgrounds */
+        --focus-ring: 0 0 0 3px rgba(100, 180, 255, 0.6);
+    }
 }
 
 /* ============================================
@@ -184,7 +250,7 @@ textarea:focus-visible,
 
 .board-header h2 {
     font-size: 1.25rem;
-    color: var(--brand-primary);
+    color: var(--text-primary);
     margin: 0;
 }
 
@@ -192,7 +258,7 @@ textarea:focus-visible,
     display: flex;
     gap: var(--gap-sm);
     font-size: 0.875rem;
-    color: #7f8c8d;
+    color: var(--text-muted);
 }
 
 /* Board grid using auto-fit for responsive columns
@@ -227,7 +293,7 @@ textarea:focus-visible,
 
 .column-header {
     font-weight: 600;
-    color: var(--brand-primary);
+    color: var(--text-primary);
     margin-bottom: var(--gap-sm);
     padding-bottom: var(--gap-sm);
     border-bottom: 2px solid var(--border-strong);
@@ -295,7 +361,7 @@ textarea:focus-visible,
 
 .ticket-id {
     font-size: 0.75rem;
-    color: #7f8c8d;
+    color: var(--text-muted);
     font-family: monospace;
 }
 
@@ -309,19 +375,19 @@ textarea:focus-visible,
 
 .ticket-title {
     font-size: 0.875rem;
-    color: var(--brand-primary);
+    color: var(--text-primary);
     line-height: 1.4;
 }
 
 .ticket-meta {
     margin-top: var(--gap-sm);
     font-size: 0.75rem;
-    color: #95a5a6;
+    color: var(--text-secondary);
 }
 
 .empty-state {
     text-align: center;
-    color: #95a5a6;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     padding: var(--gap) var(--pad);
 }

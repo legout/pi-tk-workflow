@@ -1,0 +1,2 @@
+tf_cli/static/web-ui.css
+tf_cli/templates/base.html
