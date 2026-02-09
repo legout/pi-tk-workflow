@@ -1,11 +1,7 @@
 """Tests for demo hello module."""
 from __future__ import annotations
 
-import pytest
-
 from demo.hello import hello
-
-pytestmark = pytest.mark.unit
 
 
 def test_hello_default() -> None:
