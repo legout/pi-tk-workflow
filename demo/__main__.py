@@ -7,11 +7,16 @@ import sys
 from demo.hello import hello
 
 
-def main() -> None:
-    """Run the hello CLI."""
+def main() -> int:
+    """Run the hello CLI.
+
+    Returns:
+        int: Exit code (0 for success).
+    """
     name = " ".join(sys.argv[1:]).strip() or "World"
     print(hello(name))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

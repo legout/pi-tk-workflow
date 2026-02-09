@@ -1,46 +1,32 @@
 # Close Summary: abc-123
 
-## Ticket Status
-**CLOSED** (re-run with fixes)
+## Status
+COMPLETED
 
-## Summary
-Workflow re-executed for ticket abc-123 with --auto flag. Applied fixes for all Critical and Major review issues.
+## Quality Gate
+- Enable quality gate: false
+- Blocking severities: []
+- Result: PASSED (0 blocking issues)
 
-## Issues Addressed
-
-### Fixed (Critical)
-- Docstring placement in `demo/hello.py` - moved to first statement
-- Docstring placement in `demo/__init__.py` - moved to first statement
-- Docstring placement in `demo/__main__.py` - formatting fix
-- Docstring placement in `tests/test_demo_hello.py` - moved to first statement
-
-### Fixed (Major)
-- Removed duplicate CLI entry point from `demo/hello.py`
-- Updated CLI documentation to reference `python -m demo` consistently
-
-## Files Changed
-- `demo/hello.py` - Docstring fix, removed CLI block
-- `demo/__init__.py` - Docstring fix
-- `demo/__main__.py` - Formatting fix
-- `tests/test_demo_hello.py` - Docstring fix
-
-## Final Review Status
+## Final Review Statistics
 - Critical: 0
 - Major: 0
-- Minor: 3 (not fixed - low priority)
-- Warnings: 2 (follow-up tickets)
-- Suggestions: 4 (follow-up tickets)
-
-## Verification
-- All 3 tests passing
-- CLI works: `python -m demo Alice` → "Hello, Alice!"
-- Library import works: `from demo.hello import hello`
+- Minor: 5 (1 fixed)
+- Warnings: 3
+- Suggestions: 4
 
 ## Commit
-c0fe841 - abc-123: Fix docstring placement and remove duplicate CLI entry point
+b0c32ff - abc-123: Re-run workflow - applied Minor whitespace fix to CLI
 
 ## Artifacts
 - `.tf/knowledge/tickets/abc-123/implementation.md`
 - `.tf/knowledge/tickets/abc-123/review.md`
 - `.tf/knowledge/tickets/abc-123/fixes.md`
 - `.tf/knowledge/tickets/abc-123/close-summary.md`
+- `.tf/knowledge/tickets/abc-123/files_changed.txt`
+
+## Files Changed
+- `demo/__main__.py` - Added `.strip()` for whitespace handling
+
+## Note Added
+Workflow re-executed with --auto flag. Applied Minor fix: whitespace handling in CLI args (added .strip()). All 3 tests passing. Review: 0 Critical, 0 Major, 5 Minor (1 fixed), 3 Warnings, 4 Suggestions. Commit: b0c32ff

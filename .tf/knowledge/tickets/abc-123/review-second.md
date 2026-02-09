@@ -1,38 +1,35 @@
 # Review (Second Opinion): abc-123
 
 ## Overall Assessment
-Clean implementation following Python best practices. Previous reviews covered most issues well. The code is well-documented with only minor gaps in edge case handling and doctest configurability that were overlooked.
+Clean, well-documented hello-world implementation following Python best practices. The code is functional and tests pass. A few minor improvements could enhance CLI robustness and test coverage.
 
 ## Critical (must fix)
 No issues found.
 
 ## Major (should fix)
-No major issues.
+- `demo/__main__.py:17-18` - `main()` function doesn't return an exit code. For CLI entry points, best practice is to return `0` on success to enable proper shell exit code checking (`echo $?`). Current implementation implicitly returns `None`.
 
 ## Minor (nice to fix)
-- `demo/hello.py:1-22` - Docstring contains doctest-formatted examples (`>>>`) but there's no doctest runner configured. Either add `if __name__ == "__main__": import doctest; doctest.testmod()` to enable running doctests, or change the examples to plain code blocks to avoid confusion.
-- `demo/__main__.py:12` - `" ".join(sys.argv[1:])` with a whitespace-only argument (e.g., `python -m demo " "`) produces `" "` which results in output `"Hello,  !"` (double space). Consider stripping whitespace: `" ".join(sys.argv[1:]).strip() or "World"`.
-- `tests/test_demo_hello.py:30` - `test_hello_empty_string` verifies `hello("")` returns `"Hello, !"` but this behavior is questionable. An empty string greeting looks like a bug to users. Consider either: (a) treating empty string as default, or (b) raising ValueError for empty/whitespace-only names.
+- `tests/test_demo_hello.py` - Missing CLI test coverage. The `__main__.py` module contains logic for argument parsing via `sys.argv` and output via `print()`, but there are no tests for the CLI entry point. Consider adding tests that mock `sys.argv` and capture stdout.
 
 ## Warnings (follow-up ticket)
-- `demo/hello.py:35` - No handling for non-string inputs. If `hello(None)` is called, it raises `TypeError` in f-string formatting. While the type hint indicates `str`, runtime type checking or a defensive conversion could improve robustness for library usage.
-- `demo/__main__.py:10-14` - CLI argument parsing is minimal. If requirements expand (e.g., `--help`, `--version`, `--shout` flags), the current `sys.argv` approach won't scale. Consider migrating to `argparse` or `click` in a follow-up.
+- `demo/__main__.py:12` - Direct `sys.argv` manipulation without validation could lead to unexpected behavior with quoted strings or special characters. For a demo this is acceptable, but production CLI tools should consider `argparse` for robust argument handling.
 
 ## Suggestions (follow-up ticket)
-- `tests/test_demo_hello.py` - Add unicode test cases (e.g., `hello("José")`, `hello("中")`) to ensure proper handling of international names across different system encodings.
-- `demo/hello.py` - Consider adding a `__version__` attribute to the module for version visibility in library usage.
+- `demo/__main__.py` - Consider migrating to `argparse` module for better help text (`python -m demo --help`), argument validation, and extensibility. This would provide a more complete CLI experience.
+- `tests/test_demo_hello.py` - Consider adding edge case tests for CLI invocation (e.g., multiple arguments, special characters in names) if the CLI is considered part of the public API.
 
 ## Positive Notes
-- Excellent use of `from __future__ import annotations` for forward compatibility across all modules
-- Comprehensive docstrings with usage examples that read like documentation
-- Clean separation of concerns: `hello()` is pure function, `__main__.py` handles I/O
-- Good `__all__` export control promoting clean public API
-- Multi-word name support in CLI is a thoughtful touch (`" ".join(sys.argv[1:])`)
-- Proper pytest marker usage (`pytestmark = pytest.mark.unit`) for test categorization
+- Excellent docstrings with usage examples and CLI documentation in `hello.py`
+- Consistent use of `from __future__ import annotations` across all modules for forward compatibility
+- Proper type hints throughout the codebase
+- Clean module exports with `__all__` defined in `__init__.py`
+- Good use of `pytestmark` for test categorization (unit tests)
+- Tests cover default parameter, custom names, and empty string edge case
 
 ## Summary Statistics
 - Critical: 0
-- Major: 0
-- Minor: 3
-- Warnings: 2
+- Major: 1
+- Minor: 1
+- Warnings: 1
 - Suggestions: 2

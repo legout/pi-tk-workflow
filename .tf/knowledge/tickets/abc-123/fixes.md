@@ -1,21 +1,21 @@
 # Fixes: abc-123
 
-## Status
-Fixer enabled. 0 Critical, 0 Major issues found. Applied 1 Minor fix.
+## Applied Fixes
 
-## Fixes Applied
-
-### Minor Fix
-- `demo/__main__.py:12` - Added `.strip()` to handle whitespace-only arguments
-  - Before: `name = " ".join(sys.argv[1:]) or "World"`
-  - After: `name = " ".join(sys.argv[1:]).strip() or "World"`
-  - Rationale: Prevents "Hello,  !" output when whitespace-only args passed
-
-## Skipped (Nice-to-fix, not required)
-- Missing test for multi-word names
-- No CLI test coverage for `__main__.py`
-- Empty string behavior discussion
-- Doctest runner configuration
+### Major Fix (1)
+- **File**: `demo/__main__.py`
+- **Issue**: `main()` function didn't return an exit code, preventing proper shell exit code checking
+- **Change**: 
+  - Changed return type from `None` to `int`
+  - Added `return 0` at end of function
+  - Changed `if __name__ == "__main__":` block to use `sys.exit(main())`
+  - Added docstring `Returns` section documenting exit code
 
 ## Verification
-Tests re-run after fix: 3 passed
+- All 3 tests passing
+- CLI returns exit code 0: `python -m demo; echo $?` → 0
+
+## Remaining Issues (Not Fixed)
+- Minor: Empty string test case behavior (documented edge case)
+- Minor: Missing CLI test coverage (follow-up ticket candidate)
+- Warnings/Suggestions: argparse migration ideas (follow-up ticket candidates)
