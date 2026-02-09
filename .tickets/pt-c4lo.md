@@ -1,6 +1,6 @@
 ---
 id: pt-c4lo
-status: open
+status: closed
 deps: [pt-ba0n]
 links: [pt-sd01]
 created: 2026-02-09T09:32:03Z
@@ -72,3 +72,24 @@ When a user clicks on a ticket (from kanban or topic view), they should see deta
 - Datastar docs: https://data-star.dev
 - Datastar actions: https://data-star.dev/reference/actions
 - tf_cli/ticket_loader.py - Ticket dataclass
+
+## Notes
+
+**2026-02-09T13:59:17Z**
+
+Implemented ticket detail view with:
+
+- Server-side markdown rendering using Python markdown library
+- Datastar navigation (@get('/board') for back button)
+- Full ticket metadata display (ID, title, status, priority, tags, timestamps)
+- Linked tickets and dependencies sections
+- External link placeholder for tk web integration
+
+Files changed:
+- examples/web-ui-poc/sanic-datastar/requirements.txt (new)
+- examples/web-ui-poc/sanic-datastar/web_app.py
+- examples/web-ui-poc/sanic-datastar/templates/ticket.html
+
+Commit: 5855a72
+Review: 0 Critical, 0 Major, 0 Minor (all acceptance criteria met)
+Artifacts: .tf/knowledge/tickets/pt-c4lo/
