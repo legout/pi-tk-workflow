@@ -7,27 +7,32 @@ No issues found.
 No issues found.
 
 ## Minor (nice to fix)
-- `tests/test_demo_hello.py:14` - Pytest marker `pytest.mark.unit` is used but not registered in `pytest.ini` or `pyproject.toml`. This will generate a PytestUnknownMarkWarning. Either register the marker or remove it. *(from reviewer-general)*
-- `demo/__main__.py:42` - The CLI passes `args.name` directly to `hello()` without validation at the CLI layer. Could add explicit validation for better error messaging. *(from reviewer-second-opinion)*
+- `demo/__main__.py:42` - Whitespace handling inconsistency: CLI preserves whitespace in names (e.g., `"  Bob  "`) while the library function strips empty/whitespace-only to "World". Consider stripping CLI input for consistency. (Source: reviewer-second-opinion)
 
 ## Warnings (follow-up ticket)
-- `demo/__main__.py:19-44` - The CLI `main()` function has no test coverage. Consider adding tests for argument parsing and exit codes. *(from reviewer-general, reviewer-second-opinion)*
+- `tests/test_demo_hello.py` - Test coverage gap: No test for names with mixed whitespace (e.g., `"  Bob  "` with preserved internal spacing). While edge cases for empty/whitespace-only are covered, the "whitespace preserved" behavior isn't explicitly tested. (Source: reviewer-second-opinion)
 
 ## Suggestions (follow-up ticket)
-- `demo/hello.py:33` - Consider adding explicit `None` check before calling `.strip()`, e.g., `if name is None or not name.strip()`. While type hints indicate `str`, runtime Python allows `None` to be passed. *(from reviewer-general)*
-- `demo/hello.py` - Consider adding input length validation (e.g., max 100 chars) to prevent potential issues with unexpectedly large inputs in CLI usage. *(from reviewer-general)*
-- `demo/hello.py:42` - Consider adding type validation for the `name` parameter (e.g., raise `TypeError` if not a string). *(from reviewer-spec-audit)*
-- `tests/test_demo_hello.py:28` - Consider adding a test for CLI invocation via `subprocess` or testing `main()` directly with mocked `argv`. *(from reviewer-spec-audit, reviewer-second-opinion)*
-- `demo/hello.py:37` - Consider adding support for multiple names (variadic) or formatting options (uppercase, title case) for consistency with `tf/hello.py`. *(from reviewer-second-opinion)*
+- `demo/hello.py:35` - Consider adding a `strip_whitespace: bool = False` parameter to give callers explicit control over whitespace handling behavior, making the API more flexible. (Source: reviewer-second-opinion)
+
+## Positive Notes
+- Excellent use of `from __future__ import annotations` for forward compatibility
+- Proper use of argparse with good help text and type annotations
+- Clean package exports with explicit `__all__` definition
+- Good use of pytest markers (`pytestmark = pytest.mark.unit`) for test categorization
+- All modules include comprehensive docstrings with usage examples
+- Edge case handling for empty/whitespace-only names with `.strip()` check
+- Proper `sys.exit(main())` pattern for CLI entry point
+- All 4 tests pass, CLI works correctly
 
 ## Summary Statistics
 - Critical: 0
 - Major: 0
-- Minor: 2
+- Minor: 1
 - Warnings: 1
-- Suggestions: 5
+- Suggestions: 1
 
-## Reviewers
-- reviewer-general: Completed
-- reviewer-spec-audit: Completed
-- reviewer-second-opinion: Completed
+## Review Sources
+- reviewer-general: 0 Critical, 0 Major, 0 Minor
+- reviewer-spec-audit: 0 Critical, 0 Major, 0 Minor
+- reviewer-second-opinion: 0 Critical, 0 Major, 1 Minor, 1 Warning, 1 Suggestion
