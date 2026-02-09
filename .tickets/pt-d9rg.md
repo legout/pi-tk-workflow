@@ -1,6 +1,6 @@
 ---
 id: pt-d9rg
-status: open
+status: closed
 deps: [pt-ooda]
 links: []
 created: 2026-02-09T09:04:18Z
@@ -34,3 +34,9 @@ Even after fixing the action methods, the document opening won't work correctly 
 - Seed: seed-fix-tui-doc-opening
 - Textual docs: https://textual.textualize.io/guide/app/#suspending-the-app
 
+
+## Notes
+
+**2026-02-09T09:24:42Z**
+
+Implementation complete. Wrapped os.system() call in _open_doc method with self.app.suspend() context manager for proper terminal handling when opening external pagers/editors. Added error handling for suspend failures.\n\nCommit: 5f1b2ef\n\nReview Summary:\n- Critical: 0\n- Major: 1 (doc suggestion for unrelated function)\n- Minor: 4\n- Warnings: 1\n- Suggestions: 3\n\nManual testing required:\n- Test with less pager\n- Test with vim editor\n- Verify TUI resumes correctly

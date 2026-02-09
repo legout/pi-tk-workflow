@@ -1,6 +1,6 @@
 ---
 id: pt-im9d
-status: open
+status: closed
 deps: [pt-tpwl]
 links: [pt-tpwl]
 created: 2026-02-08T23:04:18Z
@@ -33,3 +33,9 @@ The current bug is a chicken-egg condition: lessons are only written if the file
 - Tests: `tests/` (start with `tests/test_agentsmd.py` if relevant)
 
 
+
+## Notes
+
+**2026-02-09T07:22:09Z**
+
+Implementation complete. Added 11 comprehensive tests for Ralph lessons learned persistence to AGENTS.md in tests/test_ralph_state.py. Tests cover: first lesson creation, second lesson appending, no-lessons handling, progress updates, and issue count extraction. Minor cleanup: removed unused imports, fixed docstring. Commit: 949d67f

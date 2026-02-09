@@ -1,6 +1,6 @@
 ---
 id: pt-sf9w
-status: open
+status: closed
 deps: []
 links: [pt-ls9y]
 created: 2026-02-09T11:48:25Z
@@ -29,3 +29,18 @@ Plan requires supporting `textual serve` for both installed and dev workflows.
 ## References
 - Plan: plan-allow-to-serve-the-textual-app-as-a-web
 
+
+## Notes
+
+**2026-02-09T12:01:59Z**
+
+Verification completed. Both workflows confirmed working:
+
+1. Installed: textual serve --command "tf ui"
+2. Dev: textual serve "python -m tf_cli.ui"
+
+Defaults: http://localhost:8000, manual shutdown (Ctrl+C), low latency via WebSocket.
+
+Key quirk: CLI commands require --command flag; Python modules work directly.
+
+Commit: 3e19e6a
