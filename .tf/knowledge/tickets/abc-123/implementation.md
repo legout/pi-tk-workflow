@@ -1,20 +1,15 @@
 # Implementation: abc-123
 
 ## Summary
-Verified existing hello-world utility implementation. The demo module provides a greeting function with CLI support, meeting all acceptance criteria.
+Applied Minor fix to hello-world utility test suite. Removed global sys.argv patching in CLI tests and now pass argv directly to main() function.
 
 ## Files Changed
-- `demo/hello.py` - Core greeting function with docstring and type hints
-- `demo/__init__.py` - Package initialization exposing `hello`
-- `demo/__main__.py` - CLI entry point using argparse
-- `tests/test_demo_hello.py` - Comprehensive test suite (6 tests)
+- `tests/test_demo_hello.py` - Removed unittest.mock import and sys.argv patching. CLI tests now pass argv directly to main() function.
 
 ## Key Decisions
-- Used existing implementation (already complete from previous workflow runs)
-- Function accepts name parameter with default "World"
-- Handles edge cases: empty strings and whitespace-only strings return "Hello, World!"
-- CLI uses argparse per project convention
-- All functions include proper docstrings with Args/Returns sections
+- Applied fix from reviewer-general feedback: CLI tests now pass argv directly to main([]) and main(["Alice"]) instead of patching sys.argv globally
+- This avoids global state mutation in tests and follows the function signature more directly
+- All 6 tests continue to pass
 
 ## Tests Run
 ```bash
@@ -30,10 +25,10 @@ Results: 6 passed
 
 ## Quality Checks
 ```bash
-ruff check demo/ tests/test_demo_hello.py --fix
-ruff format demo/ tests/test_demo_hello.py
+ruff check tests/test_demo_hello.py --fix
+ruff format tests/test_demo_hello.py
 ```
-Result: All checks passed, 4 files unchanged
+Result: All checks passed
 
 ## Verification
 ```bash

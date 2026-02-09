@@ -1,13 +1,10 @@
 """Tests for demo hello module.
 
 Test suite for the hello-world utility demonstrating IRF workflow.
-Covers default parameter, custom names, and edge cases.
+Covers default parameter, custom names, and edge cases (6 tests total).
 """
 
 from __future__ import annotations
-
-import sys
-from unittest.mock import patch
 
 import pytest
 
@@ -45,8 +42,7 @@ def test_hello_whitespace_only() -> None:
 
 def test_cli_default(capsys: pytest.CaptureFixture[str]) -> None:
     """Test CLI entry point with no arguments."""
-    with patch.object(sys, "argv", ["demo"]):
-        result = main()
+    result = main([])
     assert result == 0
     captured = capsys.readouterr()
     assert "Hello, World!" in captured.out
@@ -54,8 +50,7 @@ def test_cli_default(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_cli_with_name(capsys: pytest.CaptureFixture[str]) -> None:
     """Test CLI entry point with a name argument."""
-    with patch.object(sys, "argv", ["demo", "Alice"]):
-        result = main()
+    result = main(["Alice"])
     assert result == 0
     captured = capsys.readouterr()
     assert "Hello, Alice!" in captured.out

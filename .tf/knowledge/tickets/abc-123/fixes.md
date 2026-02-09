@@ -1,33 +1,23 @@
 # Fixes: abc-123
 
-## Status
-No new fixes required. The issues flagged in review were already addressed in previous workflow iterations.
+## Applied Fixes
 
-## Issues Reviewed
+### Minor Fixes
+- `tests/test_demo_hello.py` - **Test pattern improvement**: Removed global `sys.argv` patching and `unittest.mock` import. CLI tests now pass argv directly to `main()` function:
+  - `test_cli_default`: Changed from patching `sys.argv` to calling `main([])`
+  - `test_cli_with_name`: Changed from patching `sys.argv` to calling `main(["Alice"])`
+  - This avoids global state mutation and follows the function signature directly
 
-### Minor Issues (already fixed)
+## Remaining Minor Issues (Intentionally Not Fixed)
+None - all Minor issues have been addressed.
 
-1. **Test count documentation** ✅
-   - Review flagged: Implementation.md stated 4 tests but file has 6
-   - Status: Already corrected - implementation.md shows "6 tests" in Tests Run section
-
-2. **Docstring wording** ✅
-   - Review flagged: Docstring said "fall back to 'World'" but returns "Hello, World!"
-   - Status: Already corrected - docstring now reads "return 'Hello, World!'"
-
-3. **CLI test pattern** ⏭️
-   - Review suggested: Pass `argv` directly to `main()` instead of patching `sys.argv`
-   - Decision: Not fixed - current pattern is valid and tests pass; low value change for demo code
-
-## Verification
-```bash
-$ ruff check demo/ tests/test_demo_hello.py
-All checks passed!
-
-$ python -c "from demo.hello import hello; print(hello()); print(hello('Test'))"
-Hello, World!
-Hello, Test!
+## Tests After Fixes
+All 6 tests passing:
 ```
-
-## Files Changed
-None - all review issues were previously addressed.
+tests/test_demo_hello.py::test_hello_default PASSED
+tests/test_demo_hello.py::test_hello_custom_name PASSED
+tests/test_demo_hello.py::test_hello_empty_string PASSED
+tests/test_demo_hello.py::test_hello_whitespace_only PASSED
+tests/test_demo_hello.py::test_cli_default PASSED
+tests/test_demo_hello.py::test_cli_with_name PASSED
+```

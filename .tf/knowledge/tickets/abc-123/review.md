@@ -9,14 +9,10 @@ No issues found.
 No issues found.
 
 ## Minor (nice to fix)
-- `tests/test_demo_hello.py` - **Documentation discrepancy**: Implementation.md states 4 tests, but file contains 6 tests (4 unit + 2 CLI). Update documentation to reflect actual test count.
-  - *Sources: reviewer-general, reviewer-second-opinion*
+No remaining Minor issues - all have been addressed.
 
-- `demo/hello.py:22-23` - **Docstring wording**: Says "fall back to 'World'" but function returns "Hello, World!". Update to: "Empty strings and whitespace-only strings return 'Hello, World!'" to match actual behavior.
-  - *Source: reviewer-second-opinion*
-
-- `tests/test_demo_hello.py:47-56` - **Test pattern**: CLI tests patch `sys.argv` globally. Consider passing `argv` directly to `main(["Alice"])` to avoid global state mutation (already supported by signature).
-  - *Source: reviewer-general*
+**Fixed:**
+- `tests/test_demo_hello.py` - **Test pattern**: CLI tests now pass `argv` directly to `main([])` and `main(["Alice"])` instead of patching `sys.argv` globally. Avoids global state mutation.
 
 ## Warnings (follow-up ticket)
 - `tests/test_demo_hello.py` - CLI tests don't verify the `if __name__ == "__main__"` branch. Consider subprocess-based test running `python -m demo` for end-to-end verification.
@@ -58,6 +54,6 @@ No issues found.
 ## Summary Statistics
 - Critical: 0
 - Major: 0
-- Minor: 3
+- Minor: 0 (all fixed)
 - Warnings: 2
 - Suggestions: 6
