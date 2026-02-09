@@ -254,7 +254,9 @@ pi install npm:pi-mcp-adapter
 | grep_app | Code search | Requires API key |
 | zai-web-search | Web search | Requires API key |
 | zai-web-reader | Page reading | Requires API key |
-| zai-vision | Image analysis | Requires API key |
+| zai-vision | Image analysis | Requires API key + Node.js |
+
+> **Note:** `zai-vision` runs locally via `npx -y @z_ai/mcp-server` and requires Node.js with npx available. The `zai-web-search` and `zai-web-reader` servers remain remote URL-based services.
 
 ### MCP Config Location
 

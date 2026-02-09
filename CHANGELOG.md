@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Documentation note clarifying that `zai-vision` MCP server runs locally via `npx -y @z_ai/mcp-server` and requires Node.js/npx, while `zai-web-search` and `zai-web-reader` remain remote URL-based services.
+
 ### Changed
 
 ### Deprecated
