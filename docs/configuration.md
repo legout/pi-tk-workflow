@@ -199,10 +199,21 @@ Additional workflow settings in `config/settings.json`:
     "enableCloser": true,
     "enableQualityGate": false,
     "failOn": [],
-    "knowledgeDir": ".tf/knowledge"
+    "knowledgeDir": ".tf/knowledge",
+    "escalation": {
+      "enabled": false,
+      "maxRetries": 3,
+      "models": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      }
+    }
   }
 }
 ```
+
+> Because `config/settings.json` is version-controlled, keep the `workflow.escalation` block there so the elevated defaults are tracked in the repo. Run `/tf-sync` (or `tf sync`) after editing `.tf/config/settings.json` to sync any overrides from the repository config.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -214,6 +225,43 @@ Additional workflow settings in `config/settings.json`:
 | `enableQualityGate` | `false` | Block closing if issues found |
 | `failOn` | `[]` | Severities that block closing |
 | `knowledgeDir` | `.tf/knowledge` | Where to store knowledge artifacts |
+| `escalation.enabled` | `false` | Enable retry escalation on quality gate blocks |
+| `escalation.maxRetries` | `3` | Maximum blocked attempts before skipping ticket |
+| `escalation.models.fixer` | `null` | Escalation model for fixer (null = use base) |
+| `escalation.models.reviewerSecondOpinion` | `null` | Escalation model for 2nd opinion reviewer |
+| `escalation.models.worker` | `null` | Escalation model for implementation worker |
+
+### Escalation Configuration
+
+When `escalation.enabled` is `true`, blocked tickets are retried with escalated models:
+
+| Attempt | Fixer | Reviewer-2nd-Opinion | Worker |
+|---------|-------|---------------------|--------|
+| 1 | Base model | Base model | Base model |
+| 2 | Escalation model | Base model | Base model |
+| 3+ | Escalation model | Escalation model | Escalation model (if configured) |
+
+Each override targets a specific workflow role: `models.fixer` feeds the fixer agent (`agents.fixer`), `models.reviewerSecondOpinion` feeds the second-opinion reviewer (`reviewer-second-opinion`), and `models.worker` feeds the implementation worker (`agents.worker`). Set any override to `null` to fall back to the base model, and keep `escalation.enabled` false when you need the previous, non-escalated behavior.
+
+**Example escalation config**:
+
+```json
+{
+  "workflow": {
+    "escalation": {
+      "enabled": true,
+      "maxRetries": 3,
+      "models": {
+        "fixer": "openai-codex/gpt-5.3-codex",
+        "reviewerSecondOpinion": "openai-codex/gpt-5.2-codex",
+        "worker": null
+      }
+    }
+  }
+}
+```
+
+See [Retries and Escalation](./retries-and-escalation.md) for full details.
 
 ---
 

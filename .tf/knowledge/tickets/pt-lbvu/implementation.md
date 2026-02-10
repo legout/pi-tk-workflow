@@ -1,58 +1,94 @@
 # Implementation: pt-lbvu
 
 ## Summary
-Ticket pt-lbvu requested adding escalation config to settings schema. Verified existing implementation meets all acceptance criteria.
+Added `workflow.escalation` configuration to the repo settings schema with explicit defaults (enabled=false, maxRetries=3, models nullable) and documented how model overrides map to roles.
 
 ## Retry Context
 - Attempt: 1
 - Escalated Models: fixer=base, reviewer-second=base, worker=base
 
 ## Files Changed
-No code changes required - implementation was already in place and verified.
 
-## Verification Results
+### 1. config/settings.json
+Added the `escalation` configuration block under `workflow`:
 
-### Config Schema Check
+```json
+"escalation": {
+  "enabled": false,
+  "maxRetries": 3,
+  "models": {
+    "fixer": null,
+    "reviewerSecondOpinion": null,
+    "worker": null
+  }
+}
 ```
-✓ workflow.escalation.enabled: false (boolean)
-✓ workflow.escalation.maxRetries: 3 (integer)
-✓ workflow.escalation.models.fixer: null (nullable string)
-✓ workflow.escalation.models.reviewerSecondOpinion: null (nullable string)
-✓ workflow.escalation.models.worker: null (nullable string)
+
+This ensures the repo settings template includes the escalation config with:
+- `enabled: false` - Escalation is disabled by default (backwards compatible)
+- `maxRetries: 3` - Maximum 3 retry attempts before skipping
+- `models.*: null` - All model overrides default to null (use base models)
+
+### 2. tf/retry_state.py
+Fixed a bug in `resolve_escalation()` method where calling the method after `start_attempt()` (while an attempt is in progress) would incorrectly calculate the attempt number and trigger escalation prematurely.
+
+The fix checks if the last attempt has status "in_progress" and uses the current attempt number instead of incrementing:
+
+```python
+# Check if there's an in-progress attempt (called after start_attempt)
+current_attempts = self._data["attempts"]
+if current_attempts and current_attempts[-1].get("status") == "in_progress":
+    # We're in the middle of an attempt - use current attempt number
+    attempt = len(current_attempts)
+else:
+    # Starting a new attempt - use next attempt number
+    attempt = len(current_attempts) + 1
 ```
 
-### Acceptance Criteria
-- [x] `workflow.escalation` config added with explicit defaults (enabled=false, maxRetries=3, models nullable)
-- [x] Model overrides documented for roles (fixer, reviewer-second-opinion, worker) in docs/retries-and-escalation.md
-- [x] Backwards compatible (escalation disabled by default, no breaking changes)
+## Key Decisions
 
-### Documentation Verified
-- `docs/retries-and-escalation.md` - Complete documentation including:
-  - Configuration options table
-  - Escalation curve (attempt 1/2/3+)
-  - Retry state schema
-  - Troubleshooting guide
+1. **Backwards Compatibility**: The escalation config defaults to `enabled: false`, ensuring existing projects continue to work without changes. When disabled, the workflow uses base models for all attempts.
 
-### Schema Validation
-- JSON schema is valid
-- All required fields present with correct types
-- Nullable model fields accept string or null
-- Boolean enabled flag defaults to false
+2. **Model Override Mapping**: The escalation config uses camelCase keys that map to workflow roles:
+   - `fixer` → The fixer agent (runs after review to fix issues)
+   - `reviewerSecondOpinion` → The reviewer-second-opinion agent (parallel reviewer)
+   - `worker` → The main implementation worker (optional, for attempt 3+)
 
-## Key Implementation Details
-1. Uses camelCase for JSON keys (reviewerSecondOpinion) matching skill spec
-2. Defaults to disabled for backwards compatibility
-3. Sets maxRetries=3 as reasonable default
-4. Uses null for model defaults (meaning "use base model from agents config")
+3. **Escalation Curve**: As documented in `docs/retries-and-escalation.md`:
+   - Attempt 1: Base models for all roles
+   - Attempt 2: Escalated fixer only
+   - Attempt 3+: Escalated fixer + reviewer-second-opinion (+ worker if configured)
 
 ## Tests Run
-- JSON schema validation via Python json module
-- Field presence verification
-- Type checking of default values
-- Documentation completeness check
+
+All 60 tests in `tests/test_retry_state.py` pass:
+- Retry state persistence (load/save)
+- Retry counter behavior
+- Blocked status detection
+- Max retries skip logic
+- Escalation model resolution
+- Reset functionality
+- Close summary detection
+- Review detection
+- Unified detection
+- Schema validation
+- Edge cases
+- Integration tests
+
+```bash
+cd /home/volker/coding/pi-ticketflow && python -m pytest tests/test_retry_state.py -v
+# 60 passed
+```
 
 ## Verification
-The escalation config is fully implemented and documented. To enable escalation:
-1. Set `workflow.escalation.enabled: true`
-2. Configure desired escalation models in `workflow.escalation.models`
-3. Run `/tf` workflow with retry-enabled tickets
+
+1. The escalation config is now present in `config/settings.json` with correct defaults
+2. The `docs/configuration.md` already documents the escalation config and model mapping
+3. The `docs/retries-and-escalation.md` has comprehensive documentation on retry behavior
+4. All retry state tests pass, including the escalation resolution tests
+
+## Documentation References
+
+- `docs/configuration.md` - Workflow configuration including escalation settings
+- `docs/retries-and-escalation.md` - Full retry and escalation behavior documentation
+- `tf/retry_state.py` - Implementation of retry state management and escalation resolution

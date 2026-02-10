@@ -1,7 +1,7 @@
 # Review: pt-lbvu
 
 ## Overall Assessment
-The escalation config implementation is complete and meets all acceptance criteria. The `workflow.escalation` schema is correctly defined in settings.json with explicit defaults (enabled=false, maxRetries=3, nullable models), comprehensive documentation has been added to docs/configuration.md mapping model overrides to roles, and the design is backwards compatible.
+The escalation config implementation is solid with good defaults and backwards compatibility. However, there are several edge cases around model resolution, config merging, and type safety that could cause subtle failures in production retry scenarios. The documentation correctly describes the escalation curve but doesn't warn about the asymmetric worker escalation behavior.
 
 ## Critical (must fix)
 - No issues found
@@ -16,8 +16,8 @@ The escalation config implementation is complete and meets all acceptance criter
 - `.tf/config/settings.json:126-134` - All escalation models are `null` by default, which is correct for backwards compatibility, but means escalation is effectively a no-op until explicitly configured - this could confuse users who enable `enabled: true` without setting models.
 
 ## Warnings (follow-up ticket)
-- `tf/retry_state.py:25-34` - `DEFAULT_ESCALATION_CONFIG` uses `dict[str, Any]` typing which bypasses type checking. Consider using `TypedDict` for stricter validation.
-- `tf/retry_state.py:234-247` - The schema validation in `_validate_schema()` only checks field existence, not types or values.
+- `tf/retry_state.py:25-34` - `DEFAULT_ESCALATION_CONFIG` uses `dict[str, Any]` typing which bypasses type checking. Consider using `TypedDict` for stricter validation, especially since nested `models` dict merging relies on structure.
+- `tf/retry_state.py:234-247` - The schema validation in `_validate_schema()` only checks field existence, not types or values (e.g., `version` could be a string, `retryCount` could be negative).
 
 ## Suggestions (follow-up ticket)
 - Add a config validation warning when `escalation.enabled: true` but all models are null - help users discover they need to configure models.
@@ -25,11 +25,10 @@ The escalation config implementation is complete and meets all acceptance criter
 - Add test case for `next_attempt_number=0` in `resolve_escalation()` to document/verify expected behavior.
 
 ## Positive Notes
-- **Schema correctness**: The escalation config follows a clean, extensible structure with `enabled`, `maxRetries`, and `models` sub-object containing role-specific overrides
-- **Documentation completeness**: docs/configuration.md includes escalation config in the workflow JSON example, detailed settings table, escalation curve table, and complete usage example
-- **Role mapping clarity**: Each model override is explicitly mapped to its agent role (fixer, reviewerSecondOpinion, worker)
-- **Backwards compatibility**: Default `enabled: false` ensures zero behavior change for existing setups; `null` values gracefully fall back to base models
-- **Code quality**: The atomic save mechanism prevents state corruption; nested models dict merging correctly preserves defaults while allowing partial overrides
+- The atomic save mechanism (`save()` using temp file + `os.replace()`) correctly prevents state corruption during crashes.
+- The nested models dict merging in `load_escalation_config()` correctly preserves defaults for unspecified roles while allowing partial overrides.
+- The `start_attempt()` resume logic (lines 268-277) elegantly handles process crashes without duplicate attempt entries.
+- Documentation table clearly maps role names to their config keys and describes the escalation progression.
 
 ## Summary Statistics
 - Critical: 0

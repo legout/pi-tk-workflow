@@ -10,6 +10,7 @@ This module provides functionality for:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -32,6 +33,9 @@ DEFAULT_ESCALATION_CONFIG: dict[str, Any] = {
         "worker": None,
     },
 }
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 class QualityGateCounts(TypedDict):
@@ -630,5 +634,10 @@ def load_escalation_config(settings_path: Path | str) -> dict[str, Any]:
         config["models"] = default_models
 
         return config
-    except (json.JSONDecodeError, IOError):
+    except json.JSONDecodeError:
+        # Invalid JSON - return defaults
+        return dict(DEFAULT_ESCALATION_CONFIG)
+    except IOError as e:
+        # File exists but can't be read (permissions, etc.) - log warning and return defaults
+        logger.warning(f"Cannot read settings file {path}: {e}. Using default escalation config.")
         return dict(DEFAULT_ESCALATION_CONFIG)
