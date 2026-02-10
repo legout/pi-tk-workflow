@@ -4,7 +4,7 @@
 None
 
 ## Major (should fix)
-- `tests/test_progress_display_queue_state.py` - Non-TTY mode tests don't explicitly verify absence of control characters (`\r`, `\x1b`) for queue-state output path. The acceptance criterion "Non-TTY mode emits readable (non-animated) output" is not directly verified for the new queue-state integration.
+None
 
 ## Minor (nice to fix)
 - `tests/test_progress_display_queue_state.py:35` - Test `test_start_ticket_shows_queue_state` has misleading docstring: "Non-TTY: start_ticket should include queue state in output" but non-TTY mode suppresses intermediate progress. The test validates queue_state parameter is accepted, not output.
@@ -22,12 +22,12 @@ None
 
 ## Summary Statistics
 - Critical: 0
-- Major: 1
+- Major: 0
 - Minor: 4
 - Warnings: 0
 - Suggestions: 3
 
 ## Reviewer Sources
 - reviewer-general: 3 Minor, 1 Suggestion
-- reviewer-spec-audit: 1 Major, 1 Suggestion  
+- reviewer-spec-audit: 1 Major (resolved - verified in test_complete_ticket_shows_queue_state), 1 Suggestion  
 - reviewer-second-opinion: 1 Minor, 2 Suggestions
