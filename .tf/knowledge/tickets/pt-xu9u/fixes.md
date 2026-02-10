@@ -1,75 +1,122 @@
 # Fixes: pt-xu9u
 
-## Issues Fixed
+## Summary
+Addressed all Critical and Major issues identified in the review.
 
-### Critical Fixes
+## Critical Fixes Applied
 
-1. **Attempt Number Consistency** (reviewer-general, reviewer-second-opinion, reviewer-spec-audit)
-   - Changed from `retryAttempt` (0-indexed) to `attemptNumber` (1-indexed) throughout
-   - Escalation curve now uses clear 1-based indexing: Attempt 1 = base, Attempt 2 = fixer escalated, Attempt 3+ = full escalation
-   - Fixed implementation template to use `{attemptNumber}` instead of `{retryAttempt + 1}`
-   - Fixed retry-state.json write to use `{attemptNumber}` instead of `{retryAttempt + 1}`
+### 1. Attempt Numbering Consistency (FIXED)
+**Issue**: Off-by-one error in attempt numbering causing second attempts to be labeled as 3.
 
-2. **Config Schema Example** (reviewer-general, reviewer-second-opinion)
-   - Fixed JSON example to show `workflow.escalation` nested inside `workflow` object
-   - Before: `{ "escalation": { ... } }`
-   - After: `{ "workflow": { "escalation": { ... } } }`
+**Fix**: 
+- Standardized on `attemptNumber` (1-indexed) throughout
+- Fresh attempt: `attemptNumber = 1`, `retryCount = 0`
+- Retry attempt: `attemptNumber = len(attempts) + 1`, `retryCount = previous_retryCount + 1`
+- Escalation curve based on `attemptNumber` directly:
+  - Attempt 1: Base models
+  - Attempt 2: Escalated fixer
+  - Attempt 3+: Escalated fixer + reviewer-second-opinion + worker (if configured)
 
-3. **Detection Algorithm Missing has_items Fallback** (reviewer-spec-audit)
-   - Added `has_items` check to fallback detection in review.md
-   - If summary stats are missing but bullet items exist, count = 1 (indicating issues present)
-   - Added section boundary detection to accurately count items per severity section
+### 2. Config Schema Example (FIXED)
+**Issue**: Example showed `{ "escalation": { ... } }` at root instead of under `workflow`.
 
-4. **Missing qualityGate.counts in BLOCKED Case** (reviewer-spec-audit)
-   - Added explicit severity count extraction algorithm to Close Ticket procedure
-   - `blocked_counts` now populated with actual failOn severity counts when BLOCKED
-   - Shows how to extract counts from review.md using regex
+**Fix**: Updated all config examples to show proper nested structure:
+```json
+{
+  "workflow": {
+    "escalation": {
+      "enabled": false,
+      "maxRetries": 3,
+      "models": { ... }
+    }
+  }
+}
+```
 
-### Major Fixes
+### 3. Detection Algorithm - Missing has_items Fallback (FIXED)
+**Issue**: review.md detection only extracted summary statistics, missing fallback when stats absent.
 
-5. **Base Model Resolution Ambiguity** (reviewer-general, reviewer-second-opinion)
-   - Clarified base model resolution: `agents.{role}` → meta-model key → `metaModels.{key}.model`
-   - Added explicit note about kebab-case vs camelCase mapping in Load Retry State
+**Fix**: Added complete detection logic:
+```python
+# Find section boundaries
+section_start = section_match.end()
+next_header = re.search(r'\n^##\s', content[section_start:], re.MULTILINE)
+section_end = section_start + next_header.start() if next_header else len(content)
+section = content[section_start:section_end]
 
-6. **maxRetries Semantics** (reviewer-general, reviewer-second-opinion)
-   - Clarified that `maxRetries` means "maximum BLOCKED attempts" not total attempts
-   - Comparison now checks `retryCount >= maxRetries` after incrementing
+# Check if section has bullet items (fallback indicator)
+has_items = bool(re.search(r'\n-\s', section))
 
-7. **Missing Ralph Skip Logic** (reviewer-spec-audit)
-   - Added "Check Skip Conditions" subsection to Ralph Integration procedure
-   - Skip tickets with `status: blocked` and `retryCount >= maxRetries`
-   - Log skip decision with ticket ID and retry count
+# Extract count from summary stats (fallback to 1 if items exist but no count)
+if stat_match:
+    count = int(stat_match.group(1))
+else:
+    count = 1 if has_items else 0
+```
 
-8. **Missing Parallel Worker Safety** (reviewer-spec-audit)
-   - Added "Parallel Worker Safety" subsection to Retry Escalation section
-   - Documents Option A (file locking with filelock) and Option B (disable retry logic)
-   - Default behavior: disable retry logic when `parallelWorkers > 1` without locking
+### 4. Ralph Skip Logic for maxRetries (FIXED)
+**Issue**: No mechanism to skip tickets that exceeded max retries.
 
-9. **No Atomic Write for retry-state.json** (reviewer-spec-audit)
-   - Added atomic write procedure: write to temp file, then `os.replace()` for atomic rename
-   - Prevents corruption from mid-write crashes
+**Fix**: Added to Ralph Integration section:
+- Check `{artifactDir}/retry-state.json` for `status: blocked` and `retryCount >= maxRetries`
+- If exceeded: Skip ticket with log message
+- Also skip if `parallelWorkers > 1` without locking
 
-10. **Model Escalation in Parallel Reviews** (reviewer-general)
-    - Added back model escalation note for reviewer-second-opinion
-    - Documents how escalated model is passed to subagent
+### 5. Parallel Worker Safety (FIXED)
+**Issue**: Only documented assumption without enforcement.
 
-## Files Changed
+**Fix**: Added explicit skip logic:
+```
+Also skip if `parallelWorkers > 1` and no locking mechanism is implemented (log warning)
+```
 
-- `.pi/skills/tf-workflow/SKILL.md` - All fixes applied
+### 6. qualityGate.counts Population in BLOCKED Case (FIXED)
+**Issue**: Attempt entry didn't show extraction of counts for BLOCKED case.
 
-## Verification
+**Fix**: 
+- Parse severity counts from review.md using detection algorithm
+- Store in `blocked_counts` when BLOCKED, `severity_counts` when CLOSED
+- Populated in attempt entry: `"counts": {blocked_counts if closeStatus == BLOCKED else severity_counts}`
 
-- Validated SKILL.md markdown structure
-- Verified all `{attemptNumber}` references are consistent
-- Confirmed atomic write pattern is correct Python
-- Checked that escalation curve logic matches specification
+## Major Fixes Applied
 
-## Remaining Items (Follow-up Tickets)
+### 7. Base Model Resolution Ambiguity (FIXED)
+**Issue**: Agent keys (kebab-case) vs escalation fields (camelCase) mapping unclear.
 
-The following items from review were noted but not fixed in this ticket (as they belong to follow-up work or pt-7lrp):
+**Fix**: 
+- Added explicit mapping note: `reviewer-second-opinion` (agent) → `reviewerSecondOpinion` (escalation field)
+- Clarified resolution order in escalation table
 
-- Post-fix re-review (mandatory per plan) - requires new ticket
-- Ralph tk ready filtering for blocked tickets - requires Ralph changes
-- Detection algorithm unit tests - belongs to pt-7lrp
-- Invalid/legacy retry-state.json handling policy - can be added later
-- End-to-end state transition examples - documentation enhancement
+### 8. maxRetries Semantics (FIXED)
+**Issue**: Unclear if maxRetries means "max total attempts" or "max BLOCKED attempts".
+
+**Fix**: 
+- Defined as "max BLOCKED attempts before giving up"
+- Comparison: `if retryCount >= maxRetries: Log warning`
+
+### 9. Successful Close Detection (FIXED)
+**Issue**: Described in prose without algorithmic clarity.
+
+**Fix**: Detection algorithm is now fully specified with regex patterns and status normalization.
+
+### 10. Schema Validation (FIXED)
+**Issue**: Only validated schema version, not required fields.
+
+**Fix**: 
+- Added validation for required fields: version, ticketId, attempts, lastAttemptAt, status
+- Added corrupted state handling: backup + reset
+
+### 11. Atomic Write for retry-state.json (FIXED)
+**Issue**: Direct write without atomic replace.
+
+**Fix**: 
+```python
+temp_path = f"{retry_state_path}.tmp"
+with open(temp_path, 'w') as f:
+    json.dump(state, f, indent=2)
+os.replace(temp_path, retry_state_path)  # Atomic rename
+```
+
+## Files Modified
+- `skills/tf-workflow/SKILL.md` - All fixes applied
+- `.pi/skills/tf-workflow/SKILL.md` - Synced
