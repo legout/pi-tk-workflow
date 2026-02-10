@@ -1,36 +1,35 @@
 # Review: pt-9lri
 
 ## Overall Assessment
-The implementation adds comprehensive tests for the timeout backoff calculation function. All acceptance criteria are technically met by the surviving test class. However, there is a critical structural issue where a duplicate class definition shadows half the tests, making them unreachable. The implementation report is misleading about test counts.
+Implementation fully satisfies all acceptance criteria. The 17 unit tests comprehensively cover iteration index semantics, cap behavior, and custom increment overrides with deterministic, hermetic assertions. All tests pass and align with the plan specification of linear backoff (effective = base + iteration_index * 150000ms).
 
 ## Critical (must fix)
-- `tests/test_utils.py:206-317` - **DUPLICATED TEST CLASS**: The first `TestCalculateTimeoutBackoff` class (lines 206-317) is completely shadowed by the second class definition (lines 319-422). In Python, redefining a class with the same name replaces the previous definition. This means 13 test methods from the first class (`test_cap_behavior_exactly_at_max`, `test_max_ms_equal_to_base_is_valid`, `test_zero_increment`, `test_default_increment_constant`, etc.) are never collected or executed by pytest, despite appearing in the source file.
+No issues found
 
 ## Major (should fix)
-- `tests/test_utils.py:1` - **Misleading implementation report**: The implementation.md claims "13 test methods" and shows test output with those 13 tests, but fails to mention that another 13 tests exist in the file but don't execute. This gives a false sense of complete coverage.
+No issues found
 
 ## Minor (nice to fix)
-- `tests/test_utils.py:319-422` - The surviving test class is missing `test_iteration_index_two` which was present in the shadowed class. While the acceptance criteria only explicitly require iteration_index=0 and 1, having iteration_index=2 provides better regression safety for the linear backoff formula.
+No issues found
 
 ## Warnings (follow-up ticket)
-- No warnings.
+No warnings
 
 ## Suggestions (follow-up ticket)
-- `tests/test_utils.py` - Consider consolidating the unique tests from both classes into a single class. The first class had valuable tests like `test_zero_increment` (tests constant timeout behavior) and `test_default_increment_constant` (verifies the 150000ms constant) that should not be lost.
+- `tests/test_utils.py:244-250` - Consider adding a test for `max_ms=0` with `base_ms=0` to explicitly document this edge case behavior (currently only tested indirectly via `test_zero_base_timeout_is_valid`)
 
 ## Positive Notes
-- The surviving test class covers all three acceptance criteria:
-  - [x] iteration_index=0 and iteration_index=1 semantics
-  - [x] Cap behavior (max_timeout_ms) with `test_cap_behavior_applies_max` and `test_cap_behavior_not_applied_when_under_max`
-  - [x] Non-default increment override with `test_non_default_increment_override`
-- Tests are fast and hermetic as required (13 tests run in 0.04s)
-- Good input validation coverage for negative parameters
-- Tests properly verify the linear backoff formula: `effective = base_ms + iteration_index * increment_ms`
-- Tests use the actual `DEFAULT_TIMEOUT_INCREMENT_MS` constant rather than hardcoding 150000
+- Excellent test coverage with 17 focused test methods covering all specified acceptance criteria
+- Proper validation of input parameters (negative values raise ValueError as expected)
+- Tests use the actual `DEFAULT_TIMEOUT_INCREMENT_MS` constant rather than hardcoded 150000, making tests resilient to constant changes
+- Clean separation of test categories with comment headers for readability
+- All tests are hermetic (no file I/O, no network calls, no external dependencies)
+- Fast execution - all 17 tests complete in milliseconds
+- Implementation correctly follows plan specification: `effective = base + iteration_index * increment` with optional `max_ms` cap
 
 ## Summary Statistics
-- Critical: 1
-- Major: 1
-- Minor: 1
+- Critical: 0
+- Major: 0
+- Minor: 0
 - Warnings: 0
 - Suggestions: 1
