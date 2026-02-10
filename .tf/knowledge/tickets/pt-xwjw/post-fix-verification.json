@@ -1,0 +1,33 @@
+{
+  "ticket_id": "pt-xwjw",
+  "pre_fix_counts": {
+    "Critical": 2,
+    "Major": 4,
+    "Minor": 3,
+    "Warnings": 4,
+    "Suggestions": 4
+  },
+  "fixed_counts": {
+    "Critical": 9,
+    "Major": 7,
+    "Minor": 3,
+    "Warnings": 0,
+    "Suggestions": 0
+  },
+  "post_fix_counts": {
+    "Critical": 0,
+    "Major": 0,
+    "Minor": 0,
+    "Warnings": 4,
+    "Suggestions": 4
+  },
+  "verification_passed": true,
+  "fail_on": [
+    "Critical",
+    "Major"
+  ],
+  "fixes_found": true,
+  "fixes_parse_warning": null,
+  "review_mtime": 1770731815.6440647,
+  "fixes_mtime": 1770731913.3339663
+}
