@@ -1,2 +1,4 @@
 demo/hello.py
-.tf/knowledge/tickets/abc-123/implementation.md
+demo/__main__.py
+demo/__init__.py
+tests/test_demo_hello.py

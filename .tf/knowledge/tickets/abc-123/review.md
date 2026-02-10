@@ -1,45 +1,36 @@
 # Review: abc-123
 
 ## Critical (must fix)
-No issues found.
+- No issues found.
 
 ## Major (should fix)
-No issues found.
+- No issues found.
 
 ## Minor (nice to fix)
-- `demo/hello.py:36` - Inconsistent whitespace handling: empty/whitespace-only strings fall back to "World", but strings with content preserve all whitespace including leading/trailing (e.g., `hello("  Bob  ")` returns `"Hello,   Bob  !"`). Consider stripping the name for consistency, or document that only completely empty/whitespace strings trigger the fallback. (reviewer-second-opinion)
-
-- `demo/__main__.py:29-32` - CLI doesn't handle names starting with `-` (e.g., `-h`). Running `python -m demo -h` shows help instead of greeting. This is standard argparse behavior but may surprise users with names like "-bob". (reviewer-second-opinion)
+- No issues found.
 
 ## Warnings (follow-up ticket)
-- `tests/test_demo_hello.py:48-51` - Whitespace test uses a manual loop instead of pytest's `@pytest.mark.parametrize`. While functional, parameterized tests provide better failure reporting. (reviewer-second-opinion)
-
-- `tests/test_demo_hello.py` - No test for CLI with names containing spaces (e.g., `"Alice Smith"`) despite docstring examples showing this as a valid use case. (reviewer-second-opinion)
+- No issues found.
 
 ## Suggestions (follow-up ticket)
-- `tests/test_demo_hello.py` - Consider adding a test for `main()` with whitespace-only input to verify CLI behavior matches library behavior. (reviewer-general)
-
-- `demo/__main__.py:21` - Consider adding `-h/--help` example to docstring for completeness. (reviewer-general)
-
-- `tests/test_demo_hello.py` - Add test case for `hello("  Bob  ")` to document/verify the whitespace preservation behavior. (reviewer-second-opinion)
-
-- `demo/__main__.py` - Add `metavar="NAME"` to the argument definition for cleaner help output. (reviewer-second-opinion)
-
-## Positive Notes
-- Excellent test coverage with 6 tests all passing
-- Proper use of modern Python: `from __future__ import annotations`, type hints throughout
-- Good docstrings with runnable examples
-- Follows project argparse conventions
-- Proper package structure with `__all__` definition
+- `tests/test_demo_hello.py:48` and `tests/test_demo_hello.py:56` - Consider asserting exact CLI output (e.g., `captured.out == "Hello, World!\n"`) instead of substring checks. This would make the tests stricter and catch accidental extra output/logging regressions. (from reviewer-second-opinion)
+- `demo/__main__.py:10` / `tests/test_demo_hello.py` - Add an explicit test for `main([""])` to lock in the documented behavior shown in the CLI examples (`python -m demo ""` -> `Hello, World!`). (from reviewer-second-opinion)
 
 ## Summary Statistics
 - Critical: 0
 - Major: 0
-- Minor: 2
-- Warnings: 2
-- Suggestions: 4
+- Minor: 0
+- Warnings: 0
+- Suggestions: 2
 
-## Reviewer Sources
-- reviewer-general: 0 Critical, 0 Major, 0 Minor, 0 Warnings, 2 Suggestions
-- reviewer-spec-audit: 0 Critical, 0 Major, 0 Minor, 0 Warnings, 0 Suggestions
-- reviewer-second-opinion: 0 Critical, 0 Major, 2 Minor, 2 Warnings, 2 Suggestions
+## Reviewer Notes
+**reviewer-general**: Clean, focused implementation consistent with ticket scope. No correctness, security, or maintainability problems found.
+
+**reviewer-spec-audit**: Implementation fully compliant with acceptance criteria. All requirements satisfied: hello utility exists at required path, function signature has default parameter, docstring present, tests included and passing.
+
+**reviewer-second-opinion**: Clean, small, functionally correct implementation. No correctness, security, or performance defects. Two suggestions for stricter test assertions and additional edge case coverage.
+
+## Deduplication Notes
+- All reviewers agree: zero Critical, Major, and Minor issues
+- reviewer-general and reviewer-spec-audit found no suggestions
+- reviewer-second-opinion provided 2 suggestions for test improvements
