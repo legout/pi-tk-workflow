@@ -70,3 +70,17 @@ def test_cli_empty_string(capsys: pytest.CaptureFixture[str]) -> None:
     assert result == 0
     captured = capsys.readouterr()
     assert "Hello, World!" in captured.out
+
+
+def test_hello_none_raises() -> None:
+    """Test hello with None raises TypeError."""
+    with pytest.raises(TypeError, match="name must be a string, not None"):
+        hello(None)  # type: ignore[arg-type]
+
+
+def test_hello_non_string_raises() -> None:
+    """Test hello with non-string types raises TypeError."""
+    with pytest.raises(TypeError, match="name must be a string, got int"):
+        hello(123)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="name must be a string, got list"):
+        hello(["Alice"])  # type: ignore[arg-type]

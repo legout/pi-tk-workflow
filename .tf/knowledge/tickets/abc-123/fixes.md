@@ -1,31 +1,38 @@
 # Fixes: abc-123
 
 ## Summary
-No fixes required. All 3 reviewers reported 0 Critical and 0 Major issues.
+Fixed 3 Major issues identified in review regarding type safety and None handling.
 
-## Review Analysis
-- **Critical**: 0 issues
-- **Major**: 0 issues  
-- **Minor**: 1 issue (already compliant - verification only)
-- **Warnings**: 4 items (follow-up ticket candidates)
-- **Suggestions**: 6 items (future improvements)
+## Fixes Applied
 
-## Minor Issue Verification
-The single Minor issue noted by reviewer-second-opinion was:
-- `demo/__main__.py:16` - Consider using modern union syntax
+### Major Issue 1: None handling
+- **File**: `demo/hello.py`
+- **Fix**: Added explicit None check with descriptive TypeError
+- **Code**: `if name is None: raise TypeError("name must be a string, not None")`
 
-**Status**: Already compliant. The code already uses `Sequence[str] | None` syntax instead of the deprecated `Optional[Sequence[str]]`.
+### Major Issue 2: Non-string type handling
+- **File**: `demo/hello.py`
+- **Fix**: Added isinstance check with descriptive TypeError showing actual type
+- **Code**: `if not isinstance(name, str): raise TypeError(f"name must be a string, got {type(name).__name__}")`
 
-## Quality Gate Status
-**PASSED** - No blocking severities (Critical, Major) found.
+### Major Issue 3: Missing test coverage
+- **File**: `tests/test_demo_hello.py`
+- **Fix**: Added 2 new tests:
+  - `test_hello_none_raises()` - Verifies TypeError for None input
+  - `test_hello_non_string_raises()` - Verifies TypeError for int and list inputs
+
+### Additional Improvements
+- **File**: `demo/hello.py`
+- **Fix**: Added `__all__ = ["hello"]` to explicitly control public API (Suggestion from reviewer-general)
+- **Docstring**: Updated function docstring to document the new `Raises` section
 
 ## Test Results
-All 8 tests passing:
-- test_hello_default
-- test_hello_custom_name
-- test_hello_empty_string
-- test_hello_whitespace_only
-- test_hello_whitespace_stripped
-- test_cli_default
-- test_cli_with_name
-- test_cli_empty_string
+```
+python -m pytest tests/test_demo_hello.py -v
+==============================
+10 passed in 0.08s
+```
+
+## Files Changed
+- `demo/hello.py` - Added type validation and __all__ export
+- `tests/test_demo_hello.py` - Added 2 type validation tests
