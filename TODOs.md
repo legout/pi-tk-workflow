@@ -1,0 +1,6 @@
+- Let the user see and browse closed ticket docs in .tf/knowledge/ticktes/ to the tui and web ui. Shortcut from the tk tickets (.tickets) would be nice
+- Refactor documentation. Make it clean, clear and easy to understand and follow
+- Simplify the code base.
+- Learn from get shit down repo. Which parts could pi-ticketflow benefit from?
+- pi-prompt-template hase new feater: prompt chaining. Check, if this helps to make our current prompts and skills easier
+- ralph loop: check if we could leverage the pi-interactive-shell extension to actually SEE the ralph work

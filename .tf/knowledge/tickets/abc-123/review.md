@@ -1,5 +1,7 @@
 # Review: abc-123
 
+Consolidated review from 3 reviewers (reviewer-general, reviewer-spec-audit, reviewer-second-opinion).
+
 ## Critical (must fix)
 No issues found.
 
@@ -7,43 +9,49 @@ No issues found.
 No issues found.
 
 ## Minor (nice to fix)
-- `demo/hello.py:22-23` - Docstring says "fall back to 'World'" but the function returns "Hello, World!" not just "World". The wording should be: "Empty strings and whitespace-only strings return 'Hello, World!'" to match actual behavior. *(from reviewer-second-opinion)*
+- `demo/hello.py:22-23` - Docstring inaccuracy: "fall back to 'World'" is misleading since the function returns "Hello, World!" not just "World". Should read: "Empty strings and whitespace-only strings return the full greeting 'Hello, World!'". *(reviewer-second-opinion)*
 
-- `.tf/knowledge/tickets/abc-123/implementation.md:18-24` - The "Tests Run" section claims 4 tests, but `tests/test_demo_hello.py` actually contains 6 tests (4 unit tests for `hello()` function + 2 CLI tests for `main()`). Update the documentation to accurately reflect the test suite. *(from reviewer-second-opinion)*
+- `.tf/knowledge/tickets/abc-123/implementation.md:18-24` - Documentation bug: "Tests Run" section lists 4 tests but actual test file contains 6 tests (4 function tests + 2 CLI tests). Correct the count to maintain documentation accuracy. *(reviewer-second-opinion)*
+
+- `tests/test_demo_hello.py:40` - The whitespace test uses a for-loop with an assertion inside, which will stop at first failure rather than showing all failing cases. Using `@pytest.mark.parametrize` would provide better failure reporting. *(reviewer-second-opinion)*
 
 ## Warnings (follow-up ticket)
-- `tests/test_demo_hello.py` - The CLI tests (`test_cli_default`, `test_cli_with_name`) test the `main()` function directly but don't test the `if __name__ == "__main__":` execution branch. Consider adding a subprocess-based test that actually runs `python -m demo` to verify the entry point works end-to-end. *(from reviewer-second-opinion)*
+- `tests/test_demo_hello.py` - Coverage gap: The `if __name__ == "__main__":` branch in `demo/__main__.py` is not tested. This branch should be verified via subprocess test to ensure CLI entry point works correctly. *(reviewer-second-opinion)*
 
-- `tests/test_demo_hello.py` - No tests for CLI argument parsing edge cases (e.g., multiple names like `python -m demo Alice Bob`). The argparse is configured with `nargs="?"` so it only accepts one, but this behavior is not verified. *(from reviewer-second-opinion)*
+- `demo/__main__.py:42` - No handling for `SystemExit` from argparse (e.g., `--help`). While current code works, if future arguments are added that trigger parser exit, the return type annotation (`int`) may be violated. *(reviewer-second-opinion)*
 
 ## Suggestions (follow-up ticket)
-- `tests/test_demo_hello.py:1` - Consider adding a module-level docstring reference to the ticket ID for traceability. *(from reviewer-general)*
+- `tests/test_demo_hello.py:55-56` - Consider adding a test for CLI with empty string argument to verify the edge case handling works through the CLI interface. *(reviewer-general)*
 
-- `demo/__main__.py:30` - The type annotation `args: argparse.Namespace` is correct but could benefit from a more specific type hint if argparse subparsers are added in future. *(from reviewer-general)*
+- `tests/test_demo_hello.py:66` - Consider adding CLI tests for multi-word names (e.g., `main(["Alice", "Smith"])`) to verify argparse nargs behavior. *(reviewer-spec-audit)*
 
-- `demo/hello.py:15` - Consider adding `__version__` to the module for package versioning consistency. *(from reviewer-spec-audit)*
+- `tests/test_demo_hello.py:68` - Consider testing CLI with whitespace-only input to ensure edge case coverage at CLI layer. *(reviewer-spec-audit)*
 
-- `tests/test_demo_hello.py:45` - Consider adding a test for multi-word names with CLI (e.g., `main(["Alice Smith"])`) to match the docstring example. *(from reviewer-spec-audit)*
+- `demo/hello.py` - Consider adding runtime type check for `name` parameter. Currently `hello(None)` raises `AttributeError: 'NoneType' object has no attribute 'strip'` rather than a more informative `TypeError`. While type hints help, runtime validation could be defensive for library code. *(reviewer-second-opinion)*
 
-- `pyproject.toml` - Consider adding the `demo` package to project dependencies if it will be used as a reusable component. *(from reviewer-spec-audit)*
+- `demo/__main__.py` - Add `--version` flag for CLI completeness. This is standard practice for command-line utilities and helps users verify their installation. *(reviewer-second-opinion)*
 
-- `demo/hello.py` - Consider adding type validation or stricter handling. Currently, passing `None` would raise `AttributeError` on `.strip()` rather than a clear `TypeError`. While the type hint indicates `str`, runtime validation could be defensive. *(from reviewer-second-opinion)*
+- `demo/__main__.py` - Consider supporting multiple names (e.g., `python -m demo Alice Bob` → "Hello, Alice and Bob!"). This would require changing `nargs="?"` to `nargs="*"` and handling the list in `hello()`. *(reviewer-second-opinion)*
 
-- `tests/test_demo_hello.py` - Add parametrized tests using `@pytest.mark.parametrize` for the whitespace-only test case to improve test readability and reduce the for-loop in the test body. *(from reviewer-second-opinion)*
-
-- `demo/__main__.py` - Consider adding `--version` flag for CLI completeness, following common CLI conventions. *(from reviewer-second-opinion)*
+## Positive Notes
+- `demo/hello.py:1` - Excellent module-level docstring with usage examples and CLI documentation. *(reviewer-general)*
+- `demo/hello.py:28-30` - Function correctly accepts name parameter with default "World" per spec. *(reviewer-spec-audit)*
+- `demo/hello.py:28-42` - Comprehensive docstring included with Args and Returns sections. *(reviewer-spec-audit)*
+- `demo/__main__.py:19` - Proper use of argparse following project conventions. *(reviewer-general)*
+- `demo/__main__.py:20-24` - Clean main() function returning int exit code for proper CLI behavior. *(reviewer-general)*
+- `tests/test_demo_hello.py:27-30` - Parameterized whitespace testing with descriptive assertion messages. *(reviewer-general)*
+- All files include `from __future__ import annotations` for project consistency. *(reviewer-general, reviewer-second-opinion)*
+- Type hints are complete and accurate throughout. *(reviewer-general)*
+- Proper use of `__all__` in `__init__.py` for explicit public API definition. *(reviewer-second-opinion)*
 
 ## Summary Statistics
 - Critical: 0
 - Major: 0
-- Minor: 2
+- Minor: 3
 - Warnings: 2
-- Suggestions: 8
+- Suggestions: 6
 
-## Reviewer Notes Summary
-
-**reviewer-general**: Clean implementation with excellent test isolation. No required fixes.
-
-**reviewer-spec-audit**: Fully compliant with acceptance criteria. Exceeds requirements with robust edge-case handling and comprehensive documentation.
-
-**reviewer-second-opinion**: Minor docstring wording issue and outdated implementation.md test count. Good overall quality.
+## Spec Coverage
+- Spec/plan sources consulted: Ticket abc-123 description (via `tk show`)
+- Missing specs: none
+- All acceptance criteria met. *(reviewer-spec-audit)*
