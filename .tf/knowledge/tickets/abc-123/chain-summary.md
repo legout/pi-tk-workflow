@@ -1,32 +1,31 @@
 # Chain Summary: abc-123
 
 ## Workflow Execution
-- **Ticket**: abc-123
-- **Command**: `/tf abc-123 --auto`
-- **Status**: Complete
+
+| Step | Status | Output |
+|------|--------|--------|
+| Re-Anchor | ✅ | Loaded lessons, ticket details, retry state |
+| Research | ✅ | Used existing research.md |
+| Implement | ✅ | Verified implementation (11 tests) |
+| Parallel Reviews | ✅ | 3 reviewers completed |
+| Merge Reviews | ✅ | review.md consolidated |
+| Fix Issues | ✅ | Verified compliance, no changes needed |
+| Post-Fix Verification | ✅ | PASSED |
+| Close Ticket | ✅ | Committed artifacts |
 
 ## Artifacts
-| Artifact | Path |
-|----------|------|
-| Research | `.tf/knowledge/tickets/abc-123/research.md` |
-| Implementation | `.tf/knowledge/tickets/abc-123/implementation.md` |
-| Review (Merged) | `.tf/knowledge/tickets/abc-123/review.md` |
-| Fixes | `.tf/knowledge/tickets/abc-123/fixes.md` |
-| Post-Fix Verification | `.tf/knowledge/tickets/abc-123/post-fix-verification.md` |
-| Close Summary | `.tf/knowledge/tickets/abc-123/close-summary.md` |
-| Retry State | `.tf/knowledge/tickets/abc-123/retry-state.json` |
 
-## Review Outputs (Individual)
-| Reviewer | File |
-|----------|------|
-| reviewer-general | `.tf/knowledge/tickets/abc-123/review-general.md` |
-| reviewer-spec-audit | `.tf/knowledge/tickets/abc-123/review-spec.md` |
-| reviewer-second-opinion | `.tf/knowledge/tickets/abc-123/review-second.md` |
+- [research.md](research.md) - Ticket research
+- [implementation.md](implementation.md) - Implementation summary
+- [review.md](review.md) - Consolidated review
+- [fixes.md](fixes.md) - Fixes verification
+- [post-fix-verification.md](post-fix-verification.md) - Quality gate results
+- [close-summary.md](close-summary.md) - This summary
+- [retry-state.json](retry-state.json) - Retry tracking
 
-## Files Changed
-See: `.tf/knowledge/tickets/abc-123/files_changed.txt`
+## Quality Gate
+- **Status**: PASSED
+- **Blocking**: 0 Critical, 0 Major
 
-## Summary
-- **Quality Gate**: PASSED
-- **Blocking Issues**: 0 Critical, 0 Major
-- **Tests**: 11 passing
+## Commit
+`431f4b0` - abc-123: Workflow re-execution - all quality checks passed
