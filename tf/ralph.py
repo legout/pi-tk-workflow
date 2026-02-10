@@ -18,6 +18,9 @@ from tf.logger import LogLevel, RalphLogger, RedactionHelper, create_logger
 # Import shared utilities
 from tf.utils import find_project_root
 
+# Import queue state for progress display
+from tf.ralph.queue_state import QueueStateSnapshot
+
 
 class ProgressDisplay:
     """Conservative per-ticket progress display for tf ralph (serial mode only).
@@ -36,7 +39,13 @@ class ProgressDisplay:
         self.total: Union[int, str] = 0
         self._last_line_len = 0
 
-    def start_ticket(self, ticket_id: str, iteration: int, total_tickets: Union[int, str]) -> None:
+    def start_ticket(
+        self,
+        ticket_id: str,
+        iteration: int,
+        total_tickets: Union[int, str],
+        queue_state: Optional["QueueStateSnapshot"] = None,
+    ) -> None:
         """Called when a ticket starts processing.
 
         Args:
@@ -44,12 +53,20 @@ class ProgressDisplay:
             iteration: Current loop iteration (0-indexed)
             total_tickets: Total number of tickets to process (for UI display),
                           can be '?' if ticket listing failed
+            queue_state: Optional queue state snapshot with ready/blocked counts
         """
         self.current_ticket = ticket_id
         self.total = total_tickets
-        self._draw(f"[{iteration + 1}/{total_tickets}] Processing {ticket_id}...")
+        state_str = f" {queue_state}" if queue_state else ""
+        self._draw(f"[{iteration + 1}/{total_tickets}]{state_str} Processing {ticket_id}...")
 
-    def complete_ticket(self, ticket_id: str, status: str, iteration: int) -> None:
+    def complete_ticket(
+        self,
+        ticket_id: str,
+        status: str,
+        iteration: int,
+        queue_state: Optional["QueueStateSnapshot"] = None,
+    ) -> None:
         """Called when a ticket completes (success or failure)."""
         if status == "COMPLETE":
             self.completed += 1
@@ -61,7 +78,8 @@ class ProgressDisplay:
             msg = f"? {ticket_id} {status.lower()}"
 
         self.current_ticket = None
-        self._draw(f"[{iteration + 1}/{self.total}] {msg}", final=True)
+        state_str = f" {queue_state}" if queue_state else ""
+        self._draw(f"[{iteration + 1}/{self.total}]{state_str} {msg}", final=True)
 
     def _draw(self, text: str, final: bool = False) -> None:
         """Draw progress line. In TTY mode, uses carriage return for in-place updates.
@@ -273,6 +291,13 @@ def select_ticket(ticket_query: str) -> Optional[str]:
 
 def list_ready_tickets(list_query: str) -> List[str]:
     result = run_shell(list_query)
+    lines = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+    return [line.split()[0] for line in lines]
+
+
+def list_blocked_tickets() -> List[str]:
+    """List tickets blocked by unresolved dependencies."""
+    result = run_shell("tk blocked")
     lines = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
     return [line.split()[0] for line in lines]
 
@@ -1467,14 +1492,9 @@ def ralph_start(args: List[str]) -> int:
             # Initialize progress display if requested
             progress_display = ProgressDisplay(output=sys.stderr) if progress else None
 
-            # Compute ready tickets count once at loop start for accurate progress display
-            ready_tickets_count: Optional[int] = None
-            if progress:
-                try:
-                    ready_tickets = list_ready_tickets(ticket_list_query(ticket_query))
-                    ready_tickets_count = len(ready_tickets) if ready_tickets else None
-                except Exception:
-                    ready_tickets_count = None
+            # Track queue state for ready/blocked counts
+            completed_tickets: set[str] = set()
+            running_ticket: Optional[str] = None
 
             while iteration < max_iterations:
                 if backlog_empty(completion_check):
@@ -1492,15 +1512,29 @@ def ralph_start(args: List[str]) -> int:
                     time.sleep(sleep_sec)
                     continue
 
+                # Mark ticket as running and compute queue state
+                running_ticket = ticket
+                ready_ids = set(list_ready_tickets(ticket_list_query(ticket_query)))
+                blocked_ids = set(list_blocked_tickets())
+                # Pending = ready + blocked (tickets that could still run)
+                pending_ids = ready_ids | blocked_ids
+                # Remove currently running ticket from pending
+                if running_ticket in pending_ids:
+                    pending_ids.remove(running_ticket)
+                # Build dep_graph: blocked tickets have unmet deps
+                dep_graph: dict[str, set[str]] = {t: set() for t in blocked_ids if t in pending_ids}
+                # Compute queue state snapshot
+                from tf.ralph.queue_state import get_queue_state
+                queue_state = get_queue_state(
+                    pending=pending_ids,
+                    running={running_ticket} if running_ticket else set(),
+                    completed=completed_tickets,
+                    dep_graph=dep_graph,
+                )
+
                 # Update progress display at ticket start
                 if progress_display:
-                    # Use pre-computed ready tickets count for progress display
-                    # If listing failed, show '?' as placeholder instead of default 50
-                    if ready_tickets_count is not None:
-                        total_display = str(ready_tickets_count)
-                    else:
-                        total_display = "?"
-                    progress_display.start_ticket(ticket, iteration, total_display)
+                    progress_display.start_ticket(ticket, iteration, str(queue_state.total), queue_state=queue_state)
 
                 # Fetch ticket title only in verbose mode (DEBUG or VERBOSE)
                 ticket_title: Optional[str] = None
@@ -1509,7 +1543,7 @@ def ralph_start(args: List[str]) -> int:
                     ticket_logger = logger.with_context(ticket=ticket, ticket_title=ticket_title, iteration=iteration)
                 else:
                     ticket_logger = logger.with_context(ticket=ticket, iteration=iteration)
-                ticket_logger.log_ticket_start(ticket, mode="serial", iteration=iteration, ticket_title=ticket_title)
+                ticket_logger.log_ticket_start(ticket, mode="serial", iteration=iteration, ticket_title=ticket_title, queue_state=queue_state)
 
                 # Bounded restart loop for timeout handling
                 attempt = 0
@@ -1560,6 +1594,22 @@ def ralph_start(args: List[str]) -> int:
 
                 # Handle final result after restart loop
                 if not options["dry_run"]:
+                    # Recompute queue state after completion
+                    if ticket_rc == 0:
+                        completed_tickets.add(ticket)
+                    running_ticket = None
+                    # Get updated state for display/logging
+                    ready_ids = set(list_ready_tickets(ticket_list_query(ticket_query)))
+                    blocked_ids = set(list_blocked_tickets())
+                    pending_ids = ready_ids | blocked_ids
+                    dep_graph = {t: set() for t in blocked_ids if t in pending_ids}
+                    queue_state = get_queue_state(
+                        pending=pending_ids,
+                        running=set(),
+                        completed=completed_tickets,
+                        dep_graph=dep_graph,
+                    )
+
                     if ticket_rc != 0:
                         if ticket_rc == -1:
                             error_msg = f"Ticket failed after {attempt} attempt(s) due to timeout (threshold: {timeout_ms}ms)"
@@ -1567,16 +1617,17 @@ def ralph_start(args: List[str]) -> int:
                             error_msg = f"pi -p failed (exit {ticket_rc})"
                         # Update progress display on failure
                         if progress_display:
-                            progress_display.complete_ticket(ticket, "FAILED", iteration)
+                            progress_display.complete_ticket(ticket, "FAILED", iteration, queue_state=queue_state)
                         knowledge_dir = resolve_knowledge_dir(project_root)
                         artifact_path = str(knowledge_dir / "tickets" / ticket)
+                        ticket_logger.log_ticket_complete(ticket, "FAILED", mode="serial", iteration=iteration, ticket_title=ticket_title, queue_state=queue_state)
                         ticket_logger.log_error_summary(ticket, error_msg, artifact_path=artifact_path, iteration=iteration, ticket_title=ticket_title)
                         update_state(ralph_dir, project_root, ticket, "FAILED", error_msg)
                         return ticket_rc
                     # Update progress display on success
                     if progress_display:
-                        progress_display.complete_ticket(ticket, "COMPLETE", iteration)
-                    ticket_logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", iteration=iteration, ticket_title=ticket_title)
+                        progress_display.complete_ticket(ticket, "COMPLETE", iteration, queue_state=queue_state)
+                    ticket_logger.log_ticket_complete(ticket, "COMPLETE", mode="serial", iteration=iteration, ticket_title=ticket_title, queue_state=queue_state)
                     update_state(ralph_dir, project_root, ticket, "COMPLETE", "")
 
                 iteration += 1
