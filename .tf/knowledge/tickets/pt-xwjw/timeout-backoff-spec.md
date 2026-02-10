@@ -1,7 +1,7 @@
 # Timeout Backoff Specification
 
 **Ticket**: pt-xwjw  
-**Status**: Draft → Ready for Implementation  
+**Status**: Ready for Implementation  
 **Related**: pt-bcu8 (implementation ticket)
 
 ---
@@ -47,6 +47,21 @@ effective_timeout_ms = min(
 )
 ```
 
+### 2.3 Formula Constraints and Validation
+
+**Input Validation Requirements**:
+
+| Parameter | Valid Range | Validation Error Behavior |
+|-----------|-------------|---------------------------|
+| `base_timeout_ms` | ≥ 0 | Log error, use default (600000) |
+| `increment_ms` | ≥ 0 | Log error, use default (150000) |
+| `iteration_index` | ≥ 0 | If negative passed, treat as 0 and log warning |
+| `max_timeout_ms` | null or ≥ `base_timeout_ms` | Log error, treat as null (no cap) |
+
+**Integer Overflow**: Python's arbitrary-precision integers prevent overflow. However, implementations should apply `max_timeout_ms` cap (if configured) before returning to prevent absurdly large timeout values at high iteration counts.
+
+**Maximum Practical Timeout**: Even without `max_timeout_ms`, implementations may impose a practical upper bound (e.g., 24 hours = 86400000 ms) to prevent runaway execution.
+
 ### 2.3 Formula Components
 
 | Component | Type | Description |
@@ -89,14 +104,24 @@ Timeout backoff settings are defined in **`.tf/ralph/config.json`** alongside ex
 
 All configuration values **MUST** be validated on load. Invalid values **MUST** log an error and fall back to defaults.
 
-| Constraint | Validation Rule | Error Behavior |
-|------------|-----------------|----------------|
-| `baseTimeoutMs` | Must be ≥ 0 | Log error, use default (600000) |
-| `incrementMs` | Must be ≥ 0 | Log error, use default (150000) |
-| `maxTimeoutMs` | Must be null or ≥ `baseTimeoutMs` | Log error, treat as null (no cap) |
-| `enabled` | Must be boolean | Log error, use default (false) |
+| Constraint | Validation Rule | Error Behavior | Log Message |
+|------------|-----------------|----------------|-------------|
+| `baseTimeoutMs` | Must be integer ≥ 0 | Log error, use default (600000) | `Invalid timeoutBackoff.baseTimeoutMs: {value} (must be >= 0). Using default: 600000` |
+| `incrementMs` | Must be integer ≥ 0 | Log error, use default (150000) | `Invalid timeoutBackoff.incrementMs: {value} (must be >= 0). Using default: 150000` |
+| `maxTimeoutMs` | Must be null, 0 (treated as null), or integer ≥ `baseTimeoutMs` | Log error, treat as null (no cap) | `Invalid timeoutBackoff.maxTimeoutMs: {value} (must be >= baseTimeoutMs: {base}). Disabling cap.` |
+| `enabled` | Must be boolean | Log error, use default (false) | `Invalid timeoutBackoff.enabled: {value} (must be boolean). Using default: false` |
 
-**Rationale**: Negative timeouts are nonsensical. Negative increment would decrease timeout over iterations (opposite of intent). A max less than base would always cap to an invalid value.
+**Type Coercion Rules**:
+- Float values: Convert to int if whole number (e.g., `600000.0` → `600000`), else log error
+- String values: Attempt int parsing, log error if parsing fails
+- Null/undefined: Use default for that key
+
+**Special Cases**:
+- `maxTimeoutMs: 0` is treated as "no cap" (same as null) - this is intentional for YAML/config file convenience
+- `maxTimeoutMs: null` is valid and means "no cap" - no log message
+- Explicit `maxTimeoutMs: null` is different from validation failure - do not log error for explicit null
+
+**Rationale**: Negative timeouts are nonsensical. Negative increment would decrease timeout over iterations (opposite of intent). A max less than base would always cap to base, which is confusing.
 
 ### 3.4 Default Values Rationale
 
@@ -251,6 +276,8 @@ def calculate_effective_timeout(
     return effective
 ```
 
+**Note**: The type annotation `int | None` requires Python 3.10+ or `from __future__ import annotations` for Python 3.7-3.9 compatibility.
+
 ### 6.1.1 Integer Overflow Considerations
 
 Python integers have arbitrary precision, so overflow is not a concern in the traditional sense. However, extremely large iteration counts could produce effectively infinite timeouts.
@@ -265,7 +292,7 @@ Python integers have arbitrary precision, so overflow is not a concern in the tr
 
 ### 6.2 Integration Points
 1. **Config loading**: Extend `load_config()` in `tf/ralph.py` to read `timeoutBackoff` section
-2. **Timeout resolution**: Update `resolve_attempt_timeout_ms()` to apply backoff when enabled
+2. **Timeout resolution**: Add a new `resolve_effective_timeout_ms(config, attempt_number)` function that wraps `calculate_effective_timeout()` with config values when backoff is enabled
 3. **Logging**: Add backoff details to attempt start logging
 
 ### 6.3 Environment Variable Override
