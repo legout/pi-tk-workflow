@@ -40,6 +40,14 @@ def test_hello_whitespace_only() -> None:
         assert result == "Hello, World!", f"Failed for whitespace: {repr(whitespace)}"
 
 
+def test_hello_whitespace_stripped() -> None:
+    """Test hello strips leading/trailing whitespace from names."""
+    result = hello("  Alice  ")
+    assert result == "Hello, Alice!"
+    result = hello("\tBob\n")
+    assert result == "Hello, Bob!"
+
+
 def test_cli_default(capsys: pytest.CaptureFixture[str]) -> None:
     """Test CLI entry point with no arguments."""
     result = main([])
@@ -54,3 +62,11 @@ def test_cli_with_name(capsys: pytest.CaptureFixture[str]) -> None:
     assert result == 0
     captured = capsys.readouterr()
     assert "Hello, Alice!" in captured.out
+
+
+def test_cli_empty_string(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CLI entry point with empty string argument."""
+    result = main([""])
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "Hello, World!" in captured.out

@@ -1,4 +1,2 @@
 demo/hello.py
-demo/__main__.py
-demo/__init__.py
 tests/test_demo_hello.py

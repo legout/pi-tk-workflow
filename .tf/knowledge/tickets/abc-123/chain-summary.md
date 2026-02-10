@@ -1,45 +1,35 @@
 # Chain Summary: abc-123
 
-## Workflow Execution
-Executed with flags: `--auto`
+## Execution Date
+2026-02-10T13:05:00Z
 
-## Chain Results
+## Ticket
+abc-123 - Demo: Create hello-world utility for workflow testing
 
-### Research
-- Status: Skipped (existing research sufficient)
-- Artifact: `.tf/knowledge/tickets/abc-123/research.md`
+## Workflow Steps Executed
+1. ✅ Re-Anchor Context
+2. ✅ Research (skipped - existing research sufficient)
+3. ✅ Implement (reviewed existing implementation)
+4. ✅ Parallel Reviews (3 reviewers)
+5. ✅ Merge Reviews
+6. ✅ Fix Issues (3 Major issues fixed)
+7. ⏭️ Follow-ups (skipped - no flag)
+8. ✅ Close Ticket (quality gate passed)
 
-### Implement
-- Status: Complete
-- Model: kimi-coding/k2p5
-- Artifact: `.tf/knowledge/tickets/abc-123/implementation.md`
-- Files: `demo/hello.py`, `demo/__main__.py`, `demo/__init__.py`, `tests/test_demo_hello.py`
+## Artifacts
+| Artifact | Path |
+|----------|------|
+| Research | [.tf/knowledge/tickets/abc-123/research.md](.tf/knowledge/tickets/abc-123/research.md) |
+| Implementation | [.tf/knowledge/tickets/abc-123/implementation.md](.tf/knowledge/tickets/abc-123/implementation.md) |
+| Review | [.tf/knowledge/tickets/abc-123/review.md](.tf/knowledge/tickets/abc-123/review.md) |
+| Fixes | [.tf/knowledge/tickets/abc-123/fixes.md](.tf/knowledge/tickets/abc-123/fixes.md) |
+| Close Summary | [.tf/knowledge/tickets/abc-123/close-summary.md](.tf/knowledge/tickets/abc-123/close-summary.md) |
 
-### Parallel Reviews
-- Status: Complete (3/3 reviewers)
-- reviewer-general: 0 Critical, 0 Major, 0 Minor
-- reviewer-spec-audit: 0 Critical, 0 Major, 0 Minor
-- reviewer-second-opinion: 0 Critical, 0 Major, 0 Minor, 2 Suggestions
-- Artifacts:
-  - `.tf/knowledge/tickets/abc-123/review-general.md`
-  - `.tf/knowledge/tickets/abc-123/review-spec.md`
-  - `.tf/knowledge/tickets/abc-123/review-second.md`
-
-### Merge Reviews
-- Status: Complete
-- Artifact: `.tf/knowledge/tickets/abc-123/review.md`
-
-### Fix Issues
-- Status: Complete (no fixes required)
-- Artifact: `.tf/knowledge/tickets/abc-123/fixes.md`
-
-### Close Ticket
-- Status: Complete (ticket already closed, verified)
-- Commit: `645bcb5`
-- Artifact: `.tf/knowledge/tickets/abc-123/close-summary.md`
-
-## Quality Gate
-**PASSED** - Zero Critical, Major, or Minor issues
+## Commit
+d0c11232abc28d28a3a23bdce77eb7cf0a13587f
 
 ## Final State
-Ticket `abc-123` remains closed with verified implementation.
+- 8/8 tests passing
+- 0 Critical issues
+- 0 Major issues remaining (3 fixed)
+- Quality gate: PASSED
