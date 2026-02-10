@@ -1,36 +1,30 @@
-# Review (Second Opinion): pt-xu9u
+# Review: pt-xu9u
 
 ## Overall Assessment
-The update is thorough and reads like a complete operating procedure for retry-aware escalation, including state schema, artifact locations, and integration points across phases. However, there are a couple of internal consistency issues (attempt numbering/config shape) that would likely cause incorrect retry attempt reporting and misconfiguration if someone follows the doc literally.
+The retry escalation docs and the new tf.retry_state helper document a solid infrastructure, but there are two sequencing assumptions that will break the curve and treat interrupted attempts as if they were completed retries. These failures only surface when a run dies before closing or when escalation decisions are made before the new attempt is recorded, so they are easy to miss unless you focus on the edge cases.
 
 ## Critical (must fix)
-- `skills/tf-workflow/SKILL.md:135-143, 274-276, 434-452` - **Off-by-one / inconsistent attempt numbering across `retryAttempt`, `retryCount`, and persisted `attemptNumber`.** The skill states `retryAttempt` is “0 for fresh, 1+ for retries” (Re-Anchor step 4), but then sets `retryAttempt = retryCount + 1` on blocked (line 141) and later writes `Attempt: {retryAttempt + 1}` in implementation.md (line 275) and `attemptNumber: {retryAttempt + 1}` in retry-state.json (line 436). Example failure: after first BLOCKED run, `retryCount` becomes 1 (line 457); next run sets `retryAttempt = 2` → implementation prints attempt 3 and state writes attemptNumber 3, even though this is the 2nd attempt. This will confuse escalation curve selection and any downstream tooling reading `attemptNumber`.
+- No issues found
 
 ## Major (should fix)
-- `skills/tf-workflow/SKILL.md:118-133` - **Escalation config example has the wrong JSON shape.** The document says `workflow.escalation.enabled` must be true (line 119), but the example block shows `{ "escalation": { ... } }` (lines 122-132) instead of `{ "workflow": { "escalation": { ... }}}`. Following the example would lead to escalation never activating.
-- `skills/tf-workflow/SKILL.md:146-152` - **“Base model resolution: `agents.{role}`” is ambiguous/wrong for this repo’s actual keys.** In `.tf/config/settings.json`, agent keys are `fixer`, `worker`, and `reviewer-second-opinion` (kebab-case) while the escalation override field is `reviewerSecondOpinion` (camelCase). The doc should explicitly map roles to config keys (e.g., `agents.reviewer-second-opinion`) to avoid incorrect lookups.
-- `skills/tf-workflow/SKILL.md:140-154` - **“If `status == "blocked"` or last attempt was BLOCKED” is underspecified.** The doc includes detection algorithms (lines 154+), but the Load Retry State algorithm doesn’t clearly state whether the “last attempt was BLOCKED” comes from `retry-state.json`, `close-summary.md`, or `review.md`, nor how conflicts are resolved.
-- `skills/tf-workflow/SKILL.md:173-187` - **Fallback BLOCKED detection for `review.md` is fragile** because it keys off the presence of per-severity sections (header regex) before extracting counts. If review merging ever outputs only “Summary Statistics” (or formats section titles differently), this fallback will incorrectly treat a blocked review as not blocked.
+- `skills/tf-workflow/SKILL.md:137-149` + `tf/retry_state.py:224-369` - The doctrinal flow says attemptNumber equals len(attempts)+1 and describes resolving escalated models before performing the work, but RetryState.resolve_escalation only looks at self.get_attempt_number (which is just len(attempts)). If the workflow follows the doc literally and defers start_attempt until after it chooses models, the first retry still sees attempt 1 and the fixer never escalates, so the escalation curve never starts. Please either record the new attempt before asking resolve_escalation or make resolve_escalation accept the next attempt number (or add one internally) so attempt 2 actually chooses the stronger fixer as advertised.
+- `skills/tf-workflow/SKILL.md:147-150` + `tf/retry_state.py:224-288` - The documentation explicitly says that an in_progress row should be resumed, but nothing in RetryState checks the previous attempt's status: start_attempt always appends a fresh entry and complete_attempt only updates the latest row. When /tf is cancelled or crashes before complete_attempt runs, the next invocation increments attemptNumber, escalates models, and bumps retryCount even though the ticket never actually finished the prior run. We need to detect attempts[-1]['status'] when loading and reuse or reset that row instead of unconditionally starting a new attempt so that aborted executions do not consume retries or trigger escalated models prematurely.
 
 ## Minor (nice to fix)
-- `skills/tf-workflow/SKILL.md:146-150` - The escalation table labels “Attempt 1 (or 0)”, which mixes 0-based and 1-based terminology in a way that invites the off-by-one bug above. Consider choosing one convention and sticking to it end-to-end (state, display, escalation selection).
-- `skills/tf-workflow/SKILL.md:142` - The `retryAttempt >= maxRetries` warning is ambiguous: is `maxRetries` intended to cap total attempts, or number of retries after the first attempt, or number of BLOCKED closes? The text says “Maximum BLOCKED attempts” elsewhere; the comparison should match that definition.
+- No issues found
 
 ## Warnings (follow-up ticket)
-- `skills/tf-workflow/SKILL.md:566-572` - The doc notes retry logic assumes `ralph.parallelWorkers: 1` and suggests locking or disabling retry logic for parallelism. If parallel workers are ever enabled in practice, lack of a concrete locking/atomic-update procedure for `retry-state.json` could cause race conditions and corrupted state.
+- No issues found
 
 ## Suggestions (follow-up ticket)
-- `skills/tf-workflow/SKILL.md:114-154, 412-459` - Consider adding a small, explicit pseudo-code example for the end-to-end state transitions (initial → blocked → retry → closed) showing `retryCount`, `retryAttempt`, and `attemptNumber` values at each step. This would make it much easier to validate the logic and prevent future drift.
-- `skills/tf-workflow/SKILL.md:421-458` - Consider clarifying whether `retry-state.json` should be written even when escalation is disabled (for observability), or only when enabled (current text says “if escalation enabled”). If only written when enabled, the Load Retry State section could explicitly say it is a no-op when disabled.
+- No issues found
 
 ## Positive Notes
-- `skills/tf-workflow/SKILL.md` - Good separation of phases and clear “artifact must exist” rules, especially for research.md.
-- The escalation curve is clearly described, and the doc attempts to keep model diversity in parallel reviews while still allowing escalation.
-- Syncing both `skills/tf-workflow/SKILL.md` and `.pi/skills/tf-workflow/SKILL.md` avoids divergence between local and packaged skill locations.
+- `tests/test_retry_state.py:604-654` thoroughly exercises escalation config loading, merging user data with defaults, and falling back when settings.json is invalid, which makes it easier to keep the new schema in sync with the documentation.
 
 ## Summary Statistics
-- Critical: 1
-- Major: 4
-- Minor: 2
-- Warnings: 1
-- Suggestions: 2
+- Critical: 0
+- Major: 2
+- Minor: 0
+- Warnings: 0
+- Suggestions: 0

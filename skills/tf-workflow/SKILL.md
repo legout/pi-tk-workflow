@@ -159,6 +159,8 @@ Determines if this is a retry attempt and calculates model escalation.
    **Escalated model resolution**: If `workflow.escalation.models.{role}` is not null, use it; else use base model
 
    Base model resolution: `agents.{role}` → `metaModels.{key}.model`
+   
+   **Note on agent name mapping**: The `agents` map uses hyphenated keys (e.g., `reviewer-second-opinion`), while escalation config uses camelCase (e.g., `reviewerSecondOpinion`). When resolving base models for escalation, map: `fixer` → `agents.fixer`, `reviewerSecondOpinion` → `agents.reviewer-second-opinion`, `worker` → `agents.worker`.
 
 **Detection Algorithm** (for determining BLOCKED status):
 

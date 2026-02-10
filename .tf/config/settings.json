@@ -152,7 +152,16 @@
       "coverage/**",
       ".venv/**",
       "vendor/**"
-    ]
+    ],
+    "escalation": {
+      "enabled": false,
+      "maxRetries": 3,
+      "models": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      }
+    }
   },
   "ralph": {
     "parallelWorkers": 1,
