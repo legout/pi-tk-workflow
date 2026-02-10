@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "ticketId": "pt-xu9u",
+  "attempts": [
+    {
+      "attemptNumber": 1,
+      "startedAt": "2026-02-10T12:39:47Z",
+      "completedAt": "2026-02-10T13:15:41Z",
+      "status": "blocked",
+      "trigger": "initial",
+      "qualityGate": {
+        "failOn": ["Critical", "Major"],
+        "counts": {
+          "Critical": 6,
+          "Major": 6,
+          "Minor": 5,
+          "Warnings": 4,
+          "Suggestions": 4
+        }
+      },
+      "escalation": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      },
+      "closeSummaryRef": "close-summary.md"
+    }
+  ],
+  "lastAttemptAt": "2026-02-10T13:15:41Z",
+  "status": "blocked",
+  "retryCount": 1
+}

@@ -60,6 +60,7 @@ Model resolution order:
 - `workflow.enableQualityGate` - Whether to enforce fail-on severities
 - `workflow.failOn` - List of severities that block closing
 - `workflow.knowledgeDir` - Base directory for knowledge/artifacts (artifactDir = `{knowledgeDir}/tickets/{ticket-id}/`)
+- `workflow.escalation` - Retry-aware model escalation configuration (see Retry Escalation section)
 
 ## Flag Handling
 
@@ -71,6 +72,7 @@ Parse flags from the Task input before running any steps:
 - `--create-followups`: After review merge, run `/tf-followups` (or equivalent procedure) on the merged review.
 - `--simplify-tickets`: After the chain completes, run `/simplify --create-tickets --last-implementation` if the command exists. If not available, warn and continue.
 - `--final-review-loop`: After the chain completes, run `/review-start` if the review-loop extension is installed. If not available, warn and continue.
+- `--retry-reset`: Force a fresh retry attempt (renames existing `retry-state.json` to `.bak.{timestamp}`).
 
 ## Execution Procedures
 
@@ -87,18 +89,128 @@ Run this at the start of EVERY ticket implementation to prevent context rot.
    - Set `artifactDir = {knowledgeDir}/tickets/{ticket-id}/`
    - `mkdir -p {artifactDir}`
 
-3. **Read knowledge base**
+3. **Handle retry reset flag** (if `--retry-reset` provided)
+   - If `{artifactDir}/retry-state.json` exists, rename to `retry-state.json.bak.{timestamp}`
+   - Log: "Retry state reset for {ticket-id}"
+
+4. **Load retry state** (see Load Retry State subsection)
+   - Check for `{artifactDir}/retry-state.json`
+   - If exists and last attempt was BLOCKED → increment retry count, determine escalation
+   - Store `attemptNumber` (1-indexed) and `escalatedModels` for use in subsequent phases
+
+5. **Read knowledge base**
    - Prefer `{artifactDir}/research.md` for ticket-specific research
    - Back-compat: if `{knowledgeDir}/tickets/{ticket}.md` exists, read it and (optionally) migrate to `{artifactDir}/research.md`
 
-4. **Get ticket details**
+6. **Get ticket details**
    - Run `tk show {ticket}` to get full ticket description
 
-5. **Parse planning references** (note, don't load yet):
+7. **Parse planning references** (note, don't load yet):
    - "OpenSpec Change: {id}" → `openspec/changes/{id}/`
    - "IRF Seed: {topic}" → `{knowledgeDir}/topics/{topic}/`
    - "Spike: {topic}" → `{knowledgeDir}/topics/{topic}/`
    - Only load if explicitly needed during implementation
+
+#### Load Retry State (Sub-procedure)
+
+Determines if this is a retry attempt and calculates model escalation.
+
+**Prerequisites**: 
+- `workflow.escalation.enabled` must be `true` for escalation to apply
+- Escalation config format (inside `workflow` section of `settings.json`):
+  ```json
+  {
+    "workflow": {
+      "escalation": {
+        "enabled": false,
+        "maxRetries": 3,
+        "models": {
+          "fixer": null,
+          "reviewerSecondOpinion": null,
+          "worker": null
+        }
+      }
+    }
+  }
+  ```
+
+**Algorithm**:
+1. Check if `{artifactDir}/retry-state.json` exists
+2. If not exists: `attemptNumber = 1`, `retryCount = 0`, no escalation
+3. If exists:
+   - Parse JSON, validate schema version (must be 1), validate required fields (version, ticketId, attempts, lastAttemptAt, status)
+   - If corrupted/invalid: Log warning, backup to `retry-state.json.bak.{timestamp}`, treat as no state
+   - Else if last attempt was BLOCKED:
+     - `attemptNumber = len(attempts) + 1`
+     - `retryCount = retryCount + 1`
+     - If `retryCount >= maxRetries`: Log warning "Max retries exceeded"
+   - Else if last attempt was CLOSED:
+     - `attemptNumber = 1`, `retryCount = 0` (reset on success)
+   - Else (in_progress): Resume current attempt
+4. **Determine escalation models** based on `attemptNumber`:
+   
+   | Attempt Number | Fixer Model | Reviewer-2nd-Opinion Model | Worker Model |
+   |----------------|-------------|---------------------------|--------------|
+   | 1 (first attempt) | Base model | Base model | Base model |
+   | 2 (first retry) | Escalated fixer or base | Base model | Base model |
+   | 3+ (subsequent retries) | Escalated fixer or base | Escalated reviewer-2nd-op or base | Escalated worker or base |
+
+   **Base model resolution**: Look up `agents.{role}` → get meta-model key → look up `metaModels.{key}.model`
+   **Escalated model resolution**: If `workflow.escalation.models.{role}` is not null, use it; else use base model
+
+   Base model resolution: `agents.{role}` → `metaModels.{key}.model`
+
+**Detection Algorithm** (for determining BLOCKED status):
+
+Primary detection (close-summary.md):
+```python
+def detect_blocked_from_close_summary(path):
+    if not path.exists(): return None
+    content = path.read_text()
+    # Match: ## Status followed by BLOCKED (case-insensitive)
+    if re.search(r'##\s*Status\s*\n\s*(?:[-*]?\s*)?(?:\*\*)?BLOCKED(?:\*\*)?(?:\s|$)', content, re.IGNORECASE):
+        # Extract severity counts from Summary Statistics
+        counts = {}
+        for sev in ["Critical", "Major", "Minor", "Warnings", "Suggestions"]:
+            match = re.search(rf'(?:^|\s|[-*]\s*)(?:\*\*)?{sev}(?:\*\*)?\s*:\s*(\d+)', content, re.IGNORECASE | re.MULTILINE)
+            counts[sev] = int(match.group(1)) if match else 0
+        return {"status": "blocked", "counts": counts}
+    return None
+```
+
+Fallback detection (review.md):
+```python
+def detect_blocked_from_review(path, fail_on):
+    if not path.exists() or not fail_on: return None
+    content = path.read_text()
+    counts = {}
+    blocked = False
+    for severity in fail_on:
+        # Match section header (e.g., "## Critical (must fix)", "## Major")
+        pattern = rf'^##\s*(?:\*\*)?{re.escape(severity)}(?:\*\*)?(?:\s*\([^)]*\))?'
+        section_match = re.search(pattern, content, re.MULTILINE | re.IGNORECASE)
+        if section_match:
+            # Find the section boundaries
+            section_start = section_match.end()
+            next_header = re.search(r'\n^##\s', content[section_start:], re.MULTILINE)
+            section_end = section_start + next_header.start() if next_header else len(content)
+            section = content[section_start:section_end]
+            
+            # Check if section has bullet items
+            has_items = bool(re.search(r'\n-\s', section))
+            
+            # Extract count from summary statistics (fallback to 1 if items exist but no count)
+            stat_match = re.search(rf'(?:^|\s|[-*]\s*)(?:\*\*)?{re.escape(severity)}(?:\*\*)?\s*:\s*(\d+)', content, re.IGNORECASE | re.MULTILINE)
+            if stat_match:
+                count = int(stat_match.group(1))
+            else:
+                count = 1 if has_items else 0
+            counts[severity] = count
+            if count > 0: blocked = True
+    return {"status": "blocked", "counts": counts} if blocked else None
+```
+
+**Output**: Sets `attemptNumber` (int, 1-indexed) and `escalatedModels` dict for use in Implement, Parallel Reviews, and Fix Issues phases.
 
 ### Procedure: Research (Optional)
 
@@ -148,12 +260,13 @@ Research enabled. No additional external research was performed.
 ### Procedure: Implement
 
 1. **Switch to worker model**:
-   - Look up `metaModels.worker.model` → get actual model ID
+   - If `escalatedModels.worker` is set (attempt 3+ with worker escalation): use that model
+   - Else: Look up `metaModels.worker.model` → get actual model ID
    - ```
-     switch_model action="switch" search="{metaModels.worker.model}"
+     switch_model action="switch" search="{worker_model_id}"
      ```
 
-2. **Review all gathered context** from Re-Anchor procedure
+2. **Review all gathered context** from Re-Anchor procedure, including `attemptNumber` and `escalatedModels`
 
 3. **Explore codebase**:
    - Use `find` and `grep` to locate relevant files
@@ -181,6 +294,10 @@ Research enabled. No additional external research was performed.
    ## Summary
    Brief description of changes
 
+   ## Retry Context
+   - Attempt: {attemptNumber}
+   - Escalated Models: fixer={escalatedModels.fixer or 'base'}, reviewer-second={escalatedModels.reviewerSecondOpinion or 'base'}, worker={escalatedModels.worker or 'base'}
+
    ## Files Changed
    - `path/to/file.ts` - what changed
 
@@ -207,8 +324,8 @@ This is the ONLY step requiring subagents.
 
 Each reviewer uses a different meta-model:
 - `reviewer-general` → `metaModels.review-general.model`
-- `reviewer-spec-audit` → `metaModels.review-spec.model`  
-- `reviewer-second-opinion` → `metaModels.review-secop.model`
+- `reviewer-spec-audit` → `metaModels.review-spec.model`
+- `reviewer-second-opinion` → `escalatedModels.reviewerSecondOpinion` (if set for attempt 3+) or `metaModels.review-secop.model`
 
 Reviewer implementation note:
 - The three reviewer agents are thin wrappers over the shared `tf-review` skill.
@@ -229,6 +346,10 @@ Reviewer implementation note:
   ]
 }
 ```
+
+**Model escalation for reviewer-second-opinion**:
+- If `escalatedModels.reviewerSecondOpinion` is set (attempt 3+ with escalation): Pass it to the subagent via model parameter or ensure the agent reads it from context
+- The reviewer-second-opinion agent should use the escalated model if provided
 
 `agentScope: "project"` is required so reviewer agents are discovered from `.pi/agents/` in this repository.
 
@@ -286,11 +407,11 @@ Store returned paths for next step.
 1. **Check if fixer is enabled**:
    - If `workflow.enableFixer` is false, write `{artifactDir}/fixes.md` noting the fixer is disabled and skip this step.
 
-2. **Switch to fixer model** (if different):
-   - Look up `agents.fixer` in config → get meta-model key ("general")
-   - Look up `metaModels.general.model` → get actual model ID
+2. **Switch to fixer model** (with escalation support):
+   - If `escalatedModels.fixer` is set (attempt 2+ with fixer escalation): use that model
+   - Else: Look up `agents.fixer` → `metaModels.general.model` → get actual model ID
    - ```
-     switch_model action="switch" search="{metaModels.general.model}"
+     switch_model action="switch" search="{fixer_model_id}"
      ```
 
 3. **Check review issues**:
@@ -320,13 +441,73 @@ Run only when `--create-followups` is provided.
 No model switch needed - stay on current model.
 
 1. **Check close gating**:
-   - Parse `{artifactDir}/review.md` counts (Critical/Major/Minor/Warnings/Suggestions).
+   - Parse `{artifactDir}/review.md` counts (Critical/Major/Minor/Warnings/Suggestions) using the detection algorithm:
+     ```python
+     severity_counts = {}
+     for sev in ["Critical", "Major", "Minor", "Warnings", "Suggestions"]:
+         match = re.search(rf'(?:^|\s|[-*]\s*)(?:\*\*)?{sev}(?:\*\*)?\s*:\s*(\d+)', review_content, re.IGNORECASE | re.MULTILINE)
+         severity_counts[sev] = int(match.group(1)) if match else 0
+     ```
    - If `workflow.enableCloser` is false, write `{artifactDir}/close-summary.md` noting closure was skipped and do not call `tk`.
-   - If `workflow.enableQualityGate` is true and any severity in `workflow.failOn` has a nonzero count, write `{artifactDir}/close-summary.md` with status BLOCKED and do not call `tk`.
+   - If `workflow.enableQualityGate` is true and any severity in `workflow.failOn` has nonzero count:
+     - Set `closeStatus = BLOCKED`
+     - `blocked_counts = {sev: severity_counts[sev] for sev in workflow.failOn if severity_counts.get(sev, 0) > 0}`
+   - Else: `closeStatus = CLOSED`, `blocked_counts = {}`
 
-2. **Read artifacts**: `{artifactDir}/implementation.md`, `{artifactDir}/review.md`, `{artifactDir}/fixes.md` (if exists), and `{artifactDir}/files_changed.txt`.
+2. **Update retry state** (if escalation enabled):
+   - Read or initialize `{artifactDir}/retry-state.json`:
+     ```json
+     {
+       "version": 1,
+       "ticketId": "{ticket-id}",
+       "attempts": [],
+       "lastAttemptAt": "",
+       "status": "active",
+       "retryCount": 0
+     }
+     ```
+   - Create new attempt entry:
+     ```json
+     {
+       "attemptNumber": {attemptNumber},
+       "startedAt": "{start_timestamp}",
+       "completedAt": "{now_timestamp}",
+       "status": "{closeStatus.lower()}",
+       "trigger": "{trigger_type}",
+       "qualityGate": {
+         "failOn": {workflow.failOn},
+         "counts": {blocked_counts if closeStatus == BLOCKED else severity_counts}
+       },
+       "escalation": {
+         "fixer": {escalatedModels.fixer or null},
+         "reviewerSecondOpinion": {escalatedModels.reviewerSecondOpinion or null},
+         "worker": {escalatedModels.worker or null}
+       },
+       "closeSummaryRef": "close-summary.md"
+     }
+     ```
+   - Append to `attempts` array
+   - Update aggregate fields:
+     - `lastAttemptAt = now_timestamp`
+     - `status = "closed"` if `closeStatus == CLOSED`, else `"blocked"`
+     - `retryCount = retryCount + 1` if `closeStatus == BLOCKED`, else `0` (reset on success)
+   - Write updated `retry-state.json` atomically:
+     ```python
+     import json
+     import os
+     temp_path = f"{retry_state_path}.tmp"
+     with open(temp_path, 'w') as f:
+         json.dump(state, f, indent=2)
+     os.replace(temp_path, retry_state_path)  # Atomic rename
+     ```
 
-3. **Commit changes (required)**:
+3. **Handle BLOCKED status**:
+   - If `closeStatus == BLOCKED`: Write `{artifactDir}/close-summary.md` with status BLOCKED, skip calling `tk close`
+   - If `closeStatus == CLOSED`: Continue with close workflow
+
+4. **Read artifacts**: `{artifactDir}/implementation.md`, `{artifactDir}/review.md`, `{artifactDir}/fixes.md` (if exists), and `{artifactDir}/files_changed.txt`.
+
+5. **Commit changes (required)**:
    - If inside a git repo, stage the ticket artifacts plus any paths from `{artifactDir}/files_changed.txt`:
      ```bash
      git add -A -- "{artifactDir}"
@@ -340,13 +521,13 @@ No model switch needed - stay on current model.
    - Capture the commit hash for the ticket note and close-summary.
    - If no repo or no changes, note it in close-summary.
 
-4. **Compose summary note** for ticket (include commit hash if available)
+6. **Compose summary note** for ticket (include commit hash if available, retry attempt if > 1)
 
-5. **Add note via `tk add-note`**
+7. **Add note via `tk add-note`**
 
-6. **Close ticket via `tk close`**
+8. **Close ticket via `tk close`** (only if `closeStatus == CLOSED`)
 
-7. **Write `{artifactDir}/close-summary.md`**
+9. **Write `{artifactDir}/close-summary.md`** with `## Status\n**{CLOSED|BLOCKED}**`
 
 ### Procedure: Final Review Loop (Optional)
 
@@ -368,13 +549,20 @@ Run only when `--simplify-tickets` is provided.
 
 Only if `.tf/ralph/` directory exists:
 
+**Check Skip Conditions** (before ticket selection):
+- If `workflow.escalation.enabled` is true:
+  - Check `{artifactDir}/retry-state.json` for `status: blocked` and `retryCount >= maxRetries`
+  - If exceeded: Skip ticket, log "Skipping {ticket-id}: max retries ({maxRetries}) exceeded"
+  - Also skip if `parallelWorkers > 1` and no locking mechanism is implemented (log warning)
+
 **Update Progress**:
 - Append to `.tf/ralph/progress.md`:
   ```markdown
   - {ticket-id}: {STATUS} ({timestamp})
     - Summary: {one-line}
     - Issues: Critical({c})/Major({m})/Minor({n})
-    - Status: COMPLETE|FAILED
+    - Retry: Attempt {attemptNumber}, Count {retryCount}
+    - Status: COMPLETE|FAILED|BLOCKED
   ```
 
 **Extract Lessons** (conditional):
@@ -398,18 +586,113 @@ Only if `.tf/ralph/` directory exists:
 ### For /tf (Standard)
 
 ```
-1. Re-Anchor Context
+1. Re-Anchor Context (includes Load Retry State)
 2. Research (optional)
-3. Implement (model-switch)
-4. Parallel Reviews (optional)
+3. Implement (model-switch, with escalation)
+4. Parallel Reviews (optional, with escalation)
 5. Merge Reviews (optional)
-6. Fix Issues (optional)
+6. Fix Issues (optional, with escalation)
 7. Follow-ups (optional)
-8. Close Ticket (optional / gated)
+8. Close Ticket (optional / gated, updates retry state)
 9. Final Review Loop (optional)
 10. Simplify Tickets (optional)
 11. Ralph Integration (if active)
 ```
+
+## Retry Escalation
+
+When `workflow.escalation.enabled: true`, the workflow detects retry attempts (previous BLOCKED closes) and escalates to stronger models.
+
+### Configuration
+
+```json
+{
+  "workflow": {
+    "escalation": {
+      "enabled": false,
+      "maxRetries": 3,
+      "models": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      }
+    }
+  }
+}
+```
+
+- `enabled`: Whether retry escalation is active (default: false)
+- `maxRetries`: Maximum BLOCKED attempts before giving up (default: 3)
+- `models`: Escalation model overrides (null = use base model)
+
+### Escalation Curve
+
+| Attempt | Fixer | Reviewer-2nd-Opinion | Worker |
+|---------|-------|---------------------|--------|
+| 1 (fresh) | Base | Base | Base |
+| 2 | Escalated | Base | Base |
+| 3+ | Escalated | Escalated | Escalated (if configured) |
+
+### Retry State Schema
+
+Location: `{artifactDir}/retry-state.json`
+
+```json
+{
+  "version": 1,
+  "ticketId": "pt-example",
+  "attempts": [
+    {
+      "attemptNumber": 1,
+      "startedAt": "2026-02-10T12:00:00Z",
+      "completedAt": "2026-02-10T12:30:00Z",
+      "status": "blocked",
+      "trigger": "initial",
+      "qualityGate": {
+        "failOn": ["Critical", "Major"],
+        "counts": {"Critical": 0, "Major": 2, "Minor": 1}
+      },
+      "escalation": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      },
+      "closeSummaryRef": "close-summary.md"
+    }
+  ],
+  "lastAttemptAt": "2026-02-10T12:00:00Z",
+  "status": "blocked",
+  "retryCount": 1
+}
+```
+
+### Reset Policy
+
+- Counter resets **only** on successful close (CLOSED status)
+- Use `--retry-reset` flag to force fresh attempt
+
+### Parallel Worker Safety
+
+**Assumption**: Retry logic assumes `ralph.parallelWorkers: 1` (default).
+
+When `ralph.parallelWorkers > 1`:
+- **Option A** (recommended): Implement file-based locking on `retry-state.json` using `filelock` library:
+  ```python
+  from filelock import FileLock
+  lock = FileLock(f"{retry_state_path}.lock")
+  with lock:
+      # read/write retry state
+  ```
+- **Option B**: Disable retry logic and log warning: "Retry escalation disabled: parallelWorkers > 1 without locking"
+
+**Default behavior** without locking: Disable retry logic to prevent race conditions (lost updates, duplicate attempts, inconsistent escalation).
+- State persists across Ralph restarts
+
+### Parallel Worker Safety
+
+Retry logic assumes `ralph.parallelWorkers: 1`. When parallel workers > 1:
+- **Option A**: Implement file-based locking on `retry-state.json`
+- **Option B**: Disable retry logic and warn about race conditions
 
 ## Error Handling
 
@@ -423,14 +706,15 @@ Only if `.tf/ralph/` directory exists:
 
 Written under `{artifactDir}` (default `{knowledgeDir}/tickets/{ticket-id}/`):
 - `research.md` - Ticket research (if research ran or migrated)
-- `implementation.md` - What was implemented
+- `implementation.md` - What was implemented (includes retry attempt and escalated models)
 - `review.md` - Consolidated review
 - `fixes.md` - What was fixed
 - `followups.md` - Follow-up tickets (if `--create-followups`)
-- `close-summary.md` - Final summary
+- `close-summary.md` - Final summary (status: CLOSED or BLOCKED)
 - `chain-summary.md` - Links to artifacts (if closer runs)
 - `files_changed.txt` - Tracked changed files for this ticket
 - `ticket_id.txt` - Ticket ID (single line)
+- `retry-state.json` - Retry tracking state (if escalation enabled, see Retry State Schema)
 
 Ralph files (if active):
 - `.tf/ralph/progress.md` - Updated

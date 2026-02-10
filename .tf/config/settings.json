@@ -144,7 +144,7 @@
     "enableFixer": true,
     "enableCloser": true,
     "enableQualityGate": true,
-    "failOn": [],
+    "failOn": ["Critical", "Major"],
     "exclude": [
       "node_modules/**",
       "dist/**",
