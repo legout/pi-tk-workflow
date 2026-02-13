@@ -198,3 +198,21 @@
   - Status: CLOSED
   - Quality Gate: PASSED
   - Commit: 5e1c409
+
+- pt-o5ca: CLOSED (2026-02-13T15:25:00Z)
+  - Summary: Decide flag strategy for chain-prompts TF workflow
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Retry: Attempt 1, Count 0
+  - Status: COMPLETE
+- pt-o5ca: COMPLETE (2026-02-13T15:24:35Z)
+  - Summary: Decide flag strategy for chain-prompts TF workflow
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Attempt: 0, Retry Count: 0
+  - Status: COMPLETE
+
+- pt-qmhr: CLOSED (2026-02-13T15:31:57Z)
+  - Summary: Design retry/escalation for chained TF phases
+  - Issues: Critical(0)/Major(0)/Minor(1)
+  - Retry: Attempt 1, Count 0
+  - Status: COMPLETE
+  - Commit: d765d51
