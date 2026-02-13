@@ -11,47 +11,50 @@ Complete reference for all pi-ticketflow commands.
 Execute the Implement → Review → Fix → Close workflow on a ticket.
 
 ```
-/tf <ticket-id> [--auto] [--no-research] [--with-research] [--plan]
-                 [--create-followups] [--simplify-tickets] [--final-review-loop]
+/tf <ticket-id> [--auto] [--no-clarify] [--no-research] [--with-research]
+    [--plan|--dry-run] [--create-followups] [--simplify-tickets]
+    [--final-review-loop] [--retry-reset]
 ```
+
+`/tf` is a thin prompt wrapper that delegates to deterministic Python tooling:
+
+```bash
+tf irf <ticket-id> [flags]
+```
+
+The CLI wrapper resolves flags, builds `/chain-prompts`, and runs optional post-chain commands.
 
 **Arguments:**
 | Argument | Description |
 |----------|-------------|
 | `ticket-id` | Ticket identifier (e.g., `abc-123`) |
-| `--auto` / `--no-clarify` | Run headless (no confirmation prompts) |
-| `--no-research` | Skip research step |
-| `--with-research` | Force enable research step |
-| `--plan` / `--dry-run` | Show resolved chain and exit |
-| `--create-followups` | Create follow-up tickets after review |
-| `--simplify-tickets` | Run simplify on created tickets |
-| `--final-review-loop` | Run `/review-start` after chain |
+| `--auto` / `--no-clarify` | Headless execution hint passed to phase prompts |
+| `--no-research` | Start chain at `tf-implement` |
+| `--with-research` | Start chain at `tf-research` |
+| `--plan` / `--dry-run` | Print resolved chain and post-chain commands only |
+| `--create-followups` | Post-chain: run `/tf-followups` |
+| `--simplify-tickets` | Post-chain: run `/simplify --create-tickets --last-implementation` |
+| `--final-review-loop` | Post-chain: run `/review-start` |
+| `--retry-reset` | Pass through to phases that support retry reset |
 
 **Workflow:**
-1. Re-anchor context (load AGENTS.md, lessons, ticket)
-2. Research (optional, MCP tools)
-3. Implement (model-switch to worker model)
-4. Parallel reviews (3 subagents)
-5. Merge reviews (deduplication)
-6. Fix issues
-7. Follow-ups (optional)
-8. Close ticket
-9. Ralph integration (if active)
+1. Resolve flags/config deterministically (`tf irf`)
+2. Run `/chain-prompts` phase sequence
+3. Run post-chain commands only if chain succeeds
 
 **Output Artifacts (written under `.tf/knowledge/tickets/<ticket-id>/`):**
-- `research.md` - Ticket research (if any)
-- `implementation.md` - Implementation summary
-- `review.md` - Consolidated review
-- `fixes.md` - Fixes applied
-- `followups.md` - Follow-up tickets (if created)
-- `close-summary.md` - Final summary
-- `chain-summary.md` - Artifact index
-- `files_changed.txt` - Tracked changed files
-- `ticket_id.txt` - Ticket ID
-- `.tf/ralph/progress.md` - Updated (if Ralph active)
+- `research.md`
+- `implementation.md`
+- `review.md`
+- `fixes.md`
+- `close-summary.md`
+- `chain-summary.md`
+- `files_changed.txt`
+- `ticket_id.txt`
+- `.tf/ralph/progress.md` (if Ralph active)
 
 **Close step behavior:**
-- Stages and commits only files listed in `files_changed.txt` before closing the ticket.
+- Stages and commits ticket artifact directory plus paths from `files_changed.txt`.
 
 ---
 
@@ -709,6 +712,9 @@ tf backlog-ls [topic]             # List backlog status
 
 # Track changes
 tf track <path>                   # Append to files_changed.txt
+
+# Deterministic IRF wrapper (used by /tf)
+tf irf <ticket-id> [flags]        # Resolve chain + run /chain-prompts + post-chain
 
 # Knowledge Base Management
 tf kb ls [--json] [--type <type>] [--archived]  # List topics

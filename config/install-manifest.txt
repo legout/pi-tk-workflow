@@ -4,11 +4,11 @@
 # into a project.
 #
 # Routing (project):
-# - agents/*, skills/*, prompts/*  → <project>/.pi/
-# - config/*, scripts/*           → <project>/.tf/
+# - agents/*, skills/*, prompts/*  → <project>/
+# - config/*, scripts/*            → <project>/.tf/
 #
 # Note:
-# - The `tf` CLI shim is installed globally via `tf install` (or install.sh --global).
+# - The `tf` CLI shim is installed globally via `tf install`.
 # - MCP/web-search config and Pi extensions are set up globally via `tf setup` / `tf login`.
 
 agents/reviewer-general.md
@@ -20,34 +20,44 @@ agents/researcher-fetch.md
 agents/fixer.md
 agents/closer.md
 
-skills/tf-workflow/SKILL.md
-skills/tf-planning/SKILL.md
-skills/tf-review/SKILL.md
-skills/tf-config/SKILL.md
-skills/tf-tickets/SKILL.md
 skills/ralph/SKILL.md
+skills/tf-close/SKILL.md
+skills/tf-config/SKILL.md
+skills/tf-fix/SKILL.md
+skills/tf-implement/SKILL.md
+skills/tf-planning/SKILL.md
+skills/tf-research/SKILL.md
+skills/tf-review/SKILL.md
+skills/tf-review-phase/SKILL.md
+skills/tf-tickets/SKILL.md
+skills/tf-workflow/SKILL.md
 
+prompts/ralph-start.md
 prompts/tf.md
+prompts/tf-backlog-from-openspec.md
+prompts/tf-backlog-ls.md
+prompts/tf-backlog.md
+prompts/tf-baseline.md
+prompts/tf-close.md
+prompts/tf-dedup.md
+prompts/tf-deps-sync.md
+prompts/tf-fix.md
+prompts/tf-followups-scan.md
+prompts/tf-followups.md
+prompts/tf-implement.md
 prompts/tf-next.md
-prompts/tf-plan.md
 prompts/tf-plan-chain.md
 prompts/tf-plan-consult.md
-prompts/tf-plan-revise.md
 prompts/tf-plan-review.md
-prompts/tf-seed.md
-prompts/tf-backlog.md
-prompts/tf-backlog-ls.md
-prompts/tf-spike.md
-prompts/tf-backlog-from-openspec.md
-prompts/tf-baseline.md
-prompts/tf-followups.md
-prompts/tf-followups-scan.md
-prompts/tf-tags-suggest.md
-prompts/tf-deps-sync.md
-prompts/tf-dedup.md
-prompts/tf-sync.md
+prompts/tf-plan-revise.md
+prompts/tf-plan.md
 prompts/tf-priority-reclassify.md
-prompts/ralph-start.md
+prompts/tf-research.md
+prompts/tf-review.md
+prompts/tf-seed.md
+prompts/tf-spike.md
+prompts/tf-sync.md
+prompts/tf-tags-suggest.md
 
 config/settings.json
 config/workflows/tf/README.md

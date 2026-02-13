@@ -1,17 +1,17 @@
 {
   "metaModels": {
     "planning": {
-      "model": "openai-codex/gpt-5.2",
-      "thinking": "medium",
+      "model": "openai-codex/gpt-5.3-codex",
+      "thinking": "high",
       "description": "Fast, capable model for planning and specification"
     },
     "worker": {
-      "model": "kimi-coding/k2p5",
+      "model": "minimax/MiniMax-M2.5",
       "thinking": "high",
       "description": "Strong model for implementation and complex reasoning"
     },
     "research": {
-      "model": "minimax/MiniMax-M2.1",
+      "model": "kimi-coding/k2p5",
       "thinking": "medium",
       "description": "Fast model for research and information gathering"
     },
@@ -21,28 +21,28 @@
       "description": "Cheapest model for quick tasks, fixes, and summaries"
     },
     "general": {
-      "model": "zai/glm-4.7",
+      "model": "kimi-coding/k2p5",
       "thinking": "medium",
       "description": "General-purpose model for admin tasks"
     },
     "review-general": {
-      "model": "openai-codex/gpt-5.1-codex-mini",
+      "model": "openai-codex/gpt-5.3-codex",
       "thinking": "high",
       "description": "Capable model for general code review"
     },
     "review-spec": {
-      "model": "openai-codex/gpt-5.2-codex",
-      "thinking": "medium",
+      "model": "openai-codex/gpt-5.1-codex-mini",
+      "thinking": "high",
       "description": "Strong model for specification compliance audit"
     },
     "review-secop": {
-      "model": "openrouter/stepfun/step-3.5-flash:free",
+      "model": "kimi-coding/k2p5",
       "thinking": "high",
       "description": "Fast model for second-opinion review"
     },
     "fixer": {
-      "model": "chutes/zai-org/GLM-4.7-Flash",
-      "thinking": "medium",
+      "model": "zai/glm-5",
+      "thinking": "high",
       "description": "Fast, cheap model for fix iterations and small edits"
     }
   },
@@ -57,7 +57,12 @@
     "researcher-fetch": "research"
   },
   "prompts": {
-    "tf": "worker",
+    "tf": "general",
+    "tf-research": "research",
+    "tf-implement": "worker",
+    "tf-review": "review-general",
+    "tf-fix": "fixer",
+    "tf-close": "fast",
     "tf-next": "general",
     "tf-plan": "planning",
     "tf-plan-chain": "planning",

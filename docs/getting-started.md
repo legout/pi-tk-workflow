@@ -27,12 +27,19 @@ Configure Pi extensions and optional MCP/web search integration:
 tf setup
 ```
 
-Typical required extensions:
+Required extensions:
 
 ```bash
 pi install npm:pi-prompt-template-model
-pi install npm:pi-model-switch
 pi install npm:pi-subagents
+```
+
+Optional:
+
+```bash
+pi install npm:pi-review-loop
+pi install npm:pi-mcp-adapter
+pi install npm:pi-web-access
 ```
 
 ## Project Setup
@@ -47,7 +54,7 @@ tf sync
 
 This creates/updates:
 
-- `.pi/agents`, `.pi/prompts`, `.pi/skills`
+- `agents/`, `prompts/`, `skills/`
 - `.tf/config`, `.tf/knowledge`, `.tf/ralph`
 
 ## First End-to-End Run

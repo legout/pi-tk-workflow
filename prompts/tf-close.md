@@ -29,15 +29,8 @@ Follow the **tf-close** skill procedure to:
 ## Usage
 
 ```
-/tf-close <ticket-id> [--create-followups] [--simplify-tickets] [--final-review-loop]
+/tf-close <ticket-id>
 ```
-
-## Post-Chain Commands
-
-After close succeeds, run any requested post-chain commands:
-- `--create-followups` → `tf-followups`
-- `--simplify-tickets` → `simplify`
-- `--final-review-loop` → `review-start`
 
 ## Output
 

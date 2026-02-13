@@ -8,7 +8,6 @@ from typing import Optional
 
 REQUIRED_EXTENSIONS = [
     "pi-subagents",
-    "pi-model-switch",
     "pi-prompt-template-model",
 ]
 
@@ -48,7 +47,7 @@ def run_setup(_: argparse.Namespace) -> int:
     print("\nTF workflow files (agents/prompts/skills/config) are installed per-project via: tf init / tf sync\n")
 
     install_required = prompt_yes_no(
-        "Install required Pi extensions (subagents, model-switch, prompt-template-model)?",
+        "Install required Pi extensions (subagents, prompt-template-model)?",
         True,
     )
     install_optional = prompt_yes_no(

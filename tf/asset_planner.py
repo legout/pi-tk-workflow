@@ -216,9 +216,9 @@ def classify_asset(rel_path: str, project_root: Path) -> Optional[Tuple[Path, bo
     if rel_path == "config/install-manifest.txt":
         return None
 
-    # Workflow assets go to .pi/
+    # Workflow assets go to project root directories.
     if rel_path.startswith(("agents/", "prompts/", "skills/")):
-        return (project_root / ".pi" / rel_path, False)
+        return (project_root / rel_path, False)
 
     # Config files go to .tf/
     if rel_path == "config/settings.json":

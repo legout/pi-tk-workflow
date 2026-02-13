@@ -22,7 +22,6 @@ DEFAULT_MCP_SERVERS = [
 
 REQUIRED_EXTENSIONS = [
     "pi-subagents",
-    "pi-model-switch",
     "pi-prompt-template-model",
 ]
 

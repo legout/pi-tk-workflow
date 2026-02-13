@@ -340,7 +340,9 @@ Usage:
   tf next
   tf backlog-ls [topic-id-or-path]
   tf track <path>
+  tf irf <ticket-id> [flags]
   tf priority-reclassify [--apply] [--ids ...] [--ready] [--status ...] [--tag ...]
+  tf post-fix-verify <ticket-id> [--write] [--counts-only] [--json]
   tf ralph <subcommand> ...
   tf agentsmd <subcommand> ...
   tf seed ...
@@ -358,7 +360,9 @@ Commands:
   next              Show next recommended ticket to work on
   backlog-ls        List tickets in backlog by topic
   track             Track file changes for a ticket
+  irf               Run deterministic /chain-prompts IRF workflow
   priority-reclassify  Reclassify ticket priorities
+  post-fix-verify   Run post-fix verification for quality gate
   ralph             Ralph loop management commands
   agentsmd          AGENTS.md management commands
   seed              Create seed topics from ideas
@@ -422,9 +426,17 @@ Run 'tf <command> --help' for more information on a command.
         from tf import track
         return track.main(rest)
 
+    if command == "irf":
+        from tf import irf
+        return irf.main(rest)
+
     if command == "priority-reclassify":
         from tf import priority_reclassify
         return priority_reclassify.main(rest)
+
+    if command == "post-fix-verify":
+        from tf import post_fix_verify
+        return post_fix_verify.main(rest)
 
     if command == "ralph":
         from tf import ralph

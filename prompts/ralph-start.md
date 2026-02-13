@@ -23,7 +23,7 @@ Start the Ralph autonomous loop for continuous ticket processing.
 ## Prerequisites
 
 - Global environment setup done (extensions + MCP/web-search config): `tf setup`
-- Project initialized (installs TF prompts/agents/skills into `.pi/`): `tf init`
+- Project initialized (installs TF prompts/agents/skills into project root): `tf init`
 - Ralph initialized (creates `.tf/ralph/` state): `tf ralph init`
 - Tickets ready in backlog: `tk ready`
 
@@ -32,7 +32,7 @@ Start the Ralph autonomous loop for continuous ticket processing.
 Before starting, confirm the prompt is available **as a Pi prompt** (not a shell command):
 
 ```bash
-ls .pi/prompts/tf.md 2>/dev/null
+ls prompts/tf.md 2>/dev/null
 ```
 
 If it does not exist, run:

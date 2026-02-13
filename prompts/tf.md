@@ -1,13 +1,13 @@
 ---
-description: Implement ticket with IRF workflow using /chain-prompts [tf-workflow]
+description: Implement ticket with deterministic IRF workflow wrapper [tf-workflow]
 model: kimi-coding/k2p5
-thinking: high
+thinking: medium
 skill: tf-workflow
 ---
 
 # /tf
 
-Execute the standard Implement → Review → Fix → Close workflow for a ticket using `/chain-prompts`.
+Execute the standard Implement → Review → Fix → Close workflow for a ticket.
 
 ## Input
 - Ticket ID: `$1`
@@ -15,76 +15,29 @@ Execute the standard Implement → Review → Fix → Close workflow for a ticke
 
 ## Usage
 
+```bash
+/tf <ticket-id> [--auto] [--no-clarify] [--no-research] [--with-research]
+    [--plan|--dry-run] [--create-followups] [--simplify-tickets]
+    [--final-review-loop] [--retry-reset]
 ```
-/tf <ticket-id> [--no-research] [--with-research] [--create-followups]
-                [--simplify-tickets] [--final-review-loop]
-```
 
-## Arguments
+## Execution (deterministic)
 
-- `$1` - Ticket ID (e.g., `abc-1234`)
-- `$@` - Ticket ID plus optional flags
-
-## Flags
-
-| Flag | Description |
-|------|-------------|
-| `--no-research` | Skip research phase (start at implement) |
-| `--with-research` | Force enable research phase |
-| `--create-followups` | Run `/tf-followups` after close |
-| `--simplify-tickets` | Run `/simplify` after close |
-| `--final-review-loop` | Run `/review-start` after close |
-
-## Execution
-
-### Chain Construction
-
-Build the chain based on research flag:
+Use the Python wrapper in `tf` tooling so flag parsing and chain construction are deterministic:
 
 ```bash
-# Default or --with-research
-/chain-prompts tf-research -> tf-implement -> tf-review -> tf-fix -> tf-close -- $@
-
-# With --no-research
-/chain-prompts tf-implement -> tf-review -> tf-fix -> tf-close -- $@
+tf irf $@
 ```
 
-### Flag Handling
-
-| Flag | Behavior |
-|------|----------|
-| `--no-research` | Start chain at `tf-implement` |
-| `--with-research` | Start chain at `tf-research` (default) |
-| `--create-followups` | Post-chain: run `tf-followups` |
-| `--simplify-tickets` | Post-chain: run `simplify` |
-| `--final-review-loop` | Post-chain: run `review-start` |
-
-**Flag precedence**: Last flag wins for conflicting flags.
-
-### Post-Chain Commands
-
-After the chain completes (CLOSED status), run post-chain commands in order:
-1. `tf-followups` (if `--create-followups`)
-2. `simplify` (if `--simplify-tickets`)
-3. `review-start` (if `--final-review-loop`)
-
-If chain ends with BLOCKED status, skip all post-chain commands.
-
-## Output Artifacts
-
-Written under `.tf/knowledge/tickets/<ticket-id>/`:
-- `research.md` - Ticket research (if research ran)
-- `implementation.md` - Implementation summary
-- `review.md` - Consolidated review
-- `fixes.md` - Fixes applied
-- `close-summary.md` - Final summary
-- `chain-summary.md` - Artifact index
-- `files_changed.txt` - Tracked changed files
-- `ticket_id.txt` - Ticket ID
+The wrapper handles:
+- research entry selection (`tf-research` vs `tf-implement`)
+- chain construction (`/chain-prompts ...`)
+- `--plan/--dry-run`
+- post-chain commands (`tf-followups`, `simplify`, `review-start`)
+- strict unknown-flag validation
 
 ## Notes
 
-- Each phase prompt has its own model/skill/thinking from frontmatter
-- Chain restores original model/thinking when complete
-- Only the review phase spawns parallel subagents
-- The close phase commits only paths from `files_changed.txt` plus artifacts
+- Phase prompts remain thin wrappers with frontmatter model/thinking/skill.
+- Phase procedures live in phase skills.
+- Reviewer subagents keep using `skill: tf-review`.

@@ -137,6 +137,12 @@ DEFAULTS: Dict[str, Any] = {
     "timeoutBackoffEnabled": False,  # Enable timeout backoff calculation
     "timeoutBackoffIncrementMs": 150000,  # Default increment per attempt (150s = 2.5min)
     "timeoutBackoffMaxMs": 0,  # Max cap (0 = no cap, use attemptTimeoutMs as base)
+    # Execution backend settings (pt-6d99)
+    "executionBackend": "dispatch",  # "dispatch" (default) or "subprocess"
+    "interactiveShell": {
+        "enabled": True,  # Use interactive_shell tool when True
+        "mode": "dispatch",  # "dispatch" (headless) or "hands-free" (monitored)
+    },
 }
 
 # Legacy session directory for backward compatibility detection
@@ -154,8 +160,19 @@ def usage() -> None:
 Usage:
   tf ralph run [ticket-id] [--dry-run] [--verbose|--debug|--quiet] [--capture-json] [--flags '...']
                             [--progress] [--pi-output MODE] [--pi-output-file PATH]
+                            [--dispatch] [--no-interactive-shell]
   tf ralph start [--max-iterations N] [--parallel N] [--no-parallel] [--dry-run] [--verbose|--debug|--quiet]
                  [--capture-json] [--flags '...'] [--progress] [--pi-output MODE] [--pi-output-file PATH]
+                 [--dispatch] [--no-interactive-shell]
+
+Execution Backend Options (pt-6d99):
+  --dispatch            Use interactive_shell dispatch mode for headless background
+                        execution (default). This is the modern execution backend.
+  --no-interactive-shell
+                        Use legacy subprocess backend (pi -p via subprocess.Popen).
+                        This provides backward compatibility for environments where
+                        interactive_shell execution is not desired.
+  (default)             When neither flag is specified, --dispatch is assumed.
 
 Verbosity Options:
   --verbose         Enable verbose output (INFO + DEBUG events)
@@ -192,6 +209,7 @@ Environment Variables:
   RALPH_QUIET               Set to 1 to enable quiet mode
   RALPH_CAPTURE_JSON        Set to 1 to enable JSON mode capture (same as --capture-json)
   RALPH_FORCE_LEGACY_SESSIONS  Set to 1 to force using legacy .tf/ralph/sessions directory
+  RALPH_NO_INTERACTIVE_SHELL   Set to 1 to force legacy subprocess backend (same as --no-interactive-shell)
 
 Session Storage:
   By default, Ralph stores session artifacts in Pi's standard session directory:
@@ -208,6 +226,12 @@ Session Storage:
     - Add {"sessionDir": ".tf/ralph/sessions"} to .tf/ralph/config.json
 
 Configuration (in .tf/ralph/config.json):
+  executionBackend      Execution backend to use: "dispatch" (default) or "subprocess".
+                        "dispatch" uses interactive_shell tool for headless background execution.
+                        "subprocess" uses legacy pi -p via subprocess.Popen.
+  interactiveShell      Configuration for interactive shell execution:
+                        - enabled: true (default) to use interactive_shell tool
+                        - mode: "dispatch" (default) for headless execution
   attemptTimeoutMs      Per-ticket attempt timeout in milliseconds (default: 600000 = 10 min)
                         Set to 0 to disable timeout. Serial mode only.
   maxRestarts           Maximum restarts per ticket on timeout/failure (default: 0)
@@ -219,8 +243,9 @@ Configuration (in .tf/ralph/config.json):
   timeoutBackoffMaxMs   Maximum timeout cap in ms (default: 0 = no cap, uses attemptTimeoutMs as base)
 
 Configuration Environment Variables:
-  RALPH_ATTEMPT_TIMEOUT_MS  Override attemptTimeoutMs (in milliseconds)
-  RALPH_MAX_RESTARTS        Override maxRestarts (integer)
+  RALPH_ATTEMPT_TIMEOUT_MS     Override attemptTimeoutMs (in milliseconds)
+  RALPH_MAX_RESTARTS           Override maxRestarts (integer)
+  RALPH_NO_INTERACTIVE_SHELL   Set to 1 to force legacy subprocess backend
 
 Notes:
   - CLI flags take precedence over environment variables
@@ -381,11 +406,17 @@ def ensure_pi() -> bool:
 
 
 def prompt_exists(project_root: Path, logger: Optional[RalphLogger] = None) -> bool:
-    local_prompt = project_root / ".pi/prompts/tf.md"
+    local_prompt = project_root / "prompts" / "tf.md"
+    legacy_local_prompt = project_root / ".pi" / "prompts" / "tf.md"
     global_prompt = Path.home() / ".pi/agent/prompts/tf.md"
-    if local_prompt.is_file() or global_prompt.is_file():
+
+    if local_prompt.is_file() or legacy_local_prompt.is_file() or global_prompt.is_file():
         return True
-    msg = "Missing /tf prompt. Run 'tf init' in the project to install prompts (or 'tf sync' to re-ensure)."
+
+    msg = (
+        "Missing /tf prompt. Run 'tf init' in the project to install prompts "
+        "(or 'tf sync' to re-ensure)."
+    )
     if logger:
         logger.error(msg)
     else:
@@ -467,6 +498,7 @@ def run_ticket(
     pi_output: str = "inherit",
     pi_output_file: Optional[str] = None,
     timeout_ms: int = 0,
+    execution_backend: str = "dispatch",
 ) -> int:
     log = logger or create_logger(mode=mode, ticket_id=ticket, ticket_title=ticket_title)
     if not ticket:
@@ -483,6 +515,14 @@ def run_ticket(
         if not prompt_exists(cwd, log):
             return 1
 
+    # Log execution backend (pt-6d99)
+    if execution_backend == "dispatch":
+        log.info(f"Execution backend: dispatch (interactive_shell) - NOTE: using subprocess fallback until pt-9yjn")
+    else:
+        log.info(f"Execution backend: subprocess (legacy)")
+
+    # TODO(pt-9yjn): Implement actual dispatch execution via interactive_shell tool
+    # For now, both backends use subprocess (this ticket only defines the contract)
     cmd = build_cmd(workflow, ticket, flags)
 
     # Determine JSON capture path if enabled
@@ -1365,12 +1405,13 @@ def update_state(
 
 def parse_run_args(
     args: List[str],
-) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel], bool, bool, str, Optional[str]]:
+) -> Tuple[Optional[str], bool, Optional[str], Optional[LogLevel], bool, bool, str, Optional[str], Optional[str]]:
     """Parse arguments for 'tf ralph run'.
 
     Returns:
         Tuple of (ticket_override, dry_run, flags_override, log_level, capture_json,
-                  progress, pi_output, pi_output_file)
+                  progress, pi_output, pi_output_file, execution_backend)
+        execution_backend is "dispatch" or "subprocess" or None (use default)
     """
     ticket_override: Optional[str] = None
     dry_run = False
@@ -1380,6 +1421,7 @@ def parse_run_args(
     progress = False
     pi_output = "inherit"
     pi_output_file: Optional[str] = None
+    execution_backend: Optional[str] = None  # None = use config default
     idx = 0
     while idx < len(args):
         arg = args[idx]
@@ -1425,6 +1467,12 @@ def parse_run_args(
         elif arg.startswith("--flags="):
             flags_override = arg.split("=", 1)[1]
             idx += 1
+        elif arg == "--dispatch":
+            execution_backend = "dispatch"
+            idx += 1
+        elif arg == "--no-interactive-shell":
+            execution_backend = "subprocess"
+            idx += 1
         elif arg in {"--help", "-h"}:
             usage()
             raise SystemExit(0)
@@ -1434,7 +1482,7 @@ def parse_run_args(
                 idx += 1
             else:
                 raise ValueError("Too many arguments for ralph run")
-    return ticket_override, dry_run, flags_override, log_level, capture_json, progress, pi_output, pi_output_file
+    return ticket_override, dry_run, flags_override, log_level, capture_json, progress, pi_output, pi_output_file, execution_backend
 
 
 def parse_start_args(args: List[str]) -> Dict[str, Any]:
@@ -1450,6 +1498,7 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         "progress": False,
         "pi_output": "inherit",
         "pi_output_file": None,
+        "execution_backend": None,  # None = use config default
     }
     idx = 0
     while idx < len(args):
@@ -1515,6 +1564,12 @@ def parse_start_args(args: List[str]) -> Dict[str, Any]:
         elif arg.startswith("--flags="):
             options["flags_override"] = arg.split("=", 1)[1]
             idx += 1
+        elif arg == "--dispatch":
+            options["execution_backend"] = "dispatch"
+            idx += 1
+        elif arg == "--no-interactive-shell":
+            options["execution_backend"] = "subprocess"
+            idx += 1
         elif arg in {"--help", "-h"}:
             usage()
             raise SystemExit(0)
@@ -1540,6 +1595,7 @@ def ralph_run(args: List[str]) -> int:
             progress,
             pi_output,
             pi_output_file,
+            cli_execution_backend,
         ) = parse_run_args(args)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
@@ -1578,6 +1634,30 @@ def ralph_run(args: List[str]) -> int:
             capture_json = True
     if not capture_json:
         capture_json = parse_bool(config.get("captureJson", DEFAULTS["captureJson"]), DEFAULTS["captureJson"])
+
+    # Resolve execution backend from CLI flag, env var, or config (in that order)
+    # Priority: CLI flag > Environment variable > Config > Default
+    execution_backend: str = DEFAULTS["executionBackend"]
+    if cli_execution_backend:
+        execution_backend = cli_execution_backend
+    else:
+        env_no_interactive = os.environ.get("RALPH_NO_INTERACTIVE_SHELL", "").strip()
+        if env_no_interactive in ("1", "true", "yes"):
+            execution_backend = "subprocess"
+        else:
+            config_backend = config.get("executionBackend", DEFAULTS["executionBackend"])
+            if isinstance(config_backend, str) and config_backend in ("dispatch", "subprocess"):
+                execution_backend = config_backend
+            else:
+                # Check interactiveShell.enabled config for backward compatibility
+                interactive_shell_config = config.get("interactiveShell", {})
+                if isinstance(interactive_shell_config, dict):
+                    if not parse_bool(interactive_shell_config.get("enabled", True), True):
+                        execution_backend = "subprocess"
+
+    # Log execution backend selection (in verbose mode)
+    if log_level in (LogLevel.DEBUG, LogLevel.VERBOSE):
+        logger.info(f"Execution backend: {execution_backend}")
 
     ticket_query = sanitize_ticket_query(str(config.get("ticketQuery", DEFAULTS["ticketQuery"])), logger)
     workflow = str(config.get("workflow", DEFAULTS["workflow"]))
@@ -1678,6 +1758,7 @@ def ralph_run(args: List[str]) -> int:
             pi_output=pi_output,
             pi_output_file=pi_output_file,
             timeout_ms=effective_timeout_ms,
+            execution_backend=execution_backend,
         )
 
         if dry_run:
@@ -1754,6 +1835,27 @@ def ralph_start(args: List[str]) -> int:
             capture_json = True
     if not capture_json:
         capture_json = parse_bool(config.get("captureJson", DEFAULTS["captureJson"]), DEFAULTS["captureJson"])
+
+    # Resolve execution backend from CLI flag, env var, or config (in that order)
+    # Priority: CLI flag > Environment variable > Config > Default
+    execution_backend: str = DEFAULTS["executionBackend"]
+    cli_execution_backend = options.get("execution_backend")
+    if cli_execution_backend:
+        execution_backend = cli_execution_backend
+    else:
+        env_no_interactive = os.environ.get("RALPH_NO_INTERACTIVE_SHELL", "").strip()
+        if env_no_interactive in ("1", "true", "yes"):
+            execution_backend = "subprocess"
+        else:
+            config_backend = config.get("executionBackend", DEFAULTS["executionBackend"])
+            if isinstance(config_backend, str) and config_backend in ("dispatch", "subprocess"):
+                execution_backend = config_backend
+            else:
+                # Check interactiveShell.enabled config for backward compatibility
+                interactive_shell_config = config.get("interactiveShell", {})
+                if isinstance(interactive_shell_config, dict):
+                    if not parse_bool(interactive_shell_config.get("enabled", True), True):
+                        execution_backend = "subprocess"
 
     # Set up logs directory for JSON capture or pi output file mode
     pi_output = options.get("pi_output", "inherit")
@@ -1980,6 +2082,7 @@ def ralph_start(args: List[str]) -> int:
                         pi_output=pi_output,
                         pi_output_file=pi_output_file,
                         timeout_ms=effective_timeout_ms,
+                        execution_backend=execution_backend,
                     )
                     ticket_logger.log_command_executed(ticket, cmd, ticket_rc, mode="serial", iteration=iteration, ticket_title=ticket_title)
 

@@ -17,7 +17,7 @@ def init_project(project_root: Path) -> int:
     """Initialize a project-local TF installation.
 
     After the refactor, TF workflow assets are *always* project-local:
-      - <project>/.pi/{agents,prompts,skills}/...
+      - <project>/{agents,prompts,skills}/...
       - <project>/.tf/config/settings.json
       - <project>/.tf/knowledge, <project>/.tf/ralph
 

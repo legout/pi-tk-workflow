@@ -21,7 +21,7 @@ Detailed procedures are in separate skills:
 |-------|-------|-------------|
 | Research | `tf-research` | Gather context and knowledge |
 | Implement | `tf-implement` | Code changes with quality checks |
-| Review | `tf-review` | Parallel reviewers and merge |
+| Review | `tf-review-phase` | Parallel reviewers and merge |
 | Fix | `tf-fix` | Apply fixes from review feedback |
 | Close | `tf-close` | Quality gate, commit, close ticket |
 
@@ -70,7 +70,17 @@ Post-chain commands (run after chain completes with CLOSED status):
 | `--simplify-tickets` | `simplify` |
 | `--final-review-loop` | `review-start` |
 
-## Chain Construction
+## Deterministic Orchestration
+
+`/tf` should delegate to Python tooling:
+
+```bash
+tf irf <ticket-id> [flags]
+```
+
+`tf irf` resolves flags/config and constructs the `/chain-prompts` command deterministically.
+
+Equivalent chain forms:
 
 ```bash
 # Default or --with-research

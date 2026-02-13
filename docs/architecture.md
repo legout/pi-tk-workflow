@@ -49,9 +49,9 @@ User types: /tf ABC-123
 │  Skill Procedures│ Follow TF workflow:
 │                 │   1. Re-anchor context
 │                 │   2. Research (optional)
-│                 │   3. Implement (model-switch)
+│                 │   3. Implement (prompt chain)
 │                 │   4. Review (subagents)
-│                 │   5. Fix (model-switch)
+│                 │   5. Fix (prompt chain)
 │                 │   6. Close
 └─────────────────┘
 ```
@@ -66,8 +66,9 @@ Skills are the core expertise containers. They live in `skills/*/SKILL.md`.
 
 | Skill | Purpose | Key Procedures |
 |-------|---------|----------------|
-| `tf-workflow` | Core implementation | Re-anchor, Research, Implement, Review, Fix, Close |
+| `tf-workflow` | Core orchestration | Deterministic `/tf` wrapper + phase delegation |
 | `tf-review` | Shared reviewer contract | Artifact resolution, findings format, severity accounting |
+| `tf-review-phase` | Review phase orchestration | Parallel reviewer fan-out + merge |
 | `tf-planning` | Research & planning | Seed capture, Backlog generation, Plan lifecycle, Research spike, Baseline, Follow-ups, OpenSpec bridge |
 | `tf-config` | Setup & maintenance | Verify setup, Sync models, Check MCP |
 | `ralph` | Autonomous loop | Initialize, Start loop, Extract lessons, Progress tracking |
@@ -220,7 +221,7 @@ During implementation, the workflow reads the linked topic for context.
 
 ## Model Switching
 
-Two extensions handle model switching:
+Model switching is handled via **frontmatter + prompt chaining**:
 
 ### 1. pi-prompt-template-model (Entry)
 
@@ -230,14 +231,12 @@ Handles the **initial** model switch when you type a command.
 - Switches to specified model
 - Injects `skill:` content
 
-### 2. pi-model-switch (Runtime)
+### 2. /chain-prompts (Runtime)
 
-Handles **runtime** model switches during workflow execution.
-
-Used by skills to switch between phases:
-- Implement (strong model) → Review merge (cheap model)
-- Review merge → Fix (cheap model)
-- Fix → Close (cheap model)
+The `/tf` command delegates to `tf irf`, which deterministically builds and executes `/chain-prompts`:
+- Each phase (research → implement → review → fix → close) is a separate prompt
+- Each prompt has its own `model:` frontmatter
+- No runtime model-switch extension needed
 
 ---
 
@@ -258,7 +257,7 @@ Used by skills to switch between phases:
 │     - MCP tools (context7, exa, grep_app)                   │
 │     - Write to .tf/knowledge/tickets/{id}/research.md       │
 ├─────────────────────────────────────────────────────────────┤
-│  2. Implement (model-switch)                                │
+│  2. Implement (prompt chain)                                │
 │     - Switch to worker model                                │
 │     - Write implementation.md (ticket artifact dir)         │
 ├─────────────────────────────────────────────────────────────┤
@@ -267,7 +266,7 @@ Used by skills to switch between phases:
 │     - reviewer-spec-audit                                   │
 │     - reviewer-second-opinion                               │
 ├─────────────────────────────────────────────────────────────┤
-│  4. Merge Reviews (model-switch)                            │
+│  4. Merge Reviews (prompt chain)                            │
 │     - Switch to cheap model                                 │
 │     - Deduplicate issues                                    │
 │     - Write review.md (ticket artifact dir)                 │
@@ -369,8 +368,7 @@ Run `/tf-sync` after editing config to apply changes.
 ### Required
 
 ```bash
-pi install npm:pi-prompt-template-model  # Entry model switch
-pi install npm:pi-model-switch           # Runtime model switch
+pi install npm:pi-prompt-template-model  # Entry model switch via frontmatter
 pi install npm:pi-subagents              # Parallel reviews
 ```
 
@@ -379,6 +377,7 @@ pi install npm:pi-subagents              # Parallel reviews
 ```bash
 pi install npm:pi-review-loop    # Post-chain review
 pi install npm:pi-mcp-adapter    # MCP tools for research
+pi install npm:pi-web-access     # Preferred web/docs research
 ```
 
 ---

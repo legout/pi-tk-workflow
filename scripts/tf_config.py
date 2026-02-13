@@ -6,22 +6,22 @@ import shlex
 import sys
 from pathlib import Path
 
-# Add parent directory to path for tf_cli imports
+# Add parent directory to path for local tf package imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tf_cli.frontmatter import (
-    resolve_meta_model,
-    update_agent_frontmatter,
-    update_prompt_frontmatter,
-    sync_models_to_files,
-)
-from tf_cli.utils import merge, read_json
+from tf.frontmatter import sync_models_to_files
+from tf.utils import merge, read_json
 
 
 def resolve_project_root(base: Path) -> Path:
-    # Project installs pass base=<project>/.pi
+    # Canonical project layout uses root-level agents/prompts/skills.
+    if (base / ".tf").exists() or (base / "prompts").exists() or (base / "agents").exists():
+        return base
+
+    # Legacy project installs used base=<project>/.pi
     if str(base).endswith("/.pi"):
         return base.parent
+
     # Global installs pass base=~/.pi/agent, but the active project is cwd
     return Path.cwd()
 
@@ -43,11 +43,16 @@ def load_workflow_config(base: Path, ignore_project: bool) -> dict:
 
 
 def resolve_sync_base(base: Path) -> Path:
-    agents_dir = base / "agents"
-    prompts_dir = base / "prompts"
-    if agents_dir.exists() or prompts_dir.exists():
+    # Canonical project layout
+    if (base / "agents").exists() or (base / "prompts").exists():
         return base
 
+    # Legacy project layout
+    legacy_base = base / ".pi"
+    if (legacy_base / "agents").exists() or (legacy_base / "prompts").exists():
+        return legacy_base
+
+    # Global fallback
     global_base = Path.home() / ".pi/agent"
     if (global_base / "agents").exists() or (global_base / "prompts").exists():
         return global_base

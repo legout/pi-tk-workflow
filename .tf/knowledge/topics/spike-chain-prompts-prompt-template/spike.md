@@ -115,17 +115,18 @@ There is no special `{previous}` variable mechanism in this extension; the "cont
 
 ```
 skills/
-├── tf-research/SKILL.md    # Research procedure
-├── tf-implement/SKILL.md   # Implementation procedure
-├── tf-review/SKILL.md      # Review procedure (parallel + merge)
-├── tf-fix/SKILL.md         # Fix procedure
-└── tf-close/SKILL.md       # Close procedure
+├── tf-research/SKILL.md      # Research procedure
+├── tf-implement/SKILL.md     # Implementation procedure
+├── tf-review/SKILL.md        # Reviewer subagent contract
+├── tf-review-phase/SKILL.md  # Review phase orchestration
+├── tf-fix/SKILL.md           # Fix procedure
+└── tf-close/SKILL.md         # Close procedure
 
 prompts/
 ├── tf.md                   # Entry point (chain invocation)
 ├── tf-research.md          # Wrapper: model=k2p5, thinking=medium, skill=tf-research
 ├── tf-implement.md         # Wrapper: model=MiniMax-M2.5, thinking=high, skill=tf-implement
-├── tf-review.md            # Wrapper: model=gpt-5.3, thinking=high, skill=tf-review
+├── tf-review.md            # Wrapper: model=gpt-5.3, thinking=high, skill=tf-review-phase
 ├── tf-fix.md               # Wrapper: model=glm-5, thinking=high, skill=tf-fix
 └── tf-close.md             # Wrapper: model=GLM-4.7-Flash, thinking=medium, skill=tf-close
 ```
@@ -133,12 +134,14 @@ prompts/
 ### Chain Invocation
 
 ```bash
-# Default workflow
-/chain-prompts tf-research -> tf-implement -> tf-review -> tf-fix -> tf-close -- pt-1234
+# Deterministic wrapper (recommended)
+tf irf pt-1234 [flags]
 
-# Skip research
-/chain-prompts tf-implement -> tf-review -> tf-fix -> tf-close -- pt-1234
+# Under the hood (resolved command)
+/chain-prompts tf-research -> tf-implement -> tf-review -> tf-fix -> tf-close -- pt-1234
 ```
+
+The wrapper handles flag parsing and post-chain commands in Python instead of prompt text.
 
 ### Context Flow Between Steps
 

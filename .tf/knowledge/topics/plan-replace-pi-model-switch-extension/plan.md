@@ -25,7 +25,8 @@ Create detailed skills in `skills/` directory for each workflow phase:
 
 - `skills/tf-research/SKILL.md` - Research procedure (context loading, research execution, artifact writing)
 - `skills/tf-implement/SKILL.md` - Implementation procedure (coding, quality checks, artifact writing)
-- `skills/tf-review/SKILL.md` - Review procedure (parallel subagents, merge)
+- `skills/tf-review/SKILL.md` - Shared reviewer subagent contract
+- `skills/tf-review-phase/SKILL.md` - Review phase orchestration (parallel subagents + merge)
 - `skills/tf-fix/SKILL.md` - Fix procedure (issue analysis, fixes, artifact writing)
 - `skills/tf-close/SKILL.md` - Close procedure (quality gate, commit, close)
 
@@ -37,7 +38,7 @@ Create thin prompt wrappers in `prompts/` directory with frontmatter:
 |--------|-------|----------|-------|
 | `prompts/tf-research.md` | kimi-coding/k2p5 | medium | tf-research |
 | `prompts/tf-implement.md` | minimax/MiniMax-M2.5 | high | tf-implement |
-| `prompts/tf-review.md` | openai-codex/gpt-5.3-codex | high | tf-review |
+| `prompts/tf-review.md` | openai-codex/gpt-5.3-codex | high | tf-review-phase |
 | `prompts/tf-fix.md` | zai/glm-5 | high | tf-fix |
 | `prompts/tf-close.md` | chutes/zai-org/GLM-4.7-Flash | medium | tf-close |
 
@@ -55,17 +56,23 @@ Keep existing agents in `agents/` for parallel reviews:
 
 These are needed for `pi-subagents` parallel execution with different models.
 
-### 4. Entry Point
+### 4. Deterministic Entry Point (`tf` Python tooling)
 
-Update `/tf` to invoke the chain:
+Keep `/tf` as the user-facing command, but delegate orchestration to Python tooling:
 
 ```bash
-# Default or --with-research
-/chain-prompts tf-research -> tf-implement -> tf-review -> tf-fix -> tf-close -- $@
+# Prompt wrapper
+/tf ...
 
-# With --no-research
-/chain-prompts tf-implement -> tf-review -> tf-fix -> tf-close -- $@
+# Deterministic backend
+tf irf <ticket-id> [flags]
 ```
+
+`tf irf` is responsible for:
+- strict flag parsing and validation
+- config-aware research entry selection
+- deterministic `/chain-prompts` command construction
+- post-chain command execution only on successful chain completion
 
 ### 5. Flag Handling
 
@@ -102,7 +109,8 @@ pi-ticketflow/
 ├── skills/
 │   ├── tf-research/SKILL.md    # Research procedure
 │   ├── tf-implement/SKILL.md   # Implementation procedure
-│   ├── tf-review/SKILL.md      # Review procedure
+│   ├── tf-review/SKILL.md      # Reviewer subagent contract
+│   ├── tf-review-phase/SKILL.md # Review phase orchestration
 │   ├── tf-fix/SKILL.md         # Fix procedure
 │   └── tf-close/SKILL.md       # Close procedure
 ├── agents/
@@ -123,7 +131,7 @@ pi-ticketflow/
 
 ### Phase 2: Orchestration
 
-4. Update `prompts/tf.md` to invoke chain
+4. Update `prompts/tf.md` to delegate to `tf irf`
 5. Validate full IRF workflow runs end-to-end
 6. Verify artifact outputs match expected format
 

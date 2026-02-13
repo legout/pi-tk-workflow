@@ -57,7 +57,6 @@ Install these Pi extensions:
 
 ```bash
 pi install npm:pi-prompt-template-model  # Entry model switch via frontmatter
-pi install npm:pi-model-switch           # Runtime model switching
 pi install npm:pi-subagents              # Parallel reviewer subagents
 ```
 
@@ -66,8 +65,15 @@ pi install npm:pi-subagents              # Parallel reviewer subagents
 | Extension | When | Purpose |
 |-----------|------|---------|
 | `pi-prompt-template-model` | Command entry | Reads `model:` and `skill:` frontmatter, handles initial model switch |
-| `pi-model-switch` | During workflow | Runtime switches between phases (implement → review → fix) |
 | `pi-subagents` | During workflow | Spawns parallel reviewer subagents |
+
+**Optional:**
+
+```bash
+pi install npm:pi-review-loop
+pi install npm:pi-mcp-adapter
+pi install npm:pi-web-access
+```
 
 ---
 
@@ -433,26 +439,30 @@ Runs preflight checks for:
 After installation:
 
 ```
-# Global install (Pi assets + CLI)
-~/.pi/agent/
-├── agents/
-├── skills/
-└── prompts/
-
+# Global install (CLI)
 ~/.local/bin/tf
 
-# Project (after `tf init` or project install)
-.pi/
-├── agents/
-├── skills/
-└── prompts/
+# Project (after `tf init`)
+agents/
+├── reviewer-general.md
+├── reviewer-spec-audit.md
+└── ...
+
+prompts/
+├── tf.md
+├── tf-research.md
+├── tf-implement.md
+└── ...
+
+skills/
+├── tf-workflow/SKILL.md
+├── tf-review/SKILL.md
+└── ...
 
 # Pi extension config (optional)
 .pi/mcp.json
 
 .tf/
-├── bin/
-│   └── tf                # (if installed locally)
 ├── config/
 │   └── settings.json
 ├── scripts/
@@ -479,10 +489,10 @@ pi install npm:pi-prompt-template-model
 
 ### Model not switching
 
-- Verify `pi-prompt-template-model` installed (for entry switch)
-- Verify `pi-model-switch` installed (for runtime switches)
-- Check model ID is valid in config/settings.json
-- Run `/tf-sync` after config changes
+- Verify `pi-prompt-template-model` is installed (handles frontmatter model switch)
+- Check model IDs in `.tf/config/settings.json`
+- Run `tf sync` (or `/tf-sync`) after config changes
+- `/tf` delegates to `tf irf`, which resolves the `/chain-prompts` sequence deterministically
 
 ### Skill not loading
 

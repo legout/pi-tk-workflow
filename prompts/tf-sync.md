@@ -1,5 +1,5 @@
 ---
-description: Sync TF configuration [tf-config +GLM-4.7]
+description: Sync TF configuration [tf-config]
 model: zai/glm-4.7
 thinking: medium
 skill: tf-config
@@ -7,83 +7,37 @@ skill: tf-config
 
 # /tf-sync
 
-Apply the workflow configuration and verify required extensions.
+Apply workflow configuration and verify required extensions.
 
 ## Usage
 
-```
+```bash
 /tf-sync
 ```
 
 ## Execution
 
-Follow the **IRF Config Skill** procedures:
+Follow the **tf-config** skill procedures:
 
-1. **Verify Setup** - Check extensions and agent files
-2. **Sync Models** - Update agent and prompt files from config/settings.json
-3. **Report Status** - Show what's installed and updated
+1. Verify setup (extensions + project assets)
+2. Sync model/thinking frontmatter from `.tf/config/settings.json`
+3. Report status and recommendations
 
-## What Gets Synced
+## Required Extensions
 
-### Extensions Checked
+- `pi-prompt-template-model`
+- `pi-subagents`
 
-| Extension | Status | Install Command |
-|-----------|--------|-----------------|
-| pi-prompt-template-model | Required | `pi install npm:pi-prompt-template-model` |
-| pi-subagents | Required | `pi install npm:pi-subagents` |
-| pi-model-switch | Required | `pi install npm:pi-model-switch` |
-| pi-mcp-adapter | Optional | `pi install npm:pi-mcp-adapter` |
-| pi-review-loop | Optional | `pi install npm:pi-review-loop` |
+## Optional Extensions
 
-### Agent Models Updated
+- `pi-review-loop`
+- `pi-mcp-adapter`
+- `pi-web-access`
 
-Config key → Agent file mapping:
-- `models.reviewer-general` → `agents/reviewer-general.md`
-- `models.reviewer-spec-audit` → `agents/reviewer-spec-audit.md`
-- `models.reviewer-second-opinion` → `agents/reviewer-second-opinion.md`
-- `models.review-merge` → `agents/review-merge.md`
-- `models.fixer` → `agents/fixer.md`
-- `models.closer` → `agents/closer.md`
-- `models.researcher` → `agents/researcher.md`
-- `models.researcher-fetch` → `agents/researcher-fetch.md`
+## Synced Files
 
-### Prompt Models Updated
+`tf sync` updates frontmatter in:
+- `agents/*.md`
+- `prompts/*.md`
 
-Config key → Prompt file mapping:
-- `models.planning` → `prompts/tf-plan.md`, `prompts/tf-plan-chain.md`, `prompts/tf-plan-consult.md`, `prompts/tf-plan-revise.md`, `prompts/tf-plan-review.md`, `prompts/tf-seed.md`, `prompts/tf-backlog.md`, `prompts/tf-backlog-ls.md`, `prompts/tf-spike.md`, `prompts/tf-backlog-from-openspec.md`, `prompts/tf-baseline.md`, `prompts/tf-followups.md`
-- `models.general` → `prompts/tf-next.md`
-- `models.config` → `prompts/tf-sync.md`
-
-## Configuration Sources
-
-Read project config:
-- `.tf/config/settings.json`
-
-## Output Example
-
-```
-## Extension Status
-✓ pi-subagents (installed)
-✓ pi-model-switch (installed)
-○ pi-mcp-adapter (optional, not installed)
-
-## Agent Models Updated
-- fixer: general (zai/glm-4.7) - updated from fast
-
-## Agent Models Unchanged
-- reviewer-general: review-general (openai-codex/gpt-5.1-codex-mini)
-- ...
-
-## Prompt Models Updated
-- tf-plan.md: planning (openai-codex/gpt-5.2)
-
-## Recommendations
-- Consider installing pi-mcp-adapter for research capabilities
-```
-
-## When to Run
-
-- After editing `config/settings.json`
-- When setting up a new project
-- After updating the pi-tk-workflow package
-- When troubleshooting model-related issues
+(legacy fallback: `.pi/agents/*.md` and `.pi/prompts/*.md`)

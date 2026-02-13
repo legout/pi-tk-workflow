@@ -5,12 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from .frontmatter import (
-    resolve_meta_model,
-    update_agent_frontmatter,
-    update_prompt_frontmatter,
-    sync_models_to_files,
-)
+from .frontmatter import sync_models_to_files
 from .utils import find_project_root, read_json
 
 
@@ -33,10 +28,22 @@ def load_project_config(project_root: Path) -> dict:
 
 
 def sync_models(project_root: Path, config: dict) -> dict:
-    """Sync models from config to all agents and prompts in the project."""
-    agents_dir = project_root / ".pi" / "agents"
-    prompts_dir = project_root / ".pi" / "prompts"
-    
+    """Sync models from config to all agents and prompts in the project.
+
+    Canonical locations are project-root `agents/` and `prompts/`.
+    Legacy `.pi/{agents,prompts}` are still supported as fallback.
+    """
+    agents_dir = project_root / "agents"
+    prompts_dir = project_root / "prompts"
+
+    if not agents_dir.exists():
+        legacy_agents = project_root / ".pi" / "agents"
+        agents_dir = legacy_agents if legacy_agents.exists() else agents_dir
+
+    if not prompts_dir.exists():
+        legacy_prompts = project_root / ".pi" / "prompts"
+        prompts_dir = legacy_prompts if legacy_prompts.exists() else prompts_dir
+
     return sync_models_to_files(
         config,
         agents_dir if agents_dir.exists() else None,

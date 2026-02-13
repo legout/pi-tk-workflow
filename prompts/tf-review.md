@@ -1,8 +1,8 @@
 ---
-description: Review phase for TF workflow [tf-review]
+description: Review phase for TF workflow [tf-review-phase]
 model: openai-codex/gpt-5.3-codex
 thinking: high
-skill: tf-review
+skill: tf-review-phase
 ---
 
 # /tf-review
@@ -15,7 +15,7 @@ Execute the Review phase for TF workflow ticket implementation.
 
 ## Execution
 
-Follow the **tf-review** skill procedure to:
+Follow the **tf-review-phase** skill procedure to:
 
 1. Load context (implementation.md, retry state)
 2. Determine reviewers from config

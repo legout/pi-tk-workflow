@@ -133,16 +133,6 @@ Brief description of what was accomplished
 - `close-summary.md`
 ```
 
-### Step 9: Optional Post-Chain Commands
-
-If flags were provided, run after close:
-
-| Flag | Command |
-|------|---------|
-| `--create-followups` | `tf-followups {artifactDir}/review.md` |
-| `--simplify-tickets` | `simplify --create-tickets --last-implementation` |
-| `--final-review-loop` | `review-start` |
-
 ## Output Artifacts
 
 | File | Description |

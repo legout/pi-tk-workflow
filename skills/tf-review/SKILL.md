@@ -1,106 +1,60 @@
 ---
 name: tf-review
-description: Review phase for TF workflow - parallel reviewers and merge. Use after implementation to get multi-perspective code review.
+description: Shared code review procedure for TF reviewer subagents. Use for reviewer-general, reviewer-spec-audit, and reviewer-second-opinion.
 ---
 
 # TF Review Skill
 
-Review phase for the IRF (Implement → Review → Fix → Close) workflow. Runs parallel reviewers and merges results.
+Shared review contract for all TF reviewer agents.
 
-## When to Use This Skill
+## Inputs
 
-- After implementation phase completes
-- When gathering multi-perspective code review
-- Before fix phase
+- Task input contains the ticket ID.
+- Agent wrapper provides:
+  - review lens (general/spec/second-opinion)
+  - output filename
 
-## Prerequisites
+## Required Procedure
 
-- Implementation phase completed
-- `{artifactDir}/implementation.md` exists
-- `pi-subagents` extension available
+1. Resolve `knowledgeDir`:
+   - If `.tf/config/settings.json` exists, read `workflow.knowledgeDir`.
+   - Default to `.tf/knowledge`.
+2. Resolve artifact directory:
+   - `{knowledgeDir}/tickets/<ticket-id>/`
+3. Read implementation context:
+   - Read `{artifactDir}/implementation.md`.
+   - Read all referenced source files from the implementation summary.
+4. Apply review lens:
+   - `general`: bugs, correctness, security, performance, maintainability, test coverage.
+   - `spec-audit`: run `tk show <ticket-id>`, compare implementation against ticket requirements and referenced plans/specs.
+   - `second-opinion`: focus on edge cases and non-obvious risks missed by typical review passes.
+5. Write the final review to the exact output path specified by the agent wrapper.
 
-## Procedure
-
-### Step 1: Load Context
-
-1. **Read previous phase artifacts**:
-   - `{artifactDir}/implementation.md` - What was implemented
-   - `{artifactDir}/files_changed.txt` - Files to review
-
-2. **Load retry state** (if escalation enabled):
-   - Get `escalatedModels.reviewerSecondOpinion` for second-opinion reviewer
-
-### Step 2: Determine Reviewers
-
-From config (`.tf/config/settings.json`):
-- If `workflow.enableReviewers` is set, use that list
-- Default: `reviewer-general`, `reviewer-spec-audit`, `reviewer-second-opinion`
-- If empty list, skip reviews and write stub
-
-### Step 3: Resolve Repo Root
-
-```bash
-git rev-parse --show-toplevel
-```
-
-### Step 4: Execute Parallel Subagents
-
-Run from repo root:
-
-```json
-{
-  "agentScope": "project",
-  "tasks": [
-    {"agent": "reviewer-general", "task": "{ticket}", "cwd": "{repoRoot}"},
-    {"agent": "reviewer-spec-audit", "task": "{ticket}", "cwd": "{repoRoot}"},
-    {"agent": "reviewer-second-opinion", "task": "{ticket}", "cwd": "{repoRoot}"}
-  ]
-}
-```
-
-Each reviewer uses a different model from config:
-- `reviewer-general` → `metaModels.review-general.model`
-- `reviewer-spec-audit` → `metaModels.review-spec.model`
-- `reviewer-second-opinion` → `metaModels.review-secop.model` (or escalated model)
-
-### Step 5: Handle Skipped Reviews
-
-If no reviewer outputs exist:
-- Write stub `{artifactDir}/review.md` with "No reviews run" in Critical and zero counts
-- Return early
-
-### Step 6: Merge Reviews
-
-1. **Read available review outputs**:
-   - `{artifactDir}/review-general.md`
-   - `{artifactDir}/review-spec.md`
-   - `{artifactDir}/review-second.md`
-
-2. **Deduplicate issues**:
-   - Match by file path + line number + description similarity
-   - Use fuzzy matching: if descriptions >70% similar, consider duplicates
-   - Keep highest severity when duplicates found
-   - Note source reviewer(s)
-
-3. **Write consolidated `{artifactDir}/review.md`**:
+## Output Format
 
 ```markdown
-# Review: {ticket-id}
+# Review: <ticket-id>
+
+## Overall Assessment
+2-3 sentence summary.
 
 ## Critical (must fix)
-- `file.ts:42` - Issue description
+- `path:line` - issue and impact
 
 ## Major (should fix)
-- `file.ts:100` - Issue description
+- `path:line` - issue and impact
 
 ## Minor (nice to fix)
-- `file.ts:150` - Issue description
+- `path:line` - issue and impact
 
 ## Warnings (follow-up ticket)
-- `file.ts:200` - Future work
+- `path:line` - deferred risk
 
 ## Suggestions (follow-up ticket)
-- `file.ts:250` - Improvement idea
+- `path:line` - optional improvement
+
+## Positive Notes
+- concrete strengths
 
 ## Summary Statistics
 - Critical: {count}
@@ -110,25 +64,10 @@ If no reviewer outputs exist:
 - Suggestions: {count}
 ```
 
-## Reviewer Focus Areas
+## Rules
 
-| Reviewer | Focus |
-|----------|-------|
-| reviewer-general | Logic correctness, security, error handling, performance, test gaps |
-| reviewer-spec-audit | Ticket/plan compliance, acceptance criteria, specification alignment |
-| reviewer-second-opinion | Non-obvious issues, alternative approaches, edge cases |
-
-## Output Artifacts
-
-| File | Description |
-|------|-------------|
-| `{artifactDir}/review.md` | Consolidated review |
-| `{artifactDir}/review-general.md` | General review (from subagent) |
-| `{artifactDir}/review-spec.md` | Spec audit (from subagent) |
-| `{artifactDir}/review-second.md` | Second opinion (from subagent) |
-
-## Error Handling
-
-- If reviewer times out, continue with available results
-- Write partial stub for failed reviewers
-- Merge handles missing reviews gracefully
+- Use concrete file paths and line references.
+- Explain why each issue matters.
+- Do not fix code in this step; report only.
+- If no issues, state `No issues found` in `Critical`.
+- Use one complete `write` call for final output.
