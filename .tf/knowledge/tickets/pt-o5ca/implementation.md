@@ -311,6 +311,20 @@ This order ensures that: (a) follow-ups exist before simplification runs, and (b
 ## Files Changed
 - `.tf/knowledge/tickets/pt-o5ca/research.md` - Research findings
 - `.tf/knowledge/tickets/pt-o5ca/implementation.md` - This decision document
+- `.tf/knowledge/topics/plan-replace-pi-model-switch-extension/plan.md` - Updated plan
+- `.tf/knowledge/topics/spike-chain-prompts-prompt-template/spike.md` - Updated spike
+- `skills/tf-research/SKILL.md` - Research phase skill
+- `skills/tf-implement/SKILL.md` - Implementation phase skill
+- `skills/tf-review/SKILL.md` - Review phase skill
+- `skills/tf-fix/SKILL.md` - Fix phase skill
+- `skills/tf-close/SKILL.md` - Close phase skill
+- `skills/tf-workflow/SKILL.md` - Updated orchestration skill
+- `prompts/tf.md` - Updated main entry point
+- `prompts/tf-research.md` - Research phase wrapper
+- `prompts/tf-implement.md` - Implementation phase wrapper
+- `prompts/tf-review.md` - Review phase wrapper
+- `prompts/tf-fix.md` - Fix phase wrapper
+- `prompts/tf-close.md` - Close phase wrapper
 
 ## Key Decisions
 
@@ -321,6 +335,36 @@ This order ensures that: (a) follow-ups exist before simplification runs, and (b
 3. **Post-chain as separate commands**: Follow-up creation, simplification, and review loops are naturally post-processing steps. Keeping them outside the chain allows them to use different models/skills.
 
 4. **Preserve `/tf` wrapper**: Backward compatibility is critical. Users shouldn't need to learn new commands.
+
+5. **Skills + Prompts architecture**: Skills contain detailed procedures; prompts are thin wrappers with frontmatter. This separation allows:
+   - Skills to be shared across prompts and agents
+   - Models to be changed by editing frontmatter only
+   - Procedures to be tested independently
+
+## Project Structure
+
+```
+pi-ticketflow/
+├── prompts/
+│   ├── tf.md              # Main entry point (chain invocation)
+│   ├── tf-research.md     # Research phase wrapper
+│   ├── tf-implement.md    # Implementation phase wrapper
+│   ├── tf-review.md       # Review phase wrapper
+│   ├── tf-fix.md          # Fix phase wrapper
+│   └── tf-close.md        # Close phase wrapper
+├── skills/
+│   ├── tf-research/SKILL.md    # Research procedure
+│   ├── tf-implement/SKILL.md   # Implementation procedure
+│   ├── tf-review/SKILL.md      # Review procedure
+│   ├── tf-fix/SKILL.md         # Fix procedure
+│   ├── tf-close/SKILL.md       # Close procedure
+│   └── tf-workflow/SKILL.md    # Orchestration skill
+├── agents/
+│   ├── reviewer-general.md     # Parallel review agent
+│   ├── reviewer-spec-audit.md  # Parallel review agent
+│   └── reviewer-second-opinion.md  # Parallel review agent
+└── tf/                         # Python tooling
+```
 
 ## Tests Run
 - Verified `/chain-prompts` syntax from spike document

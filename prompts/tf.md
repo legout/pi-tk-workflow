@@ -1,5 +1,5 @@
 ---
-description: Implement ticket with IRF workflow [tf-workflow]
+description: Implement ticket with IRF workflow using /chain-prompts [tf-workflow]
 model: kimi-coding/k2p5
 thinking: high
 skill: tf-workflow
@@ -7,17 +7,17 @@ skill: tf-workflow
 
 # /tf
 
-Execute the standard Implement → Review → Fix → Close workflow for a ticket.
+Execute the standard Implement → Review → Fix → Close workflow for a ticket using `/chain-prompts`.
 
-## Task Input
-- Ticket ID: $1
-- Args: $@
+## Input
+- Ticket ID: `$1`
+- Args: `$@`
 
 ## Usage
 
 ```
-/tf <ticket-id> [--auto] [--no-research] [--with-research] [--plan] [--dry-run]
-             [--create-followups] [--simplify-tickets] [--final-review-loop]
+/tf <ticket-id> [--no-research] [--with-research] [--create-followups]
+                [--simplify-tickets] [--final-review-loop]
 ```
 
 ## Arguments
@@ -29,49 +29,62 @@ Execute the standard Implement → Review → Fix → Close workflow for a ticke
 
 | Flag | Description |
 |------|-------------|
-| `--auto` / `--no-clarify` | Run headless (no confirmation prompts) |
-| `--no-research` | Skip research step |
-| `--with-research` | Force enable research step |
-| `--plan` / `--dry-run` | Print resolved chain and exit without running agents |
-| `--create-followups` | Run `/tf-followups` on merged review output |
-| `--simplify-tickets` | Run `/simplify --create-tickets --last-implementation` if available |
-| `--final-review-loop` | Run `/review-start` after the chain if available |
+| `--no-research` | Skip research phase (start at implement) |
+| `--with-research` | Force enable research phase |
+| `--create-followups` | Run `/tf-followups` after close |
+| `--simplify-tickets` | Run `/simplify` after close |
+| `--final-review-loop` | Run `/review-start` after close |
 
 ## Execution
 
-Follow the **TF Workflow Skill** procedures:
+### Chain Construction
 
-1. **Re-Anchor Context** - Load AGENTS.md, lessons, ticket details
-2. **Research** (optional) - MCP tools for knowledge gathering
-3. **Implement** (model-switch) - Code changes with quality checks
-4. **Parallel Reviews** (optional) - Reviewer subagents when enabled
-5. **Merge Reviews** (optional) - Deduplicate and consolidate
-6. **Fix Issues** (optional) - Apply fixes when enabled
-7. **Follow-ups** (optional) - Create follow-up tickets when requested
-8. **Close Ticket** (optional) - Add note and close in `tk` when allowed
-9. **Final Review Loop** (optional) - Run `/review-start` when requested
-10. **Simplify Tickets** (optional) - Run `/simplify` follow-on if available
-11. **Ralph Integration** (if active) - Update progress, extract lessons
+Build the chain based on research flag:
+
+```bash
+# Default or --with-research
+/chain-prompts tf-research -> tf-implement -> tf-review -> tf-fix -> tf-close -- $@
+
+# With --no-research
+/chain-prompts tf-implement -> tf-review -> tf-fix -> tf-close -- $@
+```
+
+### Flag Handling
+
+| Flag | Behavior |
+|------|----------|
+| `--no-research` | Start chain at `tf-implement` |
+| `--with-research` | Start chain at `tf-research` (default) |
+| `--create-followups` | Post-chain: run `tf-followups` |
+| `--simplify-tickets` | Post-chain: run `simplify` |
+| `--final-review-loop` | Post-chain: run `review-start` |
+
+**Flag precedence**: Last flag wins for conflicting flags.
+
+### Post-Chain Commands
+
+After the chain completes (CLOSED status), run post-chain commands in order:
+1. `tf-followups` (if `--create-followups`)
+2. `simplify` (if `--simplify-tickets`)
+3. `review-start` (if `--final-review-loop`)
+
+If chain ends with BLOCKED status, skip all post-chain commands.
 
 ## Output Artifacts
 
 Written under `.tf/knowledge/tickets/<ticket-id>/`:
-- `research.md` - Ticket research (if any)
+- `research.md` - Ticket research (if research ran)
 - `implementation.md` - Implementation summary
 - `review.md` - Consolidated review
 - `fixes.md` - Fixes applied
-- `followups.md` - Follow-up tickets (if `--create-followups`)
 - `close-summary.md` - Final summary
-- `chain-summary.md` - Artifact index (closer)
+- `chain-summary.md` - Artifact index
 - `files_changed.txt` - Tracked changed files
 - `ticket_id.txt` - Ticket ID
 
-Ralph files (if `.tf/ralph/` exists):
-- `.tf/ralph/progress.md` - Updated
-- `.tf/ralph/AGENTS.md` - May be updated
-
 ## Notes
 
-- This is the standard workflow (model-switch for sequential phases)
-- Only the parallel review step spawns subagents
-- The close step stages/commits only paths from `files_changed.txt` plus the ticket artifact directory
+- Each phase prompt has its own model/skill/thinking from frontmatter
+- Chain restores original model/thinking when complete
+- Only the review phase spawns parallel subagents
+- The close phase commits only paths from `files_changed.txt` plus artifacts

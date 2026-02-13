@@ -4,34 +4,49 @@
 **CLOSED**
 
 ## Summary
-Successfully documented the flag strategy for `/chain-prompts` based TF workflow. Selected and documented the **Hybrid Approach** that combines entry point variants for research control with post-chain commands for optional follow-up steps.
+Successfully documented the flag strategy for `/chain-prompts` based TF workflow and created the project-level phase skills and prompts architecture.
 
 ## Acceptance Criteria
 - [x] Chosen approach documented (including rationale and examples)
 - [x] Concrete mapping for: `--no-research`, `--with-research`, `--create-followups`, `--final-review-loop`, `--simplify-tickets`
 - [x] Backward compatibility story for `/tf <id>` clarified
+- [x] Project-level skills created in `skills/`
+- [x] Project-level prompts created in `prompts/`
+- [x] Plan and spike documents updated
 
-## Quality Gate
-- **Status**: PASSED
-- **Fail on**: (none configured)
-- **Pre-fix counts**: Critical(4), Major(5), Minor(3), Warnings(2), Suggestions(2)
-- **Post-fix counts**: Critical(0), Major(0), Minor(0), Warnings(2), Suggestions(2)
+## Architecture
 
-## Artifacts
-- `research.md` - Research findings on `/chain-prompts` capabilities
-- `implementation.md` - Decision document with flag strategy
-- `review.md` - Merged review from 3 reviewers
-- `fixes.md` - Documentation of fixes applied
-- `post-fix-verification.md` - Quality gate verification results
+### Skills + Prompts Pattern
+- **Skills** (`skills/`): Contain detailed procedures for each workflow phase
+- **Prompts** (`prompts/`): Thin wrappers with frontmatter (model, thinking, skill)
+- **Agents** (`agents/`): Keep existing reviewer agents for parallel reviews
 
-## Commit
-`5e3b5ea` - pt-o5ca: Document flag strategy for chain-prompts TF workflow
+### Phase Structure
+
+| Phase | Skill | Prompt | Model |
+|-------|-------|--------|-------|
+| Research | tf-research | tf-research.md | kimi-coding/k2p5 |
+| Implement | tf-implement | tf-implement.md | minimax/MiniMax-M2.5 |
+| Review | tf-review | tf-review.md | openai-codex/gpt-5.3-codex |
+| Fix | tf-fix | tf-fix.md | zai/glm-5 |
+| Close | tf-close | tf-close.md | chutes/zai-org/GLM-4.7-Flash |
+
+### Flag Mappings
+
+| Flag | Behavior |
+|------|----------|
+| `--no-research` | Start chain at `tf-implement` |
+| `--with-research` | Start chain at `tf-research` (default) |
+| `--create-followups` | Post-chain: run `tf-followups` |
+| `--simplify-tickets` | Post-chain: run `simplify` |
+| `--final-review-loop` | Post-chain: run `review-start` |
+
+## Commits
+- `46372e9` - pt-o5ca: Document flag strategy for chain-prompts TF workflow
+- `7c4beb8` - pt-o5ca: Create phase skills and prompts for chain-prompts TF workflow
 
 ## Unblocks
 - pt-74hd: Add phase prompts for TF workflow (research/implement/review/fix/close)
 
-## Still Blocked By
-- pt-qmhr: Design retry/escalation handling for chained TF phases
-
 ## Notes
-The hybrid approach avoids combinatorial explosion (2^n chains) while maintaining clean separation of concerns. Research control happens via entry point selection; post-processing happens via wrapper-managed commands after successful chain completion.
+The hybrid approach combines entry point variants for research control with post-chain commands for optional follow-up steps. Skills contain procedures; prompts are thin wrappers with model/thinking/skill in frontmatter.

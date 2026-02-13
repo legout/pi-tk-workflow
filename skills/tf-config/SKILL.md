@@ -22,9 +22,10 @@ Always run first:
 ```bash
 # Required extensions
 pi list | grep -q "pi-subagents" && echo "✓ pi-subagents" || echo "✗ pi-subagents"
-pi list | grep -q "pi-model-switch" && echo "✓ pi-model-switch" || echo "✗ pi-model-switch"
+pi list | grep -q "pi-prompt-template-model" && echo "✓ pi-prompt-template-model" || echo "✗ pi-prompt-template-model"
 
 # Optional extensions
+pi list | grep -q "pi-model-switch" && echo "✓ pi-model-switch (optional, legacy)" || echo "○ pi-model-switch (optional, for legacy workflows)"
 pi list | grep -q "pi-web-access" && echo "✓ pi-web-access" || echo "○ pi-web-access (preferred for web/docs research)"
 pi list | grep -q "pi-mcp-adapter" && echo "✓ pi-mcp-adapter" || echo "○ pi-mcp-adapter (optional)"
 pi list | grep -q "pi-review-loop" && echo "✓ pi-review-loop" || echo "○ pi-review-loop (optional)"
@@ -186,7 +187,9 @@ model: kimi-coding/k2p5:high
 
 ---
 
-### Procedure: Generate Model Aliases
+### Procedure: Generate Model Aliases (Legacy)
+
+**Note:** This is only relevant for legacy workflows not using `/chain-prompts`. With `/chain-prompts`, each phase has its own `model:` frontmatter.
 
 If `pi-model-switch` is installed, suggest useful aliases:
 
@@ -251,12 +254,13 @@ If extensions missing, provide:
 
 ```bash
 # Required
+pi install npm:pi-prompt-template-model
 pi install npm:pi-subagents
-pi install npm:pi-model-switch
 
 # Optional
 pi install npm:pi-mcp-adapter
 pi install npm:pi-review-loop
+pi install npm:pi-model-switch  # Only for legacy workflows
 ```
 
 ## Output Format
@@ -265,8 +269,9 @@ Always provide clear status report:
 
 ```
 ## Extension Status
+✓ pi-prompt-template-model (installed)
 ✓ pi-subagents (installed)
-✓ pi-model-switch (installed)
+○ pi-model-switch (optional, not installed)
 ○ pi-mcp-adapter (optional, not installed)
 
 ## Agent Models Updated
