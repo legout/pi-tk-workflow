@@ -1,0 +1,30 @@
+{
+  "ticket_id": "pt-74hd",
+  "pre_fix_counts": {
+    "Critical": 3,
+    "Major": 5,
+    "Minor": 3,
+    "Warnings": 2,
+    "Suggestions": 3
+  },
+  "fixed_counts": {
+    "Critical": 16,
+    "Major": 13,
+    "Minor": 8,
+    "Warnings": 5,
+    "Suggestions": 3
+  },
+  "post_fix_counts": {
+    "Critical": 0,
+    "Major": 0,
+    "Minor": 0,
+    "Warnings": 0,
+    "Suggestions": 0
+  },
+  "verification_passed": true,
+  "fail_on": [],
+  "fixes_found": true,
+  "fixes_parse_warning": null,
+  "review_mtime": 1770997647.9738271,
+  "fixes_mtime": 1770997794.9626803
+}

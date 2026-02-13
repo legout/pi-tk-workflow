@@ -1,0 +1,5 @@
+.pi/prompts/tf-research.md
+.pi/prompts/tf-implement.md
+.pi/prompts/tf-review.md
+.pi/prompts/tf-fix.md
+.pi/prompts/tf-close.md
