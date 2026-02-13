@@ -154,6 +154,164 @@ class TestSyncModels:
         assert results["errors"] == []
 
 
+class TestFixerMetaModelSelection:
+    """Tests for fixer meta-model selection and backward compatibility.
+
+    Covers acceptance criteria from ticket pt-6zp2:
+    - With metaModels.fixer present, fixer resolves to that model
+    - With metaModels.fixer absent, fixer follows documented fallback
+    - Escalation overrides work correctly when configured
+    """
+
+    def test_fixer_resolves_to_meta_model_when_present(self) -> None:
+        """AC1: With metaModels.fixer present, fixer resolves to that model."""
+        config = {
+            "metaModels": {
+                "fixer": {
+                    "model": "chutes/zai-org/GLM-4.7-Flash",
+                    "thinking": "medium",
+                },
+                "general": {"model": "kimi-coding/k2p5", "thinking": "medium"},
+            },
+            "agents": {"fixer": "fixer"},
+        }
+        result = sync.resolve_meta_model(config, "fixer")
+        assert result["model"] == "chutes/zai-org/GLM-4.7-Flash"
+        assert result["thinking"] == "medium"
+
+    def test_fixer_resolves_to_general_when_configured(self) -> None:
+        """Backward compat: agents.fixer='general' uses metaModels.general.
+
+        Note: This test uses 'my_fixer' as agent name to avoid conflict with
+        metaModels.fixer key - the resolution order checks metaModels first.
+        """
+        config = {
+            "metaModels": {
+                "fixer": {"model": "chutes/zai-org/GLM-4.7-Flash", "thinking": "medium"},
+                "general": {"model": "kimi-coding/k2p5", "thinking": "medium"},
+            },
+            "agents": {"my_fixer": "general"},  # Map to general instead of fixer
+        }
+        result = sync.resolve_meta_model(config, "my_fixer")
+        assert result["model"] == "kimi-coding/k2p5"
+        assert result["thinking"] == "medium"
+
+    def test_fixer_uses_general_when_meta_model_missing(self) -> None:
+        """Backward compat: agents.fixer='general' with missing metaModels.fixer uses metaModels.general.
+
+        This tests the exact fallback scenario: the fixer agent is mapped to 'general',
+        and there is no metaModels.fixer defined, so resolution should use metaModels.general.
+        """
+        config = {
+            "metaModels": {
+                "general": {"model": "kimi-coding/k2p5", "thinking": "medium"},
+                # metaModels.fixer is intentionally missing
+            },
+            "agents": {"fixer": "general"},
+        }
+        result = sync.resolve_meta_model(config, "fixer")
+        assert result["model"] == "kimi-coding/k2p5"
+        assert result["thinking"] == "medium"
+
+    def test_fixer_fallback_when_meta_model_missing(self) -> None:
+        """AC2: With metaModels.fixer absent, fixer follows documented fallback.
+
+        The fallback treats the meta-model key ("fixer") as a literal model ID.
+        This is documented behavior - users should define metaModels.fixer or
+        use agents.fixer="general" for backward compatibility.
+        """
+        config = {
+            "metaModels": {
+                "general": {"model": "kimi-coding/k2p5", "thinking": "medium"}
+                # metaModels.fixer is intentionally missing
+            },
+            "agents": {"fixer": "fixer"},
+        }
+        result = sync.resolve_meta_model(config, "fixer")
+        # Fallback uses meta-model key as literal model ID
+        assert result["model"] == "fixer"
+        assert result["thinking"] == "medium"
+
+    def test_escalation_overrides_fixer_model(self) -> None:
+        """AC3: Escalation model takes precedence over base fixer model on retry.
+
+        This test verifies end-to-end integration: base model is resolved via
+        sync.resolve_meta_model, then escalation overrides it on attempt 2.
+        """
+        from tf.retry_state import RetryState
+
+        # Full config with metaModels and agents
+        config = {
+            "metaModels": {
+                "fixer": {
+                    "model": "chutes/zai-org/GLM-4.7-Flash",
+                    "thinking": "medium",
+                },
+            },
+            "agents": {"fixer": "fixer"},
+            "workflow": {
+                "escalation": {
+                    "enabled": True,
+                    "models": {"fixer": "openai-codex/gpt-5.3-codex"},
+                }
+            },
+        }
+        # Resolve base model for fixer via the actual resolver
+        base_model = sync.resolve_meta_model(config, "fixer")["model"]
+        base_models = {"fixer": base_model}
+        escalation_config = config["workflow"]["escalation"]
+
+        # Simulate a ticket that completed attempt 1 as blocked
+        state = RetryState("/tmp/test", ticket_id="pt-test")
+        state.start_attempt()
+        state.complete_attempt(status="blocked")
+
+        # Determine escalation for the next attempt (attempt 2)
+        result = state.resolve_escalation(escalation_config, base_models, next_attempt_number=2)
+        assert result.fixer == "openai-codex/gpt-5.3-codex"
+
+    def test_escalation_fallback_to_base_when_no_override(self) -> None:
+        """When no escalation override is provided, base model is used on retry."""
+        from tf.retry_state import RetryState
+
+        config = {
+            "metaModels": {
+                "fixer": {"model": "chutes/zai-org/GLM-4.7-Flash", "thinking": "medium"},
+            },
+            "agents": {"fixer": "fixer"},
+            "workflow": {
+                "escalation": {
+                    "enabled": True,
+                    "models": {"fixer": None},  # No override
+                }
+            },
+        }
+        base_model = sync.resolve_meta_model(config, "fixer")["model"]
+        base_models = {"fixer": base_model}
+        escalation_config = config["workflow"]["escalation"]
+
+        state = RetryState("/tmp/test", ticket_id="pt-test")
+        state.start_attempt()
+        state.complete_attempt(status="blocked")
+
+        result = state.resolve_escalation(escalation_config, base_models, next_attempt_number=2)
+        assert result.fixer == base_model
+
+    def test_escalation_disabled_uses_base_model(self) -> None:
+        """When escalation is disabled, always use base model."""
+        from tf.retry_state import RetryState
+
+        state = RetryState("/tmp/test", ticket_id="pt-test")
+        # No attempts yet - first run
+
+        config = {"enabled": False, "models": {"fixer": "strong-model"}}
+        base_models = {"fixer": "base-model"}
+
+        result = state.resolve_escalation(config, base_models)
+        # No escalation when disabled
+        assert result.fixer is None  # No escalation, use base
+
+
 class TestRunSync:
     def test_runs_sync_and_installs_bundle(self, tmp_path: Path) -> None:
         project = tmp_path / "project"
