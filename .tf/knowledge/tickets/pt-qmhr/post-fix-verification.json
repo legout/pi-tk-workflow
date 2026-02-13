@@ -1,0 +1,30 @@
+{
+  "ticket_id": "pt-qmhr",
+  "pre_fix_counts": {
+    "Critical": 0,
+    "Major": 6,
+    "Minor": 5,
+    "Warnings": 4,
+    "Suggestions": 5
+  },
+  "fixed_counts": {
+    "Critical": 11,
+    "Major": 10,
+    "Minor": 4,
+    "Warnings": 2,
+    "Suggestions": 1
+  },
+  "post_fix_counts": {
+    "Critical": 0,
+    "Major": 0,
+    "Minor": 1,
+    "Warnings": 2,
+    "Suggestions": 4
+  },
+  "verification_passed": true,
+  "fail_on": [],
+  "fixes_found": true,
+  "fixes_parse_warning": null,
+  "review_mtime": 1770996599.2158802,
+  "fixes_mtime": 1770996685.8317938
+}
