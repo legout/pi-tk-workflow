@@ -216,3 +216,14 @@
   - Retry: Attempt 1, Count 0
   - Status: COMPLETE
   - Commit: d765d51
+- pt-qmhr: COMPLETE (2026-02-13T15:33:02Z)
+  - Summary: Design retry/escalation handling for chained TF phases
+  - Issues: Critical(0)/Major(6)/Minor(5)
+  - Attempt: 0, Retry Count: 0
+  - Status: COMPLETE
+
+- pt-74hd: CLOSED (2026-02-13T15:43:00Z)
+  - Summary: Add phase prompts for TF workflow with distinct skills
+  - Issues: Critical(0)/Major(0)/Minor(0)
+  - Retry: Attempt 1, Count 0
+  - Status: COMPLETE
