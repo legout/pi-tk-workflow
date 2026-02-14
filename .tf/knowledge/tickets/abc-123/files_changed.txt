@@ -1,5 +1,4 @@
+demo/hello.py
 demo/__init__.py
 demo/__main__.py
-demo/hello.py
-tests/test_demo_hello.py/home/volker/coding/pi-ticketflow/demo/hello.py
-/home/volker/coding/pi-ticketflow/tests/test_demo_hello.py
+tests/test_demo_hello.py

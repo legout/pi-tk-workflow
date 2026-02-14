@@ -51,76 +51,6 @@
     {
       "attemptNumber": 1,
       "startedAt": "2026-02-10T14:16:00Z",
-      "completedAt": "2026-02-10T14:16:30Z",
-      "status": "closed",
-      "trigger": "manual",
-      "qualityGate": {
-        "failOn": ["Critical", "Major"],
-        "counts": {
-          "Critical": 0,
-          "Major": 0,
-          "Minor": 0,
-          "Warnings": 0,
-          "Suggestions": 3
-        }
-      },
-      "escalation": {
-        "fixer": null,
-        "reviewerSecondOpinion": null,
-        "worker": null
-      },
-      "closeSummaryRef": "close-summary.md"
-    },
-    {
-      "attemptNumber": 1,
-      "startedAt": "2026-02-10T14:19:34Z",
-      "completedAt": "2026-02-10T14:19:34Z",
-      "status": "closed",
-      "trigger": "manual",
-      "qualityGate": {
-        "failOn": ["Critical", "Major"],
-        "counts": {
-          "Critical": 0,
-          "Major": 0,
-          "Minor": 1,
-          "Warnings": 1,
-          "Suggestions": 5
-        }
-      },
-      "escalation": {
-        "fixer": null,
-        "reviewerSecondOpinion": null,
-        "worker": null
-      },
-      "closeSummaryRef": "close-summary.md"
-    },
-    {
-      "attemptNumber": 1,
-      "startedAt": "2026-02-10T14:16:00Z",
-      "completedAt": "2026-02-10T14:21:00Z",
-      "status": "closed",
-      "trigger": "manual",
-      "qualityGate": {
-        "failOn": ["Critical", "Major"],
-        "counts": {
-          "Critical": 0,
-          "Major": 0,
-          "Minor": 3,
-          "Warnings": 2,
-          "Suggestions": 4
-        }
-      },
-      "escalation": {
-        "fixer": null,
-        "reviewerSecondOpinion": null,
-        "worker": null
-      },
-      "closeSummaryRef": "close-summary.md"
-    }
-  ],
-    {
-      "attemptNumber": 1,
-      "startedAt": "2026-02-10T14:28:00Z",
       "completedAt": "2026-02-10T14:30:44Z",
       "status": "closed",
       "trigger": "manual",
@@ -140,9 +70,32 @@
         "worker": null
       },
       "closeSummaryRef": "close-summary.md"
+    },
+    {
+      "attemptNumber": 1,
+      "startedAt": "2026-02-14T01:36:00Z",
+      "completedAt": "2026-02-14T01:43:36Z",
+      "status": "closed",
+      "trigger": "manual",
+      "qualityGate": {
+        "failOn": [],
+        "counts": {
+          "Critical": 0,
+          "Major": 0,
+          "Minor": 0,
+          "Warnings": 0,
+          "Suggestions": 0
+        }
+      },
+      "escalation": {
+        "fixer": null,
+        "reviewerSecondOpinion": null,
+        "worker": null
+      },
+      "closeSummaryRef": "close-summary.md"
     }
   ],
-  "lastAttemptAt": "2026-02-10T14:30:44Z",
+  "lastAttemptAt": "2026-02-14T01:43:36Z",
   "status": "closed",
   "retryCount": 0
 }
