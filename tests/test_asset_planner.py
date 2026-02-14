@@ -56,22 +56,29 @@ prompts/test.md
 class TestClassifyAsset:
     """Tests for asset classification."""
 
-    def test_classifies_agents(self, tmp_path: Path) -> None:
-        """Should classify agent files."""
-        result = asset_planner.classify_asset("agents/test.md", tmp_path)
+    def test_classifies_agents_workflow_repo(self, tmp_path: Path) -> None:
+        """Should classify agent files to .pi/ when in workflow repo."""
+        result = asset_planner.classify_asset("agents/test.md", tmp_path, repo_root=tmp_path)
         assert result is not None
         assert result[0] == tmp_path / ".pi" / "agents" / "test.md"
         assert result[1] is False
 
-    def test_classifies_prompts(self, tmp_path: Path) -> None:
-        """Should classify prompt files."""
-        result = asset_planner.classify_asset("prompts/tf.md", tmp_path)
+    def test_classifies_agents_regular_project(self, tmp_path: Path) -> None:
+        """Should classify agent files to project root for regular projects."""
+        result = asset_planner.classify_asset("agents/test.md", tmp_path, repo_root=Path("/some/other/repo"))
+        assert result is not None
+        assert result[0] == tmp_path / "agents" / "test.md"
+        assert result[1] is False
+
+    def test_classifies_prompts_workflow_repo(self, tmp_path: Path) -> None:
+        """Should classify prompt files to .pi/ when in workflow repo."""
+        result = asset_planner.classify_asset("prompts/tf.md", tmp_path, repo_root=tmp_path)
         assert result is not None
         assert result[0] == tmp_path / ".pi" / "prompts" / "tf.md"
 
-    def test_classifies_skills(self, tmp_path: Path) -> None:
-        """Should classify skill directories."""
-        result = asset_planner.classify_asset("skills/workflow/SKILL.md", tmp_path)
+    def test_classifies_skills_workflow_repo(self, tmp_path: Path) -> None:
+        """Should classify skill directories to .pi/ when in workflow repo."""
+        result = asset_planner.classify_asset("skills/workflow/SKILL.md", tmp_path, repo_root=tmp_path)
         assert result is not None
         assert result[0] == tmp_path / ".pi" / "skills" / "workflow" / "SKILL.md"
 
@@ -164,8 +171,8 @@ class TestPlanInstallation:
 
     def test_skips_existing_files(self, tmp_path: Path) -> None:
         """Should skip existing files by default."""
-        # Create existing file
-        agents_dir = tmp_path / ".pi" / "agents"
+        # Create existing file in project root (regular project)
+        agents_dir = tmp_path / "agents"
         agents_dir.mkdir(parents=True)
         (agents_dir / "test.md").write_text("exists")
 
@@ -184,8 +191,8 @@ class TestPlanInstallation:
 
     def test_force_overwrites_existing(self, tmp_path: Path) -> None:
         """Should plan updates when force=True."""
-        # Create existing file
-        agents_dir = tmp_path / ".pi" / "agents"
+        # Create existing file in project root (regular project)
+        agents_dir = tmp_path / "agents"
         agents_dir.mkdir(parents=True)
         (agents_dir / "test.md").write_text("exists")
 
@@ -289,7 +296,9 @@ class TestInstallBundle:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("agent content")
 
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        # where we're setting up the repo itself for development
+        project_root = repo_root
 
         installed, skipped = asset_planner.install_bundle(
             project_root,
@@ -309,8 +318,8 @@ class TestInstallBundle:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("agent content")
 
-        # Create project with existing file
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("existing")
 
@@ -331,8 +340,8 @@ class TestInstallBundle:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("new content")
 
-        # Create project with existing file
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("old content")
 
@@ -373,8 +382,8 @@ class TestCheckForUpdates:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("new content")
 
-        # Create project with different content
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("old content")
 
@@ -396,8 +405,8 @@ class TestCheckForUpdates:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("same content")
 
-        # Create project with same content
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("same content")
 
@@ -422,8 +431,8 @@ class TestUpdateAssets:
         (repo_root / "config" / "install-manifest.txt").write_text("agents/test.md")
         (repo_root / "agents" / "test.md").write_text("new content")
 
-        # Create project with old content
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("old content")
 
@@ -448,8 +457,8 @@ class TestUpdateAssets:
         (repo_root / "agents" / "test.md").write_text("new agent")
         (repo_root / "prompts" / "other.md").write_text("new prompt")
 
-        # Create project with old content
-        project_root = tmp_path / "project"
+        # Use repo_root as project_root to simulate workflow repo scenario
+        project_root = repo_root
         (project_root / ".pi" / "agents").mkdir(parents=True)
         (project_root / ".pi" / "prompts").mkdir(parents=True)
         (project_root / ".pi" / "agents" / "test.md").write_text("old agent")

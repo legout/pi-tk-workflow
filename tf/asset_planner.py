@@ -203,10 +203,18 @@ def load_manifest(repo_root: Optional[Path], raw_base: Optional[str] = None) -> 
         raise RuntimeError(f"Unable to download install manifest: {exc}") from exc
 
 
-def classify_asset(rel_path: str, project_root: Path) -> Optional[Tuple[Path, bool]]:
+def classify_asset(
+    rel_path: str,
+    project_root: Path,
+    *,
+    repo_root: Optional[Path] = None,
+) -> Optional[Tuple[Path, bool]]:
     """Classify a manifest entry and return its destination path and executable flag.
 
     Returns None if the entry should be skipped (e.g., bin/tf).
+
+    For the pi-ticketflow repo itself (when project_root == repo_root),
+    assets go to .pi/ so Pi can use them during workflow development.
     """
     # Skip CLI shim - projects don't install the CLI
     if rel_path == "bin/tf":
@@ -216,8 +224,22 @@ def classify_asset(rel_path: str, project_root: Path) -> Optional[Tuple[Path, bo
     if rel_path == "config/install-manifest.txt":
         return None
 
-    # Workflow assets go to project root directories.
+    # Determine if we're in the workflow repo itself
+    repo_root = repo_root or find_repo_root()
+    is_workflow_repo = repo_root and project_root.resolve() == repo_root.resolve()
+
+    # Determine base directory: .pi/ for workflow repo, project root for others
+    if is_workflow_repo:
+        pi_base = project_root / ".pi"
+        # Ensure .pi directory exists for the workflow repo
+        pi_base.mkdir(parents=True, exist_ok=True)
+    else:
+        pi_base = None
+
+    # Workflow assets go to .pi/ in the workflow repo, project root otherwise.
     if rel_path.startswith(("agents/", "prompts/", "skills/")):
+        if pi_base:
+            return (pi_base / rel_path, False)
         return (project_root / rel_path, False)
 
     # Config files go to .tf/
@@ -242,7 +264,7 @@ def create_asset_plan(
     raw_base: Optional[str] = None,
 ) -> Optional[AssetPlan]:
     """Create an asset plan for a single manifest entry."""
-    classified = classify_asset(rel_path, project_root)
+    classified = classify_asset(rel_path, project_root, repo_root=repo_root)
     if classified is None:
         return None
 

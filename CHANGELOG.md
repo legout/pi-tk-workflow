@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.5.1] - 2026-02-14
+
+### Fixed
+
+- **`tf init` in workflow repo** - Fixed `.pi/` folder creation when running `tf init` in the pi-ticketflow workflow repo itself. Assets are now correctly routed to `.pi/agents`, `.pi/prompts`, `.pi/skills` when initializing the workflow development environment, while regular projects still use project root directories.
+
 ## [0.5.0] - 2026-02-13
 
 ### Changed
