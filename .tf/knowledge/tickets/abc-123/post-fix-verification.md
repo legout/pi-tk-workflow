@@ -2,14 +2,14 @@
 
 ## Summary
 - **Status**: PASS
-- **Quality Gate**: blocks on [] (empty - no severities block)
+- **Quality Gate**: blocks on []
 
 ## Pre-Fix Counts (from review.md)
 - **Critical**: 0
 - **Major**: 0
-- **Minor**: 1
+- **Minor**: 0
 - **Warnings**: 1
-- **Suggestions**: 5
+- **Suggestions**: 3
 
 ## Fixes Applied (from fixes.md)
 - **Critical**: 0
@@ -21,11 +21,11 @@
 ## Post-Fix Counts (calculated)
 - **Critical**: 0
 - **Major**: 0
-- **Minor**: 1
+- **Minor**: 0
 - **Warnings**: 1
-- **Suggestions**: 5
+- **Suggestions**: 3
 
 ## Quality Gate Decision
 - **Based on**: Post-fix counts
 - **Result**: PASS
-- **Reason**: failOn list is empty ([]), no severities block closure
+- **Reason**: No blocking severities (failOn is empty)
